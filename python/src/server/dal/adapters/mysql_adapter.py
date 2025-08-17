@@ -189,7 +189,7 @@ class MySQLAdapter(IDatabase):
         """Select records from table"""
         try:
             # Build SELECT query
-            if columns:
+            if columns and columns != ["*"]:
                 columns_str = ", ".join(f"`{col}`" for col in columns)
             else:
                 columns_str = "*"

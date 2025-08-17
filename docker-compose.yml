@@ -33,6 +33,7 @@ services:
       - ARCHON_AGENTS_PORT=${ARCHON_AGENTS_PORT:-8052}
     networks:
       - app-network
+      - python_archon-network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for MCP container control
       - ./python/src:/app/src  # Mount source code for hot reload
@@ -158,3 +159,5 @@ services:
 networks:
   app-network:
     driver: bridge
+  python_archon-network:
+    external: true
