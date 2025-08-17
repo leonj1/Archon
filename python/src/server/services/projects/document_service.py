@@ -11,9 +11,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from src.server.utils import get_supabase_client
-
 from ...config.logfire_config import get_logger
+from ..client_manager import get_connection_manager
 
 logger = get_logger(__name__)
 
@@ -21,11 +20,11 @@ logger = get_logger(__name__)
 class DocumentService:
     """Service class for document operations within projects"""
 
-    def __init__(self, supabase_client=None):
-        """Initialize with optional supabase client"""
-        self.supabase_client = supabase_client or get_supabase_client()
+    def __init__(self, connection_manager=None):
+        """Initialize with optional connection manager"""
+        self.connection_manager = connection_manager or get_connection_manager()
 
-    def add_document(
+    async def add_document(
         self,
         project_id: str,
         document_type: str,
@@ -42,13 +41,14 @@ class DocumentService:
         """
         try:
             # Get current project
-            project_response = (
-                self.supabase_client.table("archon_projects")
-                .select("docs")
-                .eq("id", project_id)
-                .execute()
-            )
-            if not project_response.data:
+            async with self.connection_manager.get_reader() as db:
+                project_response = await db.select(
+                    table="projects",
+                    columns=["docs"],
+                    filters={"id": {"eq": project_id}}
+                )
+
+            if not project_response.success or not project_response.data:
                 return False, {"error": f"Project with ID {project_id} not found"}
 
             current_docs = project_response.data[0].get("docs", [])
@@ -71,14 +71,15 @@ class DocumentService:
             updated_docs = current_docs + [new_doc]
 
             # Update project
-            response = (
-                self.supabase_client.table("archon_projects")
-                .update({"docs": updated_docs})
-                .eq("id", project_id)
-                .execute()
-            )
+            async with self.connection_manager.get_primary() as db:
+                response = await db.update(
+                    table="projects",
+                    data={"docs": updated_docs},
+                    filters={"id": {"eq": project_id}},
+                    returning=["*"]
+                )
 
-            if response.data:
+            if response.success and response.data:
                 return True, {
                     "document": {
                         "id": new_doc["id"],
@@ -90,13 +91,14 @@ class DocumentService:
                     }
                 }
             else:
+                logger.error(f"Database error adding document: {response.error}")
                 return False, {"error": "Failed to add document to project"}
 
         except Exception as e:
             logger.error(f"Error adding document: {e}")
             return False, {"error": f"Error adding document: {str(e)}"}
 
-    def list_documents(self, project_id: str) -> tuple[bool, dict[str, Any]]:
+    async def list_documents(self, project_id: str) -> tuple[bool, dict[str, Any]]:
         """
         List all documents in a project's docs JSONB field.
 
@@ -104,14 +106,14 @@ class DocumentService:
             Tuple of (success, result_dict)
         """
         try:
-            response = (
-                self.supabase_client.table("archon_projects")
-                .select("docs")
-                .eq("id", project_id)
-                .execute()
-            )
+            async with self.connection_manager.get_reader() as db:
+                response = await db.select(
+                    table="projects",
+                    columns=["docs"],
+                    filters={"id": {"eq": project_id}}
+                )
 
-            if not response.data:
+            if not response.success or not response.data:
                 return False, {"error": f"Project with ID {project_id} not found"}
 
             docs = response.data[0].get("docs", [])
@@ -141,7 +143,7 @@ class DocumentService:
             logger.error(f"Error listing documents: {e}")
             return False, {"error": f"Error listing documents: {str(e)}"}
 
-    def get_document(self, project_id: str, doc_id: str) -> tuple[bool, dict[str, Any]]:
+    async def get_document(self, project_id: str, doc_id: str) -> tuple[bool, dict[str, Any]]:
         """
         Get a specific document from a project's docs JSONB field.
 
@@ -149,14 +151,14 @@ class DocumentService:
             Tuple of (success, result_dict)
         """
         try:
-            response = (
-                self.supabase_client.table("archon_projects")
-                .select("docs")
-                .eq("id", project_id)
-                .execute()
-            )
+            async with self.connection_manager.get_reader() as db:
+                response = await db.select(
+                    table="projects",
+                    columns=["docs"],
+                    filters={"id": {"eq": project_id}}
+                )
 
-            if not response.data:
+            if not response.success or not response.data:
                 return False, {"error": f"Project with ID {project_id} not found"}
 
             docs = response.data[0].get("docs", [])
@@ -179,7 +181,7 @@ class DocumentService:
             logger.error(f"Error getting document: {e}")
             return False, {"error": f"Error getting document: {str(e)}"}
 
-    def update_document(
+    async def update_document(
         self,
         project_id: str,
         doc_id: str,
@@ -194,13 +196,14 @@ class DocumentService:
         """
         try:
             # Get current project docs
-            project_response = (
-                self.supabase_client.table("archon_projects")
-                .select("docs")
-                .eq("id", project_id)
-                .execute()
-            )
-            if not project_response.data:
+            async with self.connection_manager.get_reader() as db:
+                project_response = await db.select(
+                    table="projects",
+                    columns=["docs"],
+                    filters={"id": {"eq": project_id}}
+                )
+
+            if not project_response.success or not project_response.data:
                 return False, {"error": f"Project with ID {project_id} not found"}
 
             current_docs = project_response.data[0].get("docs", [])
@@ -210,10 +213,10 @@ class DocumentService:
                 try:
                     from .versioning_service import VersioningService
 
-                    versioning = VersioningService(self.supabase_client)
+                    versioning = VersioningService(self.connection_manager)
 
                     change_summary = self._build_change_summary(doc_id, update_fields)
-                    versioning.create_version(
+                    await versioning.create_version(
                         project_id=project_id,
                         field_name="docs",
                         content=current_docs,
@@ -258,14 +261,15 @@ class DocumentService:
                 }
 
             # Update the project
-            response = (
-                self.supabase_client.table("archon_projects")
-                .update({"docs": docs, "updated_at": datetime.now().isoformat()})
-                .eq("id", project_id)
-                .execute()
-            )
+            async with self.connection_manager.get_primary() as db:
+                response = await db.update(
+                    table="projects",
+                    data={"docs": docs, "updated_at": datetime.now().isoformat()},
+                    filters={"id": {"eq": project_id}},
+                    returning=["*"]
+                )
 
-            if response.data:
+            if response.success and response.data:
                 # Find the updated document to return
                 updated_doc = None
                 for doc in docs:
@@ -275,13 +279,14 @@ class DocumentService:
 
                 return True, {"document": updated_doc}
             else:
+                logger.error(f"Database error updating document: {response.error}")
                 return False, {"error": "Failed to update document"}
 
         except Exception as e:
             logger.error(f"Error updating document: {e}")
             return False, {"error": f"Error updating document: {str(e)}"}
 
-    def delete_document(self, project_id: str, doc_id: str) -> tuple[bool, dict[str, Any]]:
+    async def delete_document(self, project_id: str, doc_id: str) -> tuple[bool, dict[str, Any]]:
         """
         Delete a document from a project's docs JSONB field.
 
@@ -290,13 +295,14 @@ class DocumentService:
         """
         try:
             # Get current project docs
-            project_response = (
-                self.supabase_client.table("archon_projects")
-                .select("docs")
-                .eq("id", project_id)
-                .execute()
-            )
-            if not project_response.data:
+            async with self.connection_manager.get_reader() as db:
+                project_response = await db.select(
+                    table="projects",
+                    columns=["docs"],
+                    filters={"id": {"eq": project_id}}
+                )
+
+            if not project_response.success or not project_response.data:
                 return False, {"error": f"Project with ID {project_id} not found"}
 
             docs = project_response.data[0].get("docs", [])
@@ -311,16 +317,18 @@ class DocumentService:
                 }
 
             # Update the project
-            response = (
-                self.supabase_client.table("archon_projects")
-                .update({"docs": docs, "updated_at": datetime.now().isoformat()})
-                .eq("id", project_id)
-                .execute()
-            )
+            async with self.connection_manager.get_primary() as db:
+                response = await db.update(
+                    table="projects",
+                    data={"docs": docs, "updated_at": datetime.now().isoformat()},
+                    filters={"id": {"eq": project_id}},
+                    returning=["*"]
+                )
 
-            if response.data:
+            if response.success and response.data:
                 return True, {"project_id": project_id, "doc_id": doc_id}
             else:
+                logger.error(f"Database error deleting document: {response.error}")
                 return False, {"error": "Failed to delete document"}
 
         except Exception as e:

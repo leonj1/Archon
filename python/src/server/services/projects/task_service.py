@@ -9,9 +9,8 @@ shared between MCP tools and FastAPI endpoints.
 from datetime import datetime
 from typing import Any
 
-from src.server.utils import get_supabase_client
-
 from ...config.logfire_config import get_logger
+from ..client_manager import get_connection_manager
 
 logger = get_logger(__name__)
 
@@ -59,9 +58,9 @@ class TaskService:
 
     VALID_STATUSES = ["todo", "doing", "review", "done"]
 
-    def __init__(self, supabase_client=None):
-        """Initialize with optional supabase client"""
-        self.supabase_client = supabase_client or get_supabase_client()
+    def __init__(self, connection_manager=None):
+        """Initialize with optional connection manager"""
+        self.connection_manager = connection_manager or get_connection_manager()
 
     def validate_status(self, status: str) -> tuple[bool, str]:
         """Validate task status"""
@@ -110,82 +109,93 @@ class TaskService:
 
             task_status = "todo"
 
-            # REORDERING LOGIC: If inserting at a specific position, increment existing tasks
-            if task_order > 0:
-                # Get all tasks in the same project and status with task_order >= new task's order
-                existing_tasks_response = (
-                    self.supabase_client.table("archon_tasks")
-                    .select("id, task_order")
-                    .eq("project_id", project_id)
-                    .eq("status", task_status)
-                    .gte("task_order", task_order)
-                    .execute()
+            async with self.connection_manager.get_primary() as db:
+                # REORDERING LOGIC: If inserting at a specific position, increment existing tasks
+                if task_order > 0:
+                    # Get all tasks in the same project and status with task_order >= new task's order
+                    existing_tasks_response = await db.select(
+                        table="tasks",
+                        columns=["id", "task_order"],
+                        filters={
+                            "project_id": project_id,
+                            "status": task_status,
+                            "task_order": {"gte": task_order}
+                        }
+                    )
+
+                    if existing_tasks_response.success and existing_tasks_response.data:
+                        logger.info(f"Reordering {len(existing_tasks_response.data)} existing tasks")
+
+                        # Increment task_order for all affected tasks
+                        for existing_task in existing_tasks_response.data:
+                            new_order = existing_task["task_order"] + 1
+                            await db.update(
+                                table="tasks",
+                                data={
+                                    "task_order": new_order,
+                                    "updated_at": datetime.now().isoformat(),
+                                },
+                                filters={"id": existing_task["id"]}
+                            )
+
+                task_data = {
+                    "project_id": project_id,
+                    "title": title,
+                    "description": description,
+                    "status": task_status,
+                    "assignee": assignee,
+                    "task_order": task_order,
+                    "sources": sources or [],
+                    "code_examples": code_examples or [],
+                    "created_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat(),
+                }
+
+                if feature:
+                    task_data["feature"] = feature
+
+                response = await db.insert(
+                    table="tasks",
+                    data=task_data,
+                    returning=["*"]
                 )
 
-                if existing_tasks_response.data:
-                    logger.info(f"Reordering {len(existing_tasks_response.data)} existing tasks")
+                if response.success and response.data:
+                    task = response.data[0]
 
-                    # Increment task_order for all affected tasks
-                    for existing_task in existing_tasks_response.data:
-                        new_order = existing_task["task_order"] + 1
-                        self.supabase_client.table("archon_tasks").update({
-                            "task_order": new_order,
-                            "updated_at": datetime.now().isoformat(),
-                        }).eq("id", existing_task["id"]).execute()
+                    # Broadcast Socket.IO update for new task
+                    if _broadcast_available:
+                        try:
+                            await broadcast_task_update(
+                                project_id=task["project_id"], event_type="task_created", task_data=task
+                            )
+                            logger.info(f"Socket.IO broadcast sent for new task {task['id']}")
+                        except Exception as ws_error:
+                            logger.warning(
+                                f"Failed to broadcast Socket.IO update for new task {task['id']}: {ws_error}"
+                            )
 
-            task_data = {
-                "project_id": project_id,
-                "title": title,
-                "description": description,
-                "status": task_status,
-                "assignee": assignee,
-                "task_order": task_order,
-                "sources": sources or [],
-                "code_examples": code_examples or [],
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat(),
-            }
-
-            if feature:
-                task_data["feature"] = feature
-
-            response = self.supabase_client.table("archon_tasks").insert(task_data).execute()
-
-            if response.data:
-                task = response.data[0]
-
-                # Broadcast Socket.IO update for new task
-                if _broadcast_available:
-                    try:
-                        await broadcast_task_update(
-                            project_id=task["project_id"], event_type="task_created", task_data=task
-                        )
-                        logger.info(f"Socket.IO broadcast sent for new task {task['id']}")
-                    except Exception as ws_error:
-                        logger.warning(
-                            f"Failed to broadcast Socket.IO update for new task {task['id']}: {ws_error}"
-                        )
-
-                return True, {
-                    "task": {
-                        "id": task["id"],
-                        "project_id": task["project_id"],
-                        "title": task["title"],
-                        "description": task["description"],
-                        "status": task["status"],
-                        "assignee": task["assignee"],
-                        "task_order": task["task_order"],
-                        "created_at": task["created_at"],
+                    return True, {
+                        "task": {
+                            "id": task["id"],
+                            "project_id": task["project_id"],
+                            "title": task["title"],
+                            "description": task["description"],
+                            "status": task["status"],
+                            "assignee": task["assignee"],
+                            "task_order": task["task_order"],
+                            "created_at": task["created_at"],
+                        }
                     }
-                }
-            else:
-                return False, {"error": "Failed to create task"}
+                else:
+                    error_msg = response.error or "Failed to create task"
+                    return False, {"error": error_msg}
 
         except Exception as e:
             logger.error(f"Error creating task: {e}")
             return False, {"error": f"Error creating task: {str(e)}"}
 
-    def list_tasks(
+    async def list_tasks(
         self, project_id: str = None, status: str = None, include_closed: bool = False
     ) -> tuple[bool, dict[str, Any]]:
         """
@@ -195,15 +205,13 @@ class TaskService:
             Tuple of (success, result_dict)
         """
         try:
-            # Start with base query
-            query = self.supabase_client.table("archon_tasks").select("*")
-
-            # Track filters for debugging
+            # Build filters dictionary
+            filters = {}
             filters_applied = []
 
             # Apply filters
             if project_id:
-                query = query.eq("project_id", project_id)
+                filters["project_id"] = project_id
                 filters_applied.append(f"project_id={project_id}")
 
             if status:
@@ -211,25 +219,33 @@ class TaskService:
                 is_valid, error_msg = self.validate_status(status)
                 if not is_valid:
                     return False, {"error": error_msg}
-                query = query.eq("status", status)
+                filters["status"] = status
                 filters_applied.append(f"status={status}")
                 # When filtering by specific status, don't apply include_closed filter
                 # as it would be redundant or potentially conflicting
             elif not include_closed:
                 # Only exclude done tasks if no specific status filter is applied
-                query = query.neq("status", "done")
+                filters["status"] = {"neq": "done"}
                 filters_applied.append("exclude done tasks")
 
-            # Filter out archived tasks using is null or is false
-            query = query.or_("archived.is.null,archived.is.false")
+            # Filter out archived tasks (null or false)
+            filters["archived"] = {"or": [{"is": None}, {"eq": False}]}
             filters_applied.append("exclude archived tasks (null or false)")
 
             logger.info(f"Listing tasks with filters: {', '.join(filters_applied)}")
 
-            # Execute query and get raw response
-            response = (
-                query.order("task_order", desc=False).order("created_at", desc=False).execute()
-            )
+            async with self.connection_manager.get_reader() as db:
+                # Execute query
+                response = await db.select(
+                    table="tasks",
+                    columns=["*"],
+                    filters=filters,
+                    order_by="task_order ASC, created_at ASC"
+                )
+
+                if not response.success:
+                    logger.error(f"Database error listing tasks: {response.error}")
+                    return False, {"error": f"Database error: {response.error}"}
 
             # Debug: Log task status distribution and filter effectiveness
             if response.data:
@@ -261,58 +277,41 @@ class TaskService:
                         f"Status filter: {status}, First task status: {first_task.get('status')}, archived: {first_task.get('archived')}"
                     )
             else:
-                logger.info("No tasks found with current filters")
-
-            tasks = []
-            for task in response.data:
-                tasks.append({
-                    "id": task["id"],
-                    "project_id": task["project_id"],
-                    "title": task["title"],
-                    "description": task["description"],
-                    "status": task["status"],
-                    "assignee": task.get("assignee", "User"),
-                    "task_order": task.get("task_order", 0),
-                    "created_at": task["created_at"],
-                    "updated_at": task["updated_at"],
-                })
-
-            filter_info = []
-            if project_id:
-                filter_info.append(f"project_id={project_id}")
-            if status:
-                filter_info.append(f"status={status}")
-            if not include_closed:
-                filter_info.append("excluding closed tasks")
+                logger.info("No tasks found with applied filters")
 
             return True, {
-                "tasks": tasks,
-                "total_count": len(tasks),
-                "filters_applied": ", ".join(filter_info) if filter_info else "none",
-                "include_closed": include_closed,
+                "tasks": response.data,
+                "total_count": len(response.data),
+                "filters_applied": filters_applied,
             }
 
         except Exception as e:
             logger.error(f"Error listing tasks: {e}")
             return False, {"error": f"Error listing tasks: {str(e)}"}
 
-    def get_task(self, task_id: str) -> tuple[bool, dict[str, Any]]:
+    async def get_task(self, task_id: str) -> tuple[bool, dict[str, Any]]:
         """
-        Get a specific task by ID.
+        Get a single task by ID.
 
         Returns:
             Tuple of (success, result_dict)
         """
         try:
-            response = (
-                self.supabase_client.table("archon_tasks").select("*").eq("id", task_id).execute()
-            )
+            async with self.connection_manager.get_reader() as db:
+                response = await db.select(
+                    table="tasks",
+                    columns=["*"],
+                    filters={"id": task_id}
+                )
 
-            if response.data:
-                task = response.data[0]
-                return True, {"task": task}
-            else:
-                return False, {"error": f"Task with ID {task_id} not found"}
+                if not response.success:
+                    logger.error(f"Database error getting task: {response.error}")
+                    return False, {"error": f"Database error: {response.error}"}
+
+                if not response.data:
+                    return False, {"error": f"Task with ID {task_id} not found"}
+
+                return True, {"task": response.data[0]}
 
         except Exception as e:
             logger.error(f"Error getting task: {e}")
@@ -322,138 +321,150 @@ class TaskService:
         self, task_id: str, update_fields: dict[str, Any]
     ) -> tuple[bool, dict[str, Any]]:
         """
-        Update task with specified fields.
+        Update a task.
 
         Returns:
             Tuple of (success, result_dict)
         """
         try:
-            # Build update data
-            update_data = {"updated_at": datetime.now().isoformat()}
-
-            # Validate and add fields
-            if "title" in update_fields:
-                update_data["title"] = update_fields["title"]
-
-            if "description" in update_fields:
-                update_data["description"] = update_fields["description"]
-
+            # Validate status if provided
             if "status" in update_fields:
                 is_valid, error_msg = self.validate_status(update_fields["status"])
                 if not is_valid:
                     return False, {"error": error_msg}
-                update_data["status"] = update_fields["status"]
 
+            # Validate assignee if provided
             if "assignee" in update_fields:
                 is_valid, error_msg = self.validate_assignee(update_fields["assignee"])
                 if not is_valid:
                     return False, {"error": error_msg}
-                update_data["assignee"] = update_fields["assignee"]
 
-            if "task_order" in update_fields:
-                update_data["task_order"] = update_fields["task_order"]
+            # Add updated_at timestamp
+            update_fields["updated_at"] = datetime.now().isoformat()
 
-            if "feature" in update_fields:
-                update_data["feature"] = update_fields["feature"]
+            async with self.connection_manager.get_primary() as db:
+                response = await db.update(
+                    table="tasks",
+                    data=update_fields,
+                    filters={"id": task_id},
+                    returning=["*"]
+                )
 
-            # Update task
-            response = (
-                self.supabase_client.table("archon_tasks")
-                .update(update_data)
-                .eq("id", task_id)
-                .execute()
-            )
+                if not response.success:
+                    logger.error(f"Database error updating task: {response.error}")
+                    return False, {"error": f"Database error: {response.error}"}
 
-            if response.data:
+                if not response.data:
+                    return False, {"error": f"Task with ID {task_id} not found"}
+
                 task = response.data[0]
 
-                # Broadcast Socket.IO update
+                # Broadcast Socket.IO update for task change
                 if _broadcast_available:
                     try:
-                        logger.info(
-                            f"Broadcasting task_updated for task {task_id} to project room {task['project_id']}"
-                        )
                         await broadcast_task_update(
                             project_id=task["project_id"], event_type="task_updated", task_data=task
                         )
-                        logger.info(f"✅ Socket.IO broadcast successful for task {task_id}")
+                        logger.info(f"Socket.IO broadcast sent for updated task {task['id']}")
                     except Exception as ws_error:
-                        # Don't fail the task update if Socket.IO broadcasting fails
-                        logger.error(
-                            f"❌ Failed to broadcast Socket.IO update for task {task_id}: {ws_error}"
+                        logger.warning(
+                            f"Failed to broadcast Socket.IO update for updated task {task['id']}: {ws_error}"
                         )
-                        import traceback
 
-                        logger.error(f"Traceback: {traceback.format_exc()}")
-                else:
-                    logger.warning(
-                        f"⚠️ Socket.IO broadcasting not available - task {task_id} update won't be real-time"
-                    )
-
-                return True, {"task": task, "message": "Task updated successfully"}
-            else:
-                return False, {"error": f"Task with ID {task_id} not found"}
+                return True, {"task": task}
 
         except Exception as e:
             logger.error(f"Error updating task: {e}")
             return False, {"error": f"Error updating task: {str(e)}"}
 
-    async def archive_task(
-        self, task_id: str, archived_by: str = "mcp"
-    ) -> tuple[bool, dict[str, Any]]:
+    async def archive_task(self, task_id: str) -> tuple[bool, dict[str, Any]]:
         """
-        Archive a task and all its subtasks (soft delete).
+        Archive a task (soft delete).
 
         Returns:
             Tuple of (success, result_dict)
         """
         try:
-            # First, check if task exists and is not already archived
-            task_response = (
-                self.supabase_client.table("archon_tasks").select("*").eq("id", task_id).execute()
-            )
-            if not task_response.data:
-                return False, {"error": f"Task with ID {task_id} not found"}
+            async with self.connection_manager.get_primary() as db:
+                response = await db.update(
+                    table="tasks",
+                    data={"archived": True, "updated_at": datetime.now().isoformat()},
+                    filters={"id": task_id},
+                    returning=["*"]
+                )
 
-            task = task_response.data[0]
-            if task.get("archived") is True:
-                return False, {"error": f"Task with ID {task_id} is already archived"}
+                if not response.success:
+                    logger.error(f"Database error archiving task: {response.error}")
+                    return False, {"error": f"Database error: {response.error}"}
 
-            # Archive the task
-            archive_data = {
-                "archived": True,
-                "archived_at": datetime.now().isoformat(),
-                "archived_by": archived_by,
-                "updated_at": datetime.now().isoformat(),
-            }
+                if not response.data:
+                    return False, {"error": f"Task with ID {task_id} not found"}
 
-            # Archive the main task
-            response = (
-                self.supabase_client.table("archon_tasks")
-                .update(archive_data)
-                .eq("id", task_id)
-                .execute()
-            )
+                task = response.data[0]
 
-            if response.data:
-                # Broadcast Socket.IO update for archived task
+                # Broadcast Socket.IO update for task archival
                 if _broadcast_available:
                     try:
                         await broadcast_task_update(
-                            project_id=task["project_id"],
-                            event_type="task_archived",
-                            task_data={"id": task_id, "project_id": task["project_id"]},
+                            project_id=task["project_id"], event_type="task_archived", task_data=task
                         )
-                        logger.info(f"Socket.IO broadcast sent for archived task {task_id}")
+                        logger.info(f"Socket.IO broadcast sent for archived task {task['id']}")
                     except Exception as ws_error:
                         logger.warning(
-                            f"Failed to broadcast Socket.IO update for archived task {task_id}: {ws_error}"
+                            f"Failed to broadcast Socket.IO update for archived task {task['id']}: {ws_error}"
                         )
 
-                return True, {"task_id": task_id, "message": "Task archived successfully"}
-            else:
-                return False, {"error": f"Failed to archive task {task_id}"}
+                return True, {"task": task}
 
         except Exception as e:
             logger.error(f"Error archiving task: {e}")
             return False, {"error": f"Error archiving task: {str(e)}"}
+
+    async def delete_task(self, task_id: str) -> tuple[bool, dict[str, Any]]:
+        """
+        Permanently delete a task.
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            async with self.connection_manager.get_primary() as db:
+                # First get the task for broadcast
+                get_response = await db.select(
+                    table="tasks",
+                    columns=["*"],
+                    filters={"id": task_id}
+                )
+
+                if not get_response.success or not get_response.data:
+                    return False, {"error": f"Task with ID {task_id} not found"}
+
+                task = get_response.data[0]
+
+                # Delete the task
+                response = await db.delete(
+                    table="tasks",
+                    filters={"id": task_id}
+                )
+
+                if not response.success:
+                    logger.error(f"Database error deleting task: {response.error}")
+                    return False, {"error": f"Database error: {response.error}"}
+
+                # Broadcast Socket.IO update for task deletion
+                if _broadcast_available:
+                    try:
+                        await broadcast_task_update(
+                            project_id=task["project_id"], event_type="task_deleted", task_data=task
+                        )
+                        logger.info(f"Socket.IO broadcast sent for deleted task {task['id']}")
+                    except Exception as ws_error:
+                        logger.warning(
+                            f"Failed to broadcast Socket.IO update for deleted task {task['id']}: {ws_error}"
+                        )
+
+                return True, {"task_id": task_id}
+
+        except Exception as e:
+            logger.error(f"Error deleting task: {e}")
+            return False, {"error": f"Error deleting task: {str(e)}"}
