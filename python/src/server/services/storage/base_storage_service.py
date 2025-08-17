@@ -15,6 +15,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from ...config.logfire_config import get_logger, safe_span
+from ...dal import ConnectionManager, IDatabase
 
 logger = get_logger(__name__)
 
@@ -22,14 +23,27 @@ logger = get_logger(__name__)
 class BaseStorageService(ABC):
     """Base class for all storage services with common functionality."""
 
-    def __init__(self, supabase_client=None):
-        """Initialize with optional supabase client and threading service."""
-        # Lazy import to avoid circular dependency
-        if supabase_client is None:
-            from ...utils import get_supabase_client
-
-            supabase_client = get_supabase_client()
-        self.supabase_client = supabase_client
+    def __init__(self, database_connection: IDatabase | None = None, connection_manager: ConnectionManager | None = None):
+        """Initialize with database connection through DAL and threading service.
+        
+        Args:
+            database_connection: Optional database connection. If not provided,
+                                will use connection manager to get connections.
+            connection_manager: Optional connection manager. If not provided,
+                              will get the global instance.
+        """
+        # Store connection manager for getting connections when needed
+        if connection_manager is None:
+            from ...dal.connection_manager import get_connection_manager
+            connection_manager = get_connection_manager()
+        self.connection_manager = connection_manager
+        
+        # Store optional direct database connection
+        self._database_connection = database_connection
+        
+        # Keep backward compatibility with supabase_client property
+        # This will be deprecated in favor of database operations through DAL
+        self._supabase_client = None
 
         # Lazy import threading service
         from ...utils import get_utils_threading_service
@@ -101,6 +115,49 @@ class BaseStorageService(ABC):
             start = end
 
         return chunks
+    
+    @property
+    def supabase_client(self):
+        """Backward compatibility property for supabase_client access.
+        
+        WARNING: This property is deprecated. Use get_database_connection() 
+        or the DAL methods instead.
+        """
+        if self._supabase_client is None:
+            # Lazy import to avoid circular dependency
+            from ...utils import get_supabase_client
+            self._supabase_client = get_supabase_client()
+            logger.warning(
+                "Using deprecated supabase_client property. "
+                "Consider migrating to DAL methods for better database abstraction."
+            )
+        return self._supabase_client
+    
+    async def get_database_connection(self) -> IDatabase:
+        """Get a database connection for operations.
+        
+        Returns:
+            Database connection through DAL
+        """
+        if self._database_connection:
+            return self._database_connection
+        
+        # Get connection from connection manager
+        # Note: This returns a context manager, but for base service we'll get primary
+        async with self.connection_manager.get_primary() as conn:
+            return conn
+    
+    async def get_reader_connection(self) -> IDatabase:
+        """Get a read-only database connection for queries.
+        
+        Returns:
+            Database connection optimized for reads
+        """
+        if self._database_connection:
+            return self._database_connection
+            
+        async with self.connection_manager.get_reader() as conn:
+            return conn
 
     async def smart_chunk_text_async(
         self, text: str, chunk_size: int = 5000, progress_callback: Callable | None = None

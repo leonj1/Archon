@@ -18,7 +18,7 @@ from pydantic import BaseModel
 # Removed direct logging import - using unified config
 # Set up standard logger for background tasks
 from ..config.logfire_config import get_logger, logfire
-from ..utils import get_supabase_client
+from ..services.client_manager import get_connection_manager
 
 logger = get_logger(__name__)
 
@@ -195,11 +195,10 @@ async def projects_health():
     """Health check for projects API and database schema validation."""
     try:
         logfire.info("Projects health check requested")
-        supabase_client = get_supabase_client()
 
         # Check if projects table exists by testing ProjectService
         try:
-            project_service = ProjectService(supabase_client)
+            project_service = ProjectService()
             # Try to list projects with limit 1 to test table access
             success, _ = project_service.list_projects()
             projects_table_exists = success
@@ -213,7 +212,7 @@ async def projects_health():
 
         # Check if tasks table exists by testing TaskService
         try:
-            task_service = TaskService(supabase_client)
+            task_service = TaskService()
             # Try to list tasks with limit 1 to test table access
             success, _ = task_service.list_tasks(include_closed=True)
             tasks_table_exists = success
@@ -297,8 +296,6 @@ async def get_project(project_id: str):
 async def update_project(project_id: str, request: UpdateProjectRequest):
     """Update a project with comprehensive Logfire monitoring."""
     try:
-        supabase_client = get_supabase_client()
-
         # Build update fields from request
         update_fields = {}
         if request.title is not None:
@@ -321,10 +318,10 @@ async def update_project(project_id: str, request: UpdateProjectRequest):
             try:
                 from ..services.projects.versioning_service import VersioningService
 
-                versioning_service = VersioningService(supabase_client)
+                versioning_service = VersioningService()
 
                 # Get current project for comparison
-                project_service = ProjectService(supabase_client)
+                project_service = ProjectService()
                 success, current_result = project_service.get_project(project_id)
 
                 if success and current_result.get("project"):
@@ -358,7 +355,7 @@ async def update_project(project_id: str, request: UpdateProjectRequest):
                 # Don't fail the update, just log the warning
 
         # Use ProjectService to update the project
-        project_service = ProjectService(supabase_client)
+        project_service = ProjectService()
         success, result = project_service.update_project(project_id, update_fields)
 
         if not success:
@@ -372,7 +369,7 @@ async def update_project(project_id: str, request: UpdateProjectRequest):
         project = result["project"]
 
         # Handle source updates using SourceLinkingService
-        source_service = SourceLinkingService(supabase_client)
+        source_service = SourceLinkingService()
 
         if request.technical_sources is not None or request.business_sources is not None:
             source_success, source_result = source_service.update_project_sources(

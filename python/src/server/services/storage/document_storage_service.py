@@ -11,12 +11,12 @@ from urllib.parse import urlparse
 
 from ...config.logfire_config import safe_span, search_logger
 from ..credential_service import credential_service
+from ..client_manager import get_connection_manager
 from ..embeddings.contextual_embedding_service import generate_contextual_embeddings_batch
 from ..embeddings.embedding_service import create_embeddings_batch
 
 
 async def add_documents_to_supabase(
-    client,
     urls: list[str],
     chunk_numbers: list[int],
     contents: list[str],
@@ -29,12 +29,11 @@ async def add_documents_to_supabase(
     cancellation_check: Any | None = None,
 ) -> None:
     """
-    Add documents to Supabase with threading optimizations.
+    Add documents to database with threading optimizations.
 
     This is the simpler sequential version for smaller batches.
 
     Args:
-        client: Supabase client
         urls: List of URLs
         chunk_numbers: List of chunk numbers
         contents: List of document contents
@@ -43,6 +42,7 @@ async def add_documents_to_supabase(
         batch_size: Size of each batch for insertion
         progress_callback: Optional async callback function for progress reporting
         provider: Optional provider override for embeddings
+        cancellation_check: Optional function to check for cancellation
     """
     with safe_span(
         "add_documents_to_supabase", total_documents=len(contents), batch_size=batch_size
@@ -70,6 +70,7 @@ async def add_documents_to_supabase(
         unique_urls = list(set(urls))
 
         # Delete existing records for these URLs in batches
+        manager = get_connection_manager()
         try:
             if unique_urls:
                 # Delete in configured batch sizes
@@ -79,7 +80,10 @@ async def add_documents_to_supabase(
                         cancellation_check()
 
                     batch_urls = unique_urls[i : i + delete_batch_size]
-                    client.table("archon_crawled_pages").delete().in_("url", batch_urls).execute()
+                    async with manager.get_primary() as db:
+                        result = await db.delete("crawled_pages", filters={"url": {"in": batch_urls}})
+                        if not result.success:
+                            raise Exception(f"Delete failed: {result.error}")
                     # Yield control to allow Socket.IO to process messages
                     if i + delete_batch_size < len(unique_urls):
                         await asyncio.sleep(0.05)  # Reduced pause between delete batches
@@ -96,9 +100,12 @@ async def add_documents_to_supabase(
                 if cancellation_check:
                     cancellation_check()
 
-                batch_urls = unique_urls[i : i + 10]
+                batch_urls = unique_urls[i : i + fallback_batch_size]
                 try:
-                    client.table("archon_crawled_pages").delete().in_("url", batch_urls).execute()
+                    async with manager.get_primary() as db:
+                        result = await db.delete("crawled_pages", filters={"url": {"in": batch_urls}})
+                        if not result.success:
+                            raise Exception(f"Fallback delete failed: {result.error}")
                     await asyncio.sleep(0.05)  # Rate limit to prevent overwhelming
                 except Exception as inner_e:
                     search_logger.error(
@@ -302,7 +309,10 @@ async def add_documents_to_supabase(
                     cancellation_check()
 
                 try:
-                    client.table("archon_crawled_pages").insert(batch_data).execute()
+                    async with manager.get_vector_store() as db:
+                        result = await db.insert("crawled_pages", batch_data)
+                        if not result.success:
+                            raise Exception(f"Insert failed: {result.error}")
 
                     # Increment completed batches and report simple progress
                     completed_batches += 1
@@ -346,7 +356,10 @@ async def add_documents_to_supabase(
                                 cancellation_check()
 
                             try:
-                                client.table("archon_crawled_pages").insert(record).execute()
+                                async with manager.get_vector_store() as db:
+                                    result = await db.insert("crawled_pages", [record])
+                                    if not result.success:
+                                        raise Exception(f"Individual insert failed: {result.error}")
                                 successful_inserts += 1
                             except Exception as individual_error:
                                 search_logger.error(

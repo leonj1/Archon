@@ -10,7 +10,7 @@ fast access during agent operations.
 from datetime import datetime
 
 from ..config.logfire_config import get_logger
-from ..utils import get_supabase_client
+from .client_manager import get_connection_manager
 
 logger = get_logger(__name__)
 
@@ -35,18 +35,22 @@ class PromptService:
         """
         try:
             logger.info("Loading prompts from database...")
-            supabase = get_supabase_client()
-
-            response = supabase.table("archon_prompts").select("*").execute()
-
-            if response.data:
-                self._prompts = {
-                    prompt["prompt_name"]: prompt["prompt"] for prompt in response.data
-                }
-                self._last_loaded = datetime.now()
-                logger.info(f"Loaded {len(self._prompts)} prompts into memory")
-            else:
-                logger.warning("No prompts found in database")
+            manager = get_connection_manager()
+            
+            async with manager.get_reader() as db:
+                result = await db.select("prompts")
+                
+                if not result.success:
+                    raise RuntimeError(f"Database error: {result.error}")
+                
+                if result.data:
+                    self._prompts = {
+                        prompt["prompt_name"]: prompt["prompt"] for prompt in result.data
+                    }
+                    self._last_loaded = datetime.now()
+                    logger.info(f"Loaded {len(self._prompts)} prompts into memory")
+                else:
+                    logger.warning("No prompts found in database")
 
         except Exception as e:
             logger.error(f"Failed to load prompts: {e}")

@@ -13,9 +13,8 @@ from difflib import SequenceMatcher
 from typing import Any
 from urllib.parse import urlparse
 
-from supabase import Client
-
 from ...config.logfire_config import search_logger
+from ..client_manager import get_connection_manager
 from ..embeddings.contextual_embedding_service import generate_contextual_embeddings_batch
 from ..embeddings.embedding_service import create_embeddings_batch
 
@@ -738,7 +737,6 @@ async def generate_code_summaries_batch(
 
 
 async def add_code_examples_to_supabase(
-    client: Client,
     urls: list[str],
     chunk_numbers: list[int],
     code_examples: list[str],
@@ -750,10 +748,9 @@ async def add_code_examples_to_supabase(
     provider: str | None = None,
 ):
     """
-    Add code examples to the Supabase code_examples table in batches.
+    Add code examples to the code_examples table in batches.
 
     Args:
-        client: Supabase client
         urls: List of URLs
         chunk_numbers: List of chunk numbers
         code_examples: List of code example contents
@@ -762,15 +759,20 @@ async def add_code_examples_to_supabase(
         batch_size: Size of each batch for insertion
         url_to_full_document: Optional mapping of URLs to full document content
         progress_callback: Optional async callback for progress updates
+        provider: Optional provider override for embeddings
     """
     if not urls:
         return
 
     # Delete existing records for these URLs
     unique_urls = list(set(urls))
+    manager = get_connection_manager()
     for url in unique_urls:
         try:
-            client.table("archon_code_examples").delete().eq("url", url).execute()
+            async with manager.get_primary() as db:
+                result = await db.delete("code_examples", filters={"url": url})
+                if not result.success:
+                    raise Exception(f"Delete failed: {result.error}")
         except Exception as e:
             search_logger.error(f"Error deleting existing code examples for {url}: {e}")
 
@@ -909,18 +911,19 @@ async def add_code_examples_to_supabase(
 
         for retry in range(max_retries):
             try:
-                client.table("archon_code_examples").insert(batch_data).execute()
+                async with manager.get_vector_store() as db:
+                    result = await db.insert("code_examples", batch_data)
+                    if not result.success:
+                        raise Exception(f"Insert failed: {result.error}")
                 # Success - break out of retry loop
                 break
             except Exception as e:
                 if retry < max_retries - 1:
                     search_logger.warning(
-                        f"Error inserting batch into Supabase (attempt {retry + 1}/{max_retries}): {e}"
+                        f"Error inserting batch into database (attempt {retry + 1}/{max_retries}): {e}"
                     )
                     search_logger.info(f"Retrying in {retry_delay} seconds...")
-                    import time
-
-                    time.sleep(retry_delay)
+                    await asyncio.sleep(retry_delay)
                     retry_delay *= 2  # Exponential backoff
                 else:
                     # Final attempt failed
@@ -930,7 +933,10 @@ async def add_code_examples_to_supabase(
                     successful_inserts = 0
                     for record in batch_data:
                         try:
-                            client.table("archon_code_examples").insert(record).execute()
+                            async with manager.get_vector_store() as db:
+                                result = await db.insert("code_examples", [record])
+                                if not result.success:
+                                    raise Exception(f"Individual insert failed: {result.error}")
                             successful_inserts += 1
                         except Exception as individual_error:
                             search_logger.error(

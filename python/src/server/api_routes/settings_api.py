@@ -18,7 +18,7 @@ from pydantic import BaseModel
 # Import logging
 from ..config.logfire_config import logfire
 from ..services.credential_service import credential_service, initialize_credentials
-from ..utils import get_supabase_client
+from ..services.client_manager import get_connection_manager
 
 router = APIRouter(prefix="/api", tags=["settings"])
 
@@ -283,38 +283,27 @@ async def database_metrics():
     """Get database metrics and statistics."""
     try:
         logfire.info("Getting database metrics")
-        supabase_client = get_supabase_client()
+        manager = get_connection_manager()
 
         # Get various table counts
         tables_info = {}
 
-        # Get projects count
-        projects_response = (
-            supabase_client.table("archon_projects").select("id", count="exact").execute()
-        )
-        tables_info["projects"] = (
-            projects_response.count if projects_response.count is not None else 0
-        )
+        async with manager.get_reader() as db:
+            # Get projects count
+            projects_result = await db.count("projects")
+            tables_info["projects"] = projects_result if projects_result is not None else 0
 
-        # Get tasks count
-        tasks_response = supabase_client.table("archon_tasks").select("id", count="exact").execute()
-        tables_info["tasks"] = tasks_response.count if tasks_response.count is not None else 0
+            # Get tasks count
+            tasks_result = await db.count("tasks")
+            tables_info["tasks"] = tasks_result if tasks_result is not None else 0
 
-        # Get crawled pages count
-        pages_response = (
-            supabase_client.table("archon_crawled_pages").select("id", count="exact").execute()
-        )
-        tables_info["crawled_pages"] = (
-            pages_response.count if pages_response.count is not None else 0
-        )
+            # Get crawled pages count
+            pages_result = await db.count("crawled_pages")
+            tables_info["crawled_pages"] = pages_result if pages_result is not None else 0
 
-        # Get settings count
-        settings_response = (
-            supabase_client.table("archon_settings").select("id", count="exact").execute()
-        )
-        tables_info["settings"] = (
-            settings_response.count if settings_response.count is not None else 0
-        )
+            # Get settings count
+            settings_result = await db.count("settings")
+            tables_info["settings"] = settings_result if settings_result is not None else 0
 
         total_records = sum(tables_info.values())
         logfire.info(
@@ -323,7 +312,7 @@ async def database_metrics():
 
         return {
             "status": "healthy",
-            "database": "supabase",
+            "database": "dal",
             "tables": tables_info,
             "total_records": total_records,
             "timestamp": datetime.now().isoformat(),
@@ -403,7 +392,6 @@ async def get_database_info():
         
         # Add connection status
         try:
-            from ..services.client_manager import get_connection_manager
             manager = get_connection_manager()
             # Try to check if connection is healthy
             async with manager.get_primary() as db:

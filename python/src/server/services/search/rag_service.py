@@ -21,7 +21,7 @@ except ImportError:
     CrossEncoder = None
 
 from ...config.logfire_config import get_logger, safe_span
-from ...utils import get_supabase_client
+from ..client_manager import get_connection_manager
 from ..embeddings.embedding_service import create_embedding
 from .agentic_rag_strategy import AgenticRAGStrategy
 
@@ -41,16 +41,16 @@ class RAGService:
     based on configuration settings.
     """
 
-    def __init__(self, supabase_client=None):
+    def __init__(self, connection_manager=None):
         """Initialize RAG service as a coordinator for search strategies"""
-        self.supabase_client = supabase_client or get_supabase_client()
+        self.connection_manager = connection_manager or get_connection_manager()
 
         # Initialize base strategy (always needed)
-        self.base_strategy = BaseSearchStrategy(self.supabase_client)
+        self.base_strategy = BaseSearchStrategy(self.connection_manager)
 
         # Initialize optional strategies
-        self.hybrid_strategy = HybridSearchStrategy(self.supabase_client, self.base_strategy)
-        self.agentic_strategy = AgenticRAGStrategy(self.supabase_client, self.base_strategy)
+        self.hybrid_strategy = HybridSearchStrategy(self.connection_manager, self.base_strategy)
+        self.agentic_strategy = AgenticRAGStrategy(self.connection_manager, self.base_strategy)
 
         # Initialize reranking strategy based on settings
         self.reranking_strategy = None

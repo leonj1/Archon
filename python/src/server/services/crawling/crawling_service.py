@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional, Callable, Awaitable
 from urllib.parse import urlparse
 
 from ...config.logfire_config import safe_logfire_info, safe_logfire_error, get_logger
-from ...utils import get_supabase_client
+from ..client_manager import get_connection_manager
 
 # Lazy import socket.IO handlers to avoid circular dependencies
 # These are imported as module-level variables but resolved at runtime
@@ -69,17 +69,15 @@ class CrawlingService:
     Combines functionality from both CrawlingService and CrawlOrchestrationService.
     """
     
-    def __init__(self, crawler=None, supabase_client=None, progress_id=None):
+    def __init__(self, crawler=None, progress_id=None):
         """
         Initialize the crawling service.
         
         Args:
             crawler: The Crawl4AI crawler instance
-            supabase_client: The Supabase client for database operations
             progress_id: Optional progress ID for Socket.IO updates
         """
         self.crawler = crawler
-        self.supabase_client = supabase_client or get_supabase_client()
         self.progress_id = progress_id
         
         # Initialize helpers
@@ -94,7 +92,7 @@ class CrawlingService:
         self.sitemap_strategy = SitemapCrawlStrategy()
         
         # Initialize operations
-        self.doc_storage_ops = DocumentStorageOperations(self.supabase_client)
+        self.doc_storage_ops = DocumentStorageOperations()
         
         # Track progress state across all stages to prevent UI resets
         self.progress_state = {'progressId': self.progress_id} if self.progress_id else {}

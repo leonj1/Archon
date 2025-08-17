@@ -127,19 +127,16 @@ class DocumentStorageService(BaseStorageService):
                     extract_source_summary, source_id, file_content[:5000]
                 )
 
-                await self.threading_service.run_io_bound(
-                    update_source_info,
-                    self.supabase_client,
-                    source_id,
-                    source_summary,
-                    total_word_count,
+                await update_source_info(
+                    source_id=source_id,
+                    summary=source_summary,
+                    word_count=total_word_count,
                 )
 
                 await report_progress("Storing document chunks...", 70)
 
                 # Store documents
                 await add_documents_to_supabase(
-                    client=self.supabase_client,
                     urls=urls,
                     chunk_numbers=chunk_numbers,
                     contents=contents,

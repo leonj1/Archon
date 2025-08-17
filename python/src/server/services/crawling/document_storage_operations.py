@@ -16,6 +16,7 @@ from ..storage.code_storage_service import (
     add_code_examples_to_supabase
 )
 from ..source_management_service import update_source_info, extract_source_summary
+from ..client_manager import get_connection_manager
 from .code_extraction_service import CodeExtractionService
 
 
@@ -24,16 +25,12 @@ class DocumentStorageOperations:
     Handles document storage operations for crawled content.
     """
     
-    def __init__(self, supabase_client):
+    def __init__(self):
         """
         Initialize document storage operations.
-        
-        Args:
-            supabase_client: The Supabase client for database operations
         """
-        self.supabase_client = supabase_client
-        self.doc_storage_service = DocumentStorageService(supabase_client)
-        self.code_extraction_service = CodeExtractionService(supabase_client)
+        self.doc_storage_service = DocumentStorageService()
+        self.code_extraction_service = CodeExtractionService()
     
     async def process_and_store_documents(
         self,
@@ -59,7 +56,7 @@ class DocumentStorageOperations:
             Dict containing storage statistics and document mappings
         """
         # Initialize storage service for chunking
-        storage_service = DocumentStorageService(self.supabase_client)
+        storage_service = DocumentStorageService()
         
         # Prepare data for chunked storage
         all_urls = []
@@ -141,7 +138,6 @@ class DocumentStorageOperations:
         
         # Call add_documents_to_supabase with the correct parameters
         await add_documents_to_supabase(
-            client=self.supabase_client,
             urls=all_urls,  # Now has entry per chunk
             chunk_numbers=all_chunk_numbers,  # Proper chunk numbers (0, 1, 2, etc)
             contents=all_contents,  # Individual chunks
@@ -223,8 +219,7 @@ class DocumentStorageOperations:
             # Update source info in database BEFORE storing documents
             safe_logfire_info(f"About to create/update source record for '{source_id}' (word count: {source_id_word_counts[source_id]})")
             try:
-                update_source_info(
-                    client=self.supabase_client,
+                await update_source_info(
                     source_id=source_id,
                     summary=summary,
                     word_count=source_id_word_counts[source_id],
@@ -240,19 +235,24 @@ class DocumentStorageOperations:
                 # Try a simpler approach with minimal data
                 try:
                     safe_logfire_info(f"Attempting fallback source creation for '{source_id}'")
-                    self.supabase_client.table('archon_sources').upsert({
-                        'source_id': source_id,
-                        'title': source_id,  # Use source_id as title fallback
-                        'summary': summary,
-                        'total_word_count': source_id_word_counts[source_id],
-                        'metadata': {
-                            'knowledge_type': request.get('knowledge_type', 'technical'),
-                            'tags': request.get('tags', []),
-                            'auto_generated': True,
-                            'fallback_creation': True,
-                            'original_url': request.get('url')
+                    manager = get_connection_manager()
+                    async with manager.get_primary() as db:
+                        fallback_data = {
+                            'source_id': source_id,
+                            'title': source_id,  # Use source_id as title fallback
+                            'summary': summary,
+                            'total_word_count': source_id_word_counts[source_id],
+                            'metadata': {
+                                'knowledge_type': request.get('knowledge_type', 'technical'),
+                                'tags': request.get('tags', []),
+                                'auto_generated': True,
+                                'fallback_creation': True,
+                                'original_url': request.get('url')
+                            }
                         }
-                    }).execute()
+                        result = await db.upsert('sources', fallback_data, conflict_columns=['source_id'])
+                        if not result.success:
+                            raise Exception(f"Fallback upsert failed: {result.error}")
                     safe_logfire_info(f"Fallback source creation succeeded for '{source_id}'")
                 except Exception as fallback_error:
                     safe_logfire_error(f"Both source creation attempts failed for '{source_id}': {str(fallback_error)}")
@@ -260,17 +260,23 @@ class DocumentStorageOperations:
         
         # Verify ALL source records exist before proceeding with document storage
         if unique_source_ids:
-            for source_id in unique_source_ids:
-                try:
-                    source_check = self.supabase_client.table('archon_sources').select('source_id').eq('source_id', source_id).execute()
-                    if not source_check.data:
-                        raise Exception(f"Source record verification failed - '{source_id}' does not exist in sources table")
-                    safe_logfire_info(f"Source record verified for '{source_id}'")
-                except Exception as e:
-                    safe_logfire_error(f"Source verification failed for '{source_id}': {str(e)}")
-                    raise
-            
-            safe_logfire_info(f"All {len(unique_source_ids)} source records verified - proceeding with document storage")
+            manager = get_connection_manager()
+            async with manager.get_reader() as db:
+                for source_id in unique_source_ids:
+                    try:
+                        source_check = await db.select(
+                            'sources', 
+                            columns=['source_id'], 
+                            filters={'source_id': source_id}
+                        )
+                        if not source_check.success or not source_check.data:
+                            raise Exception(f"Source record verification failed - '{source_id}' does not exist in sources table")
+                        safe_logfire_info(f"Source record verified for '{source_id}'")
+                    except Exception as e:
+                        safe_logfire_error(f"Source verification failed for '{source_id}': {str(e)}")
+                        raise
+                
+                safe_logfire_info(f"All {len(unique_source_ids)} source records verified - proceeding with document storage")
     
     async def extract_and_store_code_examples(
         self,

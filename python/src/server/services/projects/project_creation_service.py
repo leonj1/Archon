@@ -11,9 +11,8 @@ import os
 from datetime import datetime
 from typing import Any
 
-from src.server.utils import get_supabase_client
-
 from ...config.logfire_config import get_logger
+from ..client_manager import get_connection_manager
 from .progress_service import progress_service
 
 logger = get_logger(__name__)
@@ -22,9 +21,9 @@ logger = get_logger(__name__)
 class ProjectCreationService:
     """Service class for advanced project creation with AI assistance"""
 
-    def __init__(self, supabase_client=None):
-        """Initialize with optional supabase client"""
-        self.supabase_client = supabase_client or get_supabase_client()
+    def __init__(self, connection_manager=None):
+        """Initialize with optional connection manager"""
+        self.connection_manager = connection_manager or get_connection_manager()
         self.progress_service = progress_service
 
     async def create_project_with_ai(
@@ -82,87 +81,93 @@ class ProjectCreationService:
                     project_data[key] = kwargs[key]
 
             # Create the project in database
-            response = self.supabase_client.table("archon_projects").insert(project_data).execute()
-            if not response.data:
-                raise Exception("Failed to create project in database")
+            async with self.connection_manager.get_primary() as db:
+                response = await db.insert(
+                    table="projects",
+                    data=project_data,
+                    returning=["*"]
+                )
+                
+                if not response.success or not response.data:
+                    raise Exception("Failed to create project in database")
 
-            project_id = response.data[0]["id"]
-            logger.info(f"Created project {project_id} in database")
+                project_id = response.data[0]["id"]
+                logger.info(f"Created project {project_id} in database")
 
-            # Update progress - AI processing
-            logger.info(
-                "🏗️ [PROJECT-CREATION] About to call progress update: processing_requirements (50%)"
-            )
-            await self.progress_service.update_progress(
-                progress_id,
-                {
-                    "percentage": 50,
-                    "step": "processing_requirements",
-                    "log": "🧠 AI is analyzing project requirements...",
-                },
-            )
-            logger.info("🏗️ [PROJECT-CREATION] Completed progress update: processing_requirements")
-
-            # Generate AI documentation if API key is available
-            ai_success = await self._generate_ai_documentation(
-                progress_id, project_id, title, description, github_repo
-            )
-
-            # Final success - fetch complete project data
-            final_project_response = (
-                self.supabase_client.table("archon_projects")
-                .select("*")
-                .eq("id", project_id)
-                .execute()
-            )
-            if final_project_response.data:
-                final_project = final_project_response.data[0]
-
-                # Prepare project data for frontend
-                project_data_for_frontend = {
-                    "id": final_project["id"],
-                    "title": final_project["title"],
-                    "description": final_project.get("description", ""),
-                    "github_repo": final_project.get("github_repo"),
-                    "created_at": final_project["created_at"],
-                    "updated_at": final_project["updated_at"],
-                    "docs": final_project.get("docs", []),  # PRD documents will be here
-                    "features": final_project.get("features", []),
-                    "data": final_project.get("data", []),
-                    "pinned": final_project.get("pinned", False),
-                    "technical_sources": [],  # Empty initially
-                    "business_sources": [],  # Empty initially
-                }
-
+                # Update progress - AI processing
+                logger.info(
+                    "🏗️ [PROJECT-CREATION] About to call progress update: processing_requirements (50%)"
+                )
                 await self.progress_service.update_progress(
                     progress_id,
                     {
-                        "percentage": 100,
-                        "step": "completed",
-                        "log": f'🎉 Project "{title}" created successfully!',
+                        "percentage": 50,
+                        "step": "processing_requirements",
+                        "log": "🧠 AI is analyzing project requirements...",
+                    },
+                )
+                logger.info("🏗️ [PROJECT-CREATION] Completed progress update: processing_requirements")
+
+                # Generate AI documentation if API key is available
+                ai_success = await self._generate_ai_documentation(
+                    progress_id, project_id, title, description, github_repo
+                )
+
+                # Final success - fetch complete project data
+                final_project_response = await db.select(
+                    table="projects",
+                    columns=["*"],
+                    filters={"id": project_id}
+                )
+                
+                if final_project_response.success and final_project_response.data:
+                    final_project = final_project_response.data[0]
+
+                    # Prepare project data for frontend
+                    project_data_for_frontend = {
+                        "id": final_project["id"],
+                        "title": final_project["title"],
+                        "description": final_project.get("description", ""),
+                        "github_repo": final_project.get("github_repo"),
+                        "created_at": final_project["created_at"],
+                        "updated_at": final_project["updated_at"],
+                        "docs": final_project.get("docs", []),  # PRD documents will be here
+                        "features": final_project.get("features", []),
+                        "data": final_project.get("data", []),
+                        "pinned": final_project.get("pinned", False),
+                        "technical_sources": [],  # Empty initially
+                        "business_sources": [],  # Empty initially
+                    }
+
+                    await self.progress_service.update_progress(
+                        progress_id,
+                        {
+                            "percentage": 100,
+                            "step": "completed",
+                            "log": f'🎉 Project "{title}" created successfully!',
+                            "project_id": project_id,
+                            "project": project_data_for_frontend,
+                        },
+                    )
+
+                    return True, {
                         "project_id": project_id,
                         "project": project_data_for_frontend,
-                    },
-                )
+                        "ai_documentation_generated": ai_success,
+                    }
+                else:
+                    # Fallback if we can't fetch the project
+                    await self.progress_service.update_progress(
+                        progress_id,
+                        {
+                            "percentage": 100,
+                            "step": "completed",
+                            "log": f'🎉 Project "{title}" created successfully!',
+                            "project_id": project_id,
+                        },
+                    )
 
-                return True, {
-                    "project_id": project_id,
-                    "project": project_data_for_frontend,
-                    "ai_documentation_generated": ai_success,
-                }
-            else:
-                # Fallback if we can't fetch the project
-                await self.progress_service.update_progress(
-                    progress_id,
-                    {
-                        "percentage": 100,
-                        "step": "completed",
-                        "log": f'🎉 Project "{title}" created successfully!',
-                        "project_id": project_id,
-                    },
-                )
-
-                return True, {"project_id": project_id, "ai_documentation_generated": ai_success}
+                    return True, {"project_id": project_id, "ai_documentation_generated": ai_success}
 
         except Exception as e:
             logger.error(f"🚨 [PROJECT-CREATION] Project creation failed: {str(e)}")

@@ -13,7 +13,7 @@ Strategy combines:
 
 from typing import Any
 
-from supabase import Client
+from ...dal import ConnectionManager
 
 from ...config.logfire_config import get_logger, safe_span
 from ..embeddings.embedding_service import create_embedding
@@ -25,8 +25,8 @@ logger = get_logger(__name__)
 class HybridSearchStrategy:
     """Strategy class implementing hybrid search combining vector and keyword search"""
 
-    def __init__(self, supabase_client: Client, base_strategy):
-        self.supabase_client = supabase_client
+    def __init__(self, connection_manager: ConnectionManager, base_strategy):
+        self.connection_manager = connection_manager
         self.base_strategy = base_strategy
 
     async def keyword_search(
@@ -46,7 +46,7 @@ class HybridSearchStrategy:
         Args:
             query: The search query text
             match_count: Number of results to return
-            table_name: The table to search (documents, archon_crawled_pages, or archon_code_examples)
+            table_name: The table to search (documents or code_examples)
             filter_metadata: Optional metadata filters
             select_fields: Optional specific fields to select (default: all)
 
@@ -73,35 +73,59 @@ class HybridSearchStrategy:
 
             # Search for each keyword individually to get better coverage
             for keyword in search_terms[:6]:  # Limit to avoid too many queries
-                # Build the query with appropriate fields
-                if select_fields:
-                    query_builder = self.supabase_client.from_(table_name).select(select_fields)
-                else:
-                    query_builder = self.supabase_client.from_(table_name).select("*")
-
-                # Add keyword search condition with wildcards
-                search_pattern = f"%{keyword}%"
-
-                # Handle different search patterns based on table
-                if table_name == "archon_code_examples":
-                    # Search both content and summary for code examples
-                    query_builder = query_builder.or_(
-                        f"content.ilike.{search_pattern},summary.ilike.{search_pattern}"
-                    )
-                else:
-                    query_builder = query_builder.ilike("content", search_pattern)
-
-                # Add metadata filters if provided
+                # Build filters
+                filters = {}
                 if filter_metadata:
-                    if "source" in filter_metadata and table_name in ["documents", "crawled_pages"]:
-                        query_builder = query_builder.eq("source_id", filter_metadata["source"])
+                    if "source" in filter_metadata:
+                        # Extract domain from source URL if it looks like a URL
+                        source = filter_metadata["source"]
+                        if source.startswith("http"):
+                            from urllib.parse import urlparse
+                            parsed = urlparse(source)
+                            domain = parsed.netloc
+                            filters["source"] = domain
+                        else:
+                            filters["source"] = source
                     elif "source_id" in filter_metadata:
-                        query_builder = query_builder.eq("source_id", filter_metadata["source_id"])
+                        filters["source_id"] = filter_metadata["source_id"]
 
-                # Execute query with limit
-                response = query_builder.limit(match_count * 2).execute()
+                # Execute search with DAL
+                async with self.connection_manager.get_primary() as db:
+                    # Use ILIKE for case-insensitive search with wildcards
+                    search_pattern = f"%{keyword}%"
+                    
+                    # Build columns to select
+                    columns = select_fields.split(", ") if select_fields else None
+                    
+                    # Handle different search patterns based on table
+                    if table_name == "code_examples":
+                        # For code examples, search both content and summary
+                        # We'll use a raw query for OR conditions
+                        where_clause = f"(content ILIKE %s OR summary ILIKE %s)"
+                        params = {"pattern1": search_pattern, "pattern2": search_pattern}
+                        
+                        if filters:
+                            for key, value in filters.items():
+                                where_clause += f" AND {key} = %s"
+                                params[f"filter_{key}"] = value
+                        
+                        raw_query = f"SELECT * FROM {table_name} WHERE {where_clause} LIMIT %s"
+                        params["limit"] = match_count * 2
+                        response = await db.execute(raw_query, params)
+                    else:
+                        # For documents, search content field
+                        # Add content filter to filters dict
+                        content_filters = filters.copy()
+                        content_filters["content"] = {"ilike": search_pattern}
+                        
+                        response = await db.select(
+                            table=table_name,
+                            columns=columns,
+                            filters=content_filters,
+                            limit=match_count * 2
+                        )
 
-                if response.data:
+                if response.success and response.data:
                     for result in response.data:
                         result_id = result.get("id")
                         if result_id and result_id not in seen_ids:
@@ -109,7 +133,7 @@ class HybridSearchStrategy:
                             content = result.get("content", "").lower()
                             summary = (
                                 result.get("summary", "").lower()
-                                if table_name == "archon_code_examples"
+                                if table_name == "code_examples"
                                 else ""
                             )
                             combined_text = f"{content} {summary}"
@@ -148,7 +172,7 @@ class HybridSearchStrategy:
         filter_metadata: dict | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Perform hybrid search on archon_crawled_pages table combining vector and keyword search.
+        Perform hybrid search on documents table combining vector and keyword search.
 
         Args:
             query: Original search query text
@@ -166,14 +190,14 @@ class HybridSearchStrategy:
                     query_embedding=query_embedding,
                     match_count=match_count * 2,  # Get more for filtering
                     filter_metadata=filter_metadata,
-                    table_rpc="match_archon_crawled_pages",
+                    table_name="documents",
                 )
 
                 # 2. Get keyword search results
                 keyword_results = await self.keyword_search(
                     query=query,
                     match_count=match_count * 2,
-                    table_name="archon_crawled_pages",
+                    table_name="documents",
                     filter_metadata=filter_metadata,
                     select_fields="id, url, chunk_number, content, metadata, source_id",
                 )
@@ -206,7 +230,7 @@ class HybridSearchStrategy:
         source_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Perform hybrid search on archon_code_examples table combining vector and keyword search.
+        Perform hybrid search on code_examples table combining vector and keyword search.
 
         Args:
             query: Search query text
@@ -235,7 +259,7 @@ class HybridSearchStrategy:
                     query_embedding=query_embedding,
                     match_count=match_count * 2,
                     filter_metadata=combined_filter,
-                    table_rpc="match_archon_code_examples",
+                    table_name="code_examples",
                 )
 
                 # 2. Get keyword search results
@@ -246,7 +270,7 @@ class HybridSearchStrategy:
                 keyword_results = await self.keyword_search(
                     query=query,
                     match_count=match_count * 2,
-                    table_name="archon_code_examples",
+                    table_name="code_examples",
                     filter_metadata=keyword_filter,
                     select_fields="id, url, chunk_number, content, summary, metadata, source_id",
                 )

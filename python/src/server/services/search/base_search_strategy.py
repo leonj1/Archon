@@ -7,7 +7,7 @@ This is the core semantic search functionality.
 
 from typing import Any
 
-from supabase import Client
+from ...dal import ConnectionManager
 
 from ...config.logfire_config import get_logger, safe_span
 
@@ -20,16 +20,16 @@ SIMILARITY_THRESHOLD = 0.15
 class BaseSearchStrategy:
     """Base strategy implementing fundamental vector similarity search"""
 
-    def __init__(self, supabase_client: Client):
-        """Initialize with database client"""
-        self.supabase_client = supabase_client
+    def __init__(self, connection_manager: ConnectionManager):
+        """Initialize with connection manager"""
+        self.connection_manager = connection_manager
 
     async def vector_search(
         self,
         query_embedding: list[float],
         match_count: int,
         filter_metadata: dict | None = None,
-        table_rpc: str = "match_archon_crawled_pages",
+        table_name: str = "documents",
     ) -> list[dict[str, Any]]:
         """
         Perform basic vector similarity search.
@@ -40,41 +40,63 @@ class BaseSearchStrategy:
             query_embedding: The embedding vector for the query
             match_count: Number of results to return
             filter_metadata: Optional metadata filters
-            table_rpc: The RPC function to call (match_archon_crawled_pages or match_archon_code_examples)
+            table_name: The table to search (documents or code_examples)
 
         Returns:
             List of matching documents with similarity scores
         """
-        with safe_span("base_vector_search", table=table_rpc, match_count=match_count) as span:
+        with safe_span("base_vector_search", table=table_name, match_count=match_count) as span:
             try:
-                # Build RPC parameters
-                rpc_params = {"query_embedding": query_embedding, "match_count": match_count}
-
-                # Add filter parameters
+                import numpy as np
+                
+                # Convert embedding to numpy array
+                query_vector = np.array(query_embedding)
+                
+                # Build filters
+                filters = {}
                 if filter_metadata:
+                    # Handle source filter specifically
                     if "source" in filter_metadata:
-                        rpc_params["source_filter"] = filter_metadata["source"]
-                        rpc_params["filter"] = {}
+                        # Extract domain from source URL if it looks like a URL
+                        source = filter_metadata["source"]
+                        if source.startswith("http"):
+                            from urllib.parse import urlparse
+                            parsed = urlparse(source)
+                            domain = parsed.netloc
+                            filters["source"] = domain
+                        else:
+                            filters["source"] = source
                     else:
-                        rpc_params["filter"] = filter_metadata
-                else:
-                    rpc_params["filter"] = {}
+                        filters.update(filter_metadata)
 
-                # Execute search
-                response = self.supabase_client.rpc(table_rpc, rpc_params).execute()
+                # Perform vector search
+                async with self.connection_manager.get_vector_store() as db:
+                    results = await db.search(
+                        collection=table_name,
+                        query_vector=query_vector,
+                        top_k=match_count,
+                        filters=filters,
+                        include_metadata=True,
+                        include_vectors=False,
+                    )
 
-                # Filter by similarity threshold
+                # Filter by similarity threshold and convert format
                 filtered_results = []
-                if response.data:
-                    for result in response.data:
-                        similarity = float(result.get("similarity", 0.0))
-                        if similarity >= SIMILARITY_THRESHOLD:
-                            filtered_results.append(result)
+                for result in results:
+                    if result.score >= SIMILARITY_THRESHOLD:
+                        # Convert to the expected format
+                        formatted_result = {
+                            "id": result.id,
+                            "content": result.content,
+                            "metadata": result.metadata,
+                            "similarity": result.score,
+                        }
+                        filtered_results.append(formatted_result)
 
                 span.set_attribute("results_found", len(filtered_results))
                 span.set_attribute(
                     "results_filtered",
-                    len(response.data) - len(filtered_results) if response.data else 0,
+                    len(results) - len(filtered_results),
                 )
 
                 return filtered_results

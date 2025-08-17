@@ -18,7 +18,7 @@ from datetime import datetime
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from ..utils import get_supabase_client
+from ..services.client_manager import get_connection_manager
 from ..services.storage import DocumentStorageService
 from ..services.search.rag_service import RAGService
 from ..services.knowledge import KnowledgeItemService, DatabaseMetricsService
@@ -27,10 +27,6 @@ from ..services.crawler_manager import get_crawler
 
 # Import unified logging
 from ..config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
-from ..services.crawler_manager import get_crawler
-from ..services.search.rag_service import RAGService
-from ..services.storage import DocumentStorageService
-from ..utils import get_supabase_client
 from ..utils.document_processing import extract_text_from_document
 
 # Get logger for this module
@@ -137,8 +133,8 @@ async def get_knowledge_items(
 ):
     """Get knowledge items with pagination and filtering."""
     try:
-        # Use KnowledgeItemService
-        service = KnowledgeItemService(get_supabase_client())
+        # Use KnowledgeItemService (already migrated to DAL)
+        service = KnowledgeItemService()
         result = await service.list_items(
             page=page, per_page=per_page, knowledge_type=knowledge_type, search=search
         )
@@ -155,8 +151,8 @@ async def get_knowledge_items(
 async def update_knowledge_item(source_id: str, updates: dict):
     """Update a knowledge item's metadata."""
     try:
-        # Use KnowledgeItemService
-        service = KnowledgeItemService(get_supabase_client())
+        # Use KnowledgeItemService (already migrated to DAL)
+        service = KnowledgeItemService()
         success, result = await service.update_item(source_id, updates)
 
         if success:
@@ -187,7 +183,7 @@ async def delete_knowledge_item(source_id: str):
         logger.debug("Creating SourceManagementService...")
         from ..services.source_management_service import SourceManagementService
 
-        source_service = SourceManagementService(get_supabase_client())
+        source_service = SourceManagementService()
         logger.debug("Successfully created SourceManagementService")
 
         logger.debug("Calling delete_source function...")
@@ -232,15 +228,15 @@ async def get_knowledge_item_code_examples(source_id: str):
         safe_logfire_info(f"Fetching code examples for source_id: {source_id}")
 
         # Query code examples with full content for this specific source
-        supabase = get_supabase_client()
-        result = (
-            supabase.from_("archon_code_examples")
-            .select("id, source_id, content, summary, metadata")
-            .eq("source_id", source_id)
-            .execute()
-        )
+        manager = get_connection_manager()
+        async with manager.get_reader() as db:
+            result = await db.select(
+                "code_examples",
+                ["id", "source_id", "content", "summary", "metadata"],
+                filters={"source_id": source_id}
+            )
 
-        code_examples = result.data if result.data else []
+        code_examples = result.data if result.success else []
 
         safe_logfire_info(f"Found {len(code_examples)} code examples for {source_id}")
 
@@ -265,7 +261,7 @@ async def refresh_knowledge_item(source_id: str):
         safe_logfire_info(f"Starting knowledge item refresh | source_id={source_id}")
 
         # Get the existing knowledge item
-        service = KnowledgeItemService(get_supabase_client())
+        service = KnowledgeItemService()
         existing_item = await service.get_item(source_id)
 
         if not existing_item:
@@ -317,9 +313,7 @@ async def refresh_knowledge_item(source_id: str):
             )
 
         # Use the same crawl orchestration as regular crawl
-        crawl_service = CrawlOrchestrationService(
-            crawler=crawler, supabase_client=get_supabase_client()
-        )
+        crawl_service = CrawlOrchestrationService(crawler=crawler)
         crawl_service.set_progress_id(progress_id)
 
         # Start the crawl task with proper request format
@@ -443,8 +437,7 @@ async def _perform_crawl_with_progress(progress_id: str, request: KnowledgeItemR
                 await error_crawl_progress(progress_id, f"Failed to initialize crawler: {str(e)}")
                 return
 
-            supabase_client = get_supabase_client()
-            orchestration_service = CrawlOrchestrationService(crawler, supabase_client)
+            orchestration_service = CrawlOrchestrationService(crawler)
             orchestration_service.set_progress_id(progress_id)
 
             # Store the current task in active_crawl_tasks for cancellation support
@@ -625,7 +618,7 @@ async def _perform_upload_with_progress(
             return
 
         # Use DocumentStorageService to handle the upload
-        doc_storage_service = DocumentStorageService(get_supabase_client())
+        doc_storage_service = DocumentStorageService()
 
         # Generate source_id from filename
         source_id = f"file_{filename.replace(' ', '_').replace('.', '_')}_{int(time.time())}"
@@ -730,7 +723,7 @@ async def perform_rag_query(request: RagQueryRequest):
 
     try:
         # Use RAGService for RAG query
-        search_service = RAGService(get_supabase_client())
+        search_service = RAGService()
         success, result = await search_service.perform_rag_query(
             query=request.query, source=request.source, match_count=request.match_count
         )
@@ -757,7 +750,7 @@ async def search_code_examples(request: RagQueryRequest):
     """Search for code examples relevant to the query using dedicated code examples service."""
     try:
         # Use RAGService for code examples search
-        search_service = RAGService(get_supabase_client())
+        search_service = RAGService()
         success, result = await search_service.search_code_examples_service(
             query=request.query,
             source_id=request.source,  # This is Optional[str] which matches the method signature
@@ -799,8 +792,8 @@ async def search_code_examples_simple(request: RagQueryRequest):
 async def get_available_sources():
     """Get all available sources for RAG queries."""
     try:
-        # Use KnowledgeItemService
-        service = KnowledgeItemService(get_supabase_client())
+        # Use KnowledgeItemService (already migrated to DAL)
+        service = KnowledgeItemService()
         result = await service.get_available_sources()
 
         # Parse result if it's a string
@@ -822,7 +815,7 @@ async def delete_source(source_id: str):
         # Use SourceManagementService directly
         from ..services.source_management_service import SourceManagementService
 
-        source_service = SourceManagementService(get_supabase_client())
+        source_service = SourceManagementService()
 
         success, result_data = source_service.delete_source(source_id)
 
@@ -855,8 +848,8 @@ async def delete_source(source_id: str):
 async def get_database_metrics():
     """Get database metrics and statistics."""
     try:
-        # Use DatabaseMetricsService
-        service = DatabaseMetricsService(get_supabase_client())
+        # Use DatabaseMetricsService (already migrated to DAL)
+        service = DatabaseMetricsService()
         metrics = await service.get_metrics()
         return metrics
     except Exception as e:

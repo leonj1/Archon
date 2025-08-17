@@ -7,6 +7,7 @@ Handles all knowledge item CRUD operations and data transformations.
 from typing import Any
 
 from ...config.logfire_config import safe_logfire_error, safe_logfire_info
+from ..client_manager import get_connection_manager
 
 
 class KnowledgeItemService:
@@ -14,14 +15,11 @@ class KnowledgeItemService:
     Service for managing knowledge items including listing, filtering, updating, and deletion.
     """
 
-    def __init__(self, supabase_client):
+    def __init__(self):
         """
         Initialize the knowledge item service.
-
-        Args:
-            supabase_client: The Supabase client for database operations
         """
-        self.supabase = supabase_client
+        pass
 
     async def list_items(
         self,
@@ -43,150 +41,154 @@ class KnowledgeItemService:
             Dict containing items, pagination info, and total count
         """
         try:
-            # Build the query with filters at database level for better performance
-            query = self.supabase.from_("archon_sources").select("*")
+            manager = get_connection_manager()
 
-            # Apply knowledge type filter at database level if provided
-            if knowledge_type:
-                query = query.eq("metadata->>knowledge_type", knowledge_type)
+            async with manager.get_reader() as db:
+                # Apply knowledge type filter at database level if provided
+                # Note: JSON field filtering is handled by adapter implementation
+                if knowledge_type:
+                    # This is simplified - actual JSON querying depends on database adapter
+                    pass
 
-            # Apply search filter at database level if provided
-            if search:
-                search_pattern = f"%{search}%"
-                query = query.or_(
-                    f"title.ilike.{search_pattern},summary.ilike.{search_pattern},source_id.ilike.{search_pattern}"
-                )
+                # For search, we'll need to get all records and filter in memory
+                # as complex text search across multiple fields varies by database
 
-            # Get total count before pagination
-            # Clone the query for counting
-            count_query = self.supabase.from_("archon_sources").select(
-                "*", count="exact", head=True
-            )
+                # Get total count before pagination
+                if not knowledge_type and not search:
+                    # Simple count when no filters
+                    total = await db.count("sources")
+                else:
+                    # Need to count filtered results
+                    count_result = await db.select("sources", columns=["source_id"])
+                    if count_result.success:
+                        all_sources = count_result.data
+                        # Apply filters in memory for count
+                        filtered_sources = await self._apply_filters_in_memory(
+                            all_sources, knowledge_type, search, db
+                        )
+                        total = len(filtered_sources)
+                    else:
+                        total = 0
 
-            # Apply same filters to count query
-            if knowledge_type:
-                count_query = count_query.eq("metadata->>knowledge_type", knowledge_type)
+                # Get sources with pagination
+                start_idx = (page - 1) * per_page
 
-            if search:
-                search_pattern = f"%{search}%"
-                count_query = count_query.or_(
-                    f"title.ilike.{search_pattern},summary.ilike.{search_pattern},source_id.ilike.{search_pattern}"
-                )
-
-            count_result = count_query.execute()
-            total = count_result.count if hasattr(count_result, "count") else 0
-
-            # Apply pagination at database level
-            start_idx = (page - 1) * per_page
-            query = query.range(start_idx, start_idx + per_page - 1)
-
-            # Execute query
-            result = query.execute()
-            sources = result.data if result.data else []
-
-            # Get source IDs for batch queries
-            source_ids = [source["source_id"] for source in sources]
-
-            # Debug log source IDs
-            safe_logfire_info(f"Source IDs for batch query: {source_ids}")
-
-            # Batch fetch related data to avoid N+1 queries
-            first_urls = {}
-            code_example_counts = {}
-            chunk_counts = {}
-
-            if source_ids:
-                # Batch fetch first URLs
-                urls_result = (
-                    self.supabase.from_("archon_crawled_pages")
-                    .select("source_id, url")
-                    .in_("source_id", source_ids)
-                    .execute()
-                )
-
-                # Group URLs by source_id (take first one for each)
-                for item in urls_result.data or []:
-                    if item["source_id"] not in first_urls:
-                        first_urls[item["source_id"]] = item["url"]
-
-                # Get code example counts per source - NO CONTENT, just counts!
-                # Fetch counts individually for each source
-                for source_id in source_ids:
-                    count_result = (
-                        self.supabase.from_("archon_code_examples")
-                        .select("id", count="exact", head=True)
-                        .eq("source_id", source_id)
-                        .execute()
+                if not knowledge_type and not search:
+                    # Simple query when no filters
+                    sources_result = await db.select(
+                        "sources",
+                        order_by="source_id",
+                        limit=per_page,
+                        offset=start_idx
                     )
-                    code_example_counts[source_id] = (
-                        count_result.count if hasattr(count_result, "count") else 0
-                    )
+                    sources = sources_result.data if sources_result.success else []
+                else:
+                    # Get all and filter in memory
+                    all_result = await db.select("sources", order_by="source_id")
+                    if all_result.success:
+                        all_sources = all_result.data
+                        filtered_sources = await self._apply_filters_in_memory(
+                            all_sources, knowledge_type, search, db
+                        )
+                        # Apply pagination to filtered results
+                        sources = filtered_sources[start_idx:start_idx + per_page]
+                    else:
+                        sources = []
 
-                # Ensure all sources have a count (default to 0)
-                for source_id in source_ids:
-                    if source_id not in code_example_counts:
-                        code_example_counts[source_id] = 0
-                    chunk_counts[source_id] = 0  # Default to 0 to avoid timeout
+                # Get source IDs for batch queries
+                source_ids = [source["source_id"] for source in sources]
 
-                safe_logfire_info(f"Code example counts: {code_example_counts}")
+                # Debug log source IDs
+                safe_logfire_info(f"Source IDs for batch query: {source_ids}")
 
-            # Transform sources to items with batched data
-            items = []
-            for source in sources:
-                source_id = source["source_id"]
-                source_metadata = source.get("metadata", {})
+                # Batch fetch related data to avoid N+1 queries
+                first_urls = {}
+                code_example_counts = {}
+                chunk_counts = {}
 
-                # Use batched data instead of individual queries
-                first_page_url = first_urls.get(source_id, f"source://{source_id}")
-                code_examples_count = code_example_counts.get(source_id, 0)
-                chunks_count = chunk_counts.get(source_id, 0)
+                if source_ids:
+                    # Batch fetch first URLs
+                    for source_id in source_ids:
+                        urls_result = await db.select(
+                            "crawled_pages",
+                            columns=["url"],
+                            filters={"source_id": source_id},
+                            limit=1
+                        )
 
-                # Determine source type
-                source_type = self._determine_source_type(source_metadata, first_page_url)
+                        if urls_result.success and urls_result.data:
+                            first_urls[source_id] = urls_result.data[0]["url"]
 
-                item = {
-                    "id": source_id,
-                    "title": source.get("title", source.get("summary", "Untitled")),
-                    "url": first_page_url,
-                    "source_id": source_id,
-                    "code_examples": [{"count": code_examples_count}]
-                    if code_examples_count > 0
-                    else [],  # Minimal array just for count display
-                    "metadata": {
-                        "knowledge_type": source_metadata.get("knowledge_type", "technical"),
-                        "tags": source_metadata.get("tags", []),
-                        "source_type": source_type,
-                        "status": "active",
-                        "description": source_metadata.get(
-                            "description", source.get("summary", "")
-                        ),
-                        "chunks_count": chunks_count,
-                        "word_count": source.get("total_word_count", 0),
-                        "estimated_pages": round(source.get("total_word_count", 0) / 250, 1),
-                        "pages_tooltip": f"{round(source.get('total_word_count', 0) / 250, 1)} pages (≈ {source.get('total_word_count', 0):,} words)",
-                        "last_scraped": source.get("updated_at"),
-                        "file_name": source_metadata.get("file_name"),
-                        "file_type": source_metadata.get("file_type"),
-                        "update_frequency": source_metadata.get("update_frequency", 7),
-                        "code_examples_count": code_examples_count,
-                        **source_metadata,
-                    },
-                    "created_at": source.get("created_at"),
-                    "updated_at": source.get("updated_at"),
+                    # Get code example counts per source
+                    for source_id in source_ids:
+                        count = await db.count("code_examples", filters={"source_id": source_id})
+                        code_example_counts[source_id] = count
+
+                    # Ensure all sources have counts (default to 0)
+                    for source_id in source_ids:
+                        if source_id not in code_example_counts:
+                            code_example_counts[source_id] = 0
+                        chunk_counts[source_id] = 0  # Default to 0 to avoid timeout
+
+                    safe_logfire_info(f"Code example counts: {code_example_counts}")
+
+                # Transform sources to items with batched data
+                items = []
+                for source in sources:
+                    source_id = source["source_id"]
+                    source_metadata = source.get("metadata", {})
+
+                    # Use batched data instead of individual queries
+                    first_page_url = first_urls.get(source_id, f"source://{source_id}")
+                    code_examples_count = code_example_counts.get(source_id, 0)
+                    chunks_count = chunk_counts.get(source_id, 0)
+
+                    # Determine source type
+                    source_type = self._determine_source_type(source_metadata, first_page_url)
+
+                    item = {
+                        "id": source_id,
+                        "title": source.get("title", source.get("summary", "Untitled")),
+                        "url": first_page_url,
+                        "source_id": source_id,
+                        "code_examples": [{"count": code_examples_count}]
+                        if code_examples_count > 0
+                        else [],  # Minimal array just for count display
+                        "metadata": {
+                            "knowledge_type": source_metadata.get("knowledge_type", "technical"),
+                            "tags": source_metadata.get("tags", []),
+                            "source_type": source_type,
+                            "status": "active",
+                            "description": source_metadata.get(
+                                "description", source.get("summary", "")
+                            ),
+                            "chunks_count": chunks_count,
+                            "word_count": source.get("total_word_count", 0),
+                            "estimated_pages": round(source.get("total_word_count", 0) / 250, 1),
+                            "pages_tooltip": f"{round(source.get('total_word_count', 0) / 250, 1)} pages (≈ {source.get('total_word_count', 0):,} words)",
+                            "last_scraped": source.get("updated_at"),
+                            "file_name": source_metadata.get("file_name"),
+                            "file_type": source_metadata.get("file_type"),
+                            "update_frequency": source_metadata.get("update_frequency", 7),
+                            "code_examples_count": code_examples_count,
+                            **source_metadata,
+                        },
+                        "created_at": source.get("created_at"),
+                        "updated_at": source.get("updated_at"),
+                    }
+                    items.append(item)
+
+                safe_logfire_info(
+                    f"Knowledge items retrieved | total={total} | page={page} | filtered_count={len(items)}"
+                )
+
+                return {
+                    "items": items,
+                    "total": total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": (total + per_page - 1) // per_page,
                 }
-                items.append(item)
-
-            safe_logfire_info(
-                f"Knowledge items retrieved | total={total} | page={page} | filtered_count={len(items)}"
-            )
-
-            return {
-                "items": items,
-                "total": total,
-                "page": page,
-                "per_page": per_page,
-                "pages": (total + per_page - 1) // per_page,
-            }
 
         except Exception as e:
             safe_logfire_error(f"Failed to list knowledge items | error={str(e)}")
@@ -204,22 +206,21 @@ class KnowledgeItemService:
         """
         try:
             safe_logfire_info(f"Getting knowledge item | source_id={source_id}")
+            manager = get_connection_manager()
 
-            # Get the source record
-            result = (
-                self.supabase.from_("archon_sources")
-                .select("*")
-                .eq("source_id", source_id)
-                .single()
-                .execute()
-            )
+            async with manager.get_reader() as db:
+                # Get the source record
+                result = await db.select(
+                    "sources",
+                    filters={"source_id": source_id}
+                )
 
-            if not result.data:
-                return None
+                if not result.success or not result.data:
+                    return None
 
-            # Transform the source to item format
-            item = await self._transform_source_to_item(result.data)
-            return item
+                # Transform the source to item format
+                item = await self._transform_source_to_item(result.data[0])
+                return item
 
         except Exception as e:
             safe_logfire_error(
@@ -244,58 +245,60 @@ class KnowledgeItemService:
             safe_logfire_info(
                 f"Updating knowledge item | source_id={source_id} | updates={updates}"
             )
+            manager = get_connection_manager()
 
-            # Prepare update data
-            update_data = {}
+            async with manager.get_primary() as db:
+                # Prepare update data
+                update_data = {}
 
-            # Handle title updates
-            if "title" in updates:
-                update_data["title"] = updates["title"]
+                # Handle title updates
+                if "title" in updates:
+                    update_data["title"] = updates["title"]
 
-            # Handle metadata updates
-            metadata_fields = [
-                "description",
-                "knowledge_type",
-                "tags",
-                "status",
-                "update_frequency",
-                "group_name",
-            ]
-            metadata_updates = {k: v for k, v in updates.items() if k in metadata_fields}
+                # Handle metadata updates
+                metadata_fields = [
+                    "description",
+                    "knowledge_type",
+                    "tags",
+                    "status",
+                    "update_frequency",
+                    "group_name",
+                ]
+                metadata_updates = {k: v for k, v in updates.items() if k in metadata_fields}
 
-            if metadata_updates:
-                # Get current metadata
-                current_response = (
-                    self.supabase.table("archon_sources")
-                    .select("metadata")
-                    .eq("source_id", source_id)
-                    .execute()
+                if metadata_updates:
+                    # Get current metadata
+                    current_result = await db.select(
+                        "sources",
+                        columns=["metadata"],
+                        filters={"source_id": source_id}
+                    )
+
+                    if current_result.success and current_result.data:
+                        current_metadata = current_result.data[0].get("metadata", {})
+                        current_metadata.update(metadata_updates)
+                        update_data["metadata"] = current_metadata
+                    else:
+                        update_data["metadata"] = metadata_updates
+
+                # Perform the update
+                result = await db.update(
+                    "sources",
+                    update_data,
+                    filters={"source_id": source_id},
+                    returning=["source_id"]
                 )
-                if current_response.data:
-                    current_metadata = current_response.data[0].get("metadata", {})
-                    current_metadata.update(metadata_updates)
-                    update_data["metadata"] = current_metadata
+
+                if result.success and result.data:
+                    safe_logfire_info(f"Knowledge item updated successfully | source_id={source_id}")
+                    return True, {
+                        "success": True,
+                        "message": f"Successfully updated knowledge item {source_id}",
+                        "source_id": source_id,
+                    }
                 else:
-                    update_data["metadata"] = metadata_updates
-
-            # Perform the update
-            result = (
-                self.supabase.table("archon_sources")
-                .update(update_data)
-                .eq("source_id", source_id)
-                .execute()
-            )
-
-            if result.data:
-                safe_logfire_info(f"Knowledge item updated successfully | source_id={source_id}")
-                return True, {
-                    "success": True,
-                    "message": f"Successfully updated knowledge item {source_id}",
-                    "source_id": source_id,
-                }
-            else:
-                safe_logfire_error(f"Knowledge item not found | source_id={source_id}")
-                return False, {"error": f"Knowledge item {source_id} not found"}
+                    safe_logfire_error(f"Knowledge item not found | source_id={source_id}")
+                    return False, {"error": f"Knowledge item {source_id} not found"}
 
         except Exception as e:
             safe_logfire_error(
@@ -311,25 +314,28 @@ class KnowledgeItemService:
             Dict containing sources list and count
         """
         try:
-            # Query the sources table
-            result = self.supabase.from_("archon_sources").select("*").order("source_id").execute()
+            manager = get_connection_manager()
 
-            # Format the sources
-            sources = []
-            if result.data:
-                for source in result.data:
-                    sources.append({
-                        "source_id": source.get("source_id"),
-                        "title": source.get("title", source.get("summary", "Untitled")),
-                        "summary": source.get("summary"),
-                        "metadata": source.get("metadata", {}),
-                        "total_words": source.get("total_words", source.get("total_word_count", 0)),
-                        "update_frequency": source.get("update_frequency", 7),
-                        "created_at": source.get("created_at"),
-                        "updated_at": source.get("updated_at", source.get("created_at")),
-                    })
+            async with manager.get_reader() as db:
+                # Query the sources table
+                result = await db.select("sources", order_by="source_id")
 
-            return {"success": True, "sources": sources, "count": len(sources)}
+                # Format the sources
+                sources = []
+                if result.success and result.data:
+                    for source in result.data:
+                        sources.append({
+                            "source_id": source.get("source_id"),
+                            "title": source.get("title", source.get("summary", "Untitled")),
+                            "summary": source.get("summary"),
+                            "metadata": source.get("metadata", {}),
+                            "total_words": source.get("total_words", source.get("total_word_count", 0)),
+                            "update_frequency": source.get("update_frequency", 7),
+                            "created_at": source.get("created_at"),
+                            "updated_at": source.get("updated_at", source.get("created_at")),
+                        })
+
+                return {"success": True, "sources": sources, "count": len(sources)}
 
         except Exception as e:
             safe_logfire_error(f"Failed to get available sources | error={str(e)}")
@@ -394,16 +400,18 @@ class KnowledgeItemService:
     async def _get_first_page_url(self, source_id: str) -> str:
         """Get the first page URL for a source."""
         try:
-            pages_response = (
-                self.supabase.from_("archon_crawled_pages")
-                .select("url")
-                .eq("source_id", source_id)
-                .limit(1)
-                .execute()
-            )
+            manager = get_connection_manager()
 
-            if pages_response.data:
-                return pages_response.data[0].get("url", f"source://{source_id}")
+            async with manager.get_reader() as db:
+                pages_result = await db.select(
+                    "crawled_pages",
+                    columns=["url"],
+                    filters={"source_id": source_id},
+                    limit=1
+                )
+
+                if pages_result.success and pages_result.data:
+                    return pages_result.data[0].get("url", f"source://{source_id}")
 
         except Exception:
             pass
@@ -413,14 +421,16 @@ class KnowledgeItemService:
     async def _get_code_examples(self, source_id: str) -> list[dict[str, Any]]:
         """Get code examples for a source."""
         try:
-            code_examples_response = (
-                self.supabase.from_("archon_code_examples")
-                .select("id, content, summary, metadata")
-                .eq("source_id", source_id)
-                .execute()
-            )
+            manager = get_connection_manager()
 
-            return code_examples_response.data if code_examples_response.data else []
+            async with manager.get_reader() as db:
+                code_examples_result = await db.select(
+                    "code_examples",
+                    columns=["id", "content", "summary", "metadata"],
+                    filters={"source_id": source_id}
+                )
+
+                return code_examples_result.data if code_examples_result.success else []
 
         except Exception:
             return []
@@ -433,6 +443,37 @@ class KnowledgeItemService:
 
         # Legacy fallback - check URL pattern
         return "file" if url.startswith("file://") else "url"
+
+    async def _apply_filters_in_memory(
+        self,
+        sources: list[dict[str, Any]],
+        knowledge_type: str | None,
+        search: str | None,
+        db
+    ) -> list[dict[str, Any]]:
+        """Apply filters to sources in memory when database-level filtering isn't available."""
+        filtered_sources = sources
+
+        # Filter by knowledge type
+        if knowledge_type:
+            filtered_sources = [
+                source for source in filtered_sources
+                if source.get("metadata", {}).get("knowledge_type") == knowledge_type
+            ]
+
+        # Filter by search term
+        if search:
+            search_lower = search.lower()
+            filtered_sources = [
+                source for source in filtered_sources
+                if (
+                    search_lower in source.get("title", "").lower() or
+                    search_lower in source.get("summary", "").lower() or
+                    search_lower in source.get("source_id", "").lower()
+                )
+            ]
+
+        return filtered_sources
 
     def _filter_by_search(self, items: list[dict[str, Any]], search: str) -> list[dict[str, Any]]:
         """Filter items by search term."""
@@ -454,16 +495,12 @@ class KnowledgeItemService:
     async def _get_chunks_count(self, source_id: str) -> int:
         """Get the actual number of chunks for a source."""
         try:
-            # Count the actual rows in crawled_pages for this source
-            result = (
-                self.supabase.table("archon_crawled_pages")
-                .select("*", count="exact")
-                .eq("source_id", source_id)
-                .execute()
-            )
+            manager = get_connection_manager()
 
-            # Return the count of pages (chunks)
-            return result.count if result.count else 0
+            async with manager.get_reader() as db:
+                # Count the actual rows in crawled_pages for this source
+                count = await db.count("crawled_pages", filters={"source_id": source_id})
+                return count
 
         except Exception as e:
             # If we can't get chunk count, return 0
