@@ -1,10 +1,12 @@
 """Simple test configuration for Archon - Essential tests only."""
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
+
+from src.server.dal.interfaces import QueryResult
 
 # Set test environment
 os.environ["TEST_MODE"] = "true"
@@ -75,21 +77,43 @@ def mock_supabase_client():
 
 
 @pytest.fixture
-def client(mock_supabase_client):
+def mock_database_connection():
+    """Mock database connection that returns QueryResult objects."""
+    mock_db = AsyncMock()
+    
+    # Configure default responses to return successful QueryResult objects
+    mock_db.select.return_value = QueryResult(data=[])
+    mock_db.insert.return_value = QueryResult(data=[{"id": "test-id"}])
+    mock_db.update.return_value = QueryResult(data=[{"id": "test-id"}])
+    mock_db.delete.return_value = QueryResult(data=[])
+    mock_db.upsert.return_value = QueryResult(data=[{"id": "test-id"}])
+    
+    return mock_db
+
+
+@pytest.fixture
+def client(mock_supabase_client, mock_database_connection):
     """FastAPI test client with mocked database."""
     # Patch all the ways Supabase client can be created
     with patch(
         "src.server.services.client_manager.create_client", return_value=mock_supabase_client
     ):
         with patch(
-            "src.server.services.credential_service.create_client",
+            "src.server.services.client_manager.get_supabase_client",
             return_value=mock_supabase_client,
         ):
-            with patch(
-                "src.server.services.client_manager.get_supabase_client",
-                return_value=mock_supabase_client,
-            ):
-                with patch("supabase.create_client", return_value=mock_supabase_client):
+            with patch("supabase.create_client", return_value=mock_supabase_client):
+                # Mock the connection manager for the new repository pattern
+                with patch("src.server.services.client_manager.get_connection_manager") as mock_manager:
+                    # Setup mock connection manager with proper async context manager behavior
+                    mock_conn_mgr = mock_manager.return_value
+                    
+                    # Create async context managers that return the mock database connection
+                    mock_conn_mgr.get_reader.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+                    mock_conn_mgr.get_reader.return_value.__aexit__ = AsyncMock(return_value=None)
+                    mock_conn_mgr.get_primary.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+                    mock_conn_mgr.get_primary.return_value.__aexit__ = AsyncMock(return_value=None)
+                    
                     # Import app after patching to ensure mocks are used
                     from src.server.main import app
 

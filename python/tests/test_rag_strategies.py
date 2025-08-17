@@ -43,16 +43,16 @@ class TestRAGService:
     """Test core RAGService functionality"""
 
     @pytest.fixture
-    def mock_supabase_client(self):
-        """Mock Supabase client"""
+    def mock_connection_manager(self):
+        """Mock Connection Manager"""
         return MagicMock()
 
     @pytest.fixture
-    def rag_service(self, mock_supabase_client):
+    def rag_service(self, mock_connection_manager):
         """Create RAGService instance"""
         from src.server.services.search import RAGService
 
-        return RAGService(supabase_client=mock_supabase_client)
+        return RAGService(connection_manager=mock_connection_manager)
 
     def test_rag_service_initialization(self, rag_service):
         """Test RAGService initializes correctly"""
@@ -297,16 +297,16 @@ class TestRAGIntegration:
     """Integration tests for RAG strategies working together"""
 
     @pytest.fixture
-    def mock_supabase_client(self):
-        """Mock Supabase client"""
+    def mock_connection_manager(self):
+        """Mock Connection Manager"""
         return MagicMock()
 
     @pytest.fixture
-    def rag_service(self, mock_supabase_client):
+    def rag_service(self, mock_connection_manager):
         """Create RAGService instance"""
         from src.server.services.search import RAGService
 
-        return RAGService(supabase_client=mock_supabase_client)
+        return RAGService(connection_manager=mock_connection_manager)
 
     @pytest.mark.asyncio
     async def test_full_rag_pipeline(self, rag_service):
@@ -397,8 +397,8 @@ class TestRAGPerformance:
 
         from src.server.services.search import RAGService
 
-        mock_client = MagicMock()
-        return RAGService(supabase_client=mock_client)
+        mock_connection_manager = MagicMock()
+        return RAGService(connection_manager=mock_connection_manager)
 
     @pytest.mark.asyncio
     async def test_concurrent_rag_queries(self, rag_service):
@@ -478,8 +478,8 @@ class TestRAGConfiguration:
 
         from src.server.services.search import RAGService
 
-        mock_client = MagicMock()
-        return RAGService(supabase_client=mock_client)
+        mock_connection_manager = MagicMock()
+        return RAGService(connection_manager=mock_connection_manager)
 
     def test_environment_variable_settings(self, rag_service):
         """Test reading settings from environment variables"""

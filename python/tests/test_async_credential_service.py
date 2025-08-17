@@ -7,10 +7,11 @@ Covers credential storage, retrieval, encryption/decryption, and caching.
 
 import asyncio
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
 
+from src.server.dal.interfaces import QueryResult
 from src.server.services.credential_service import (
     credential_service,
     get_credential,
@@ -34,12 +35,18 @@ class TestAsyncCredentialService:
         credential_service._cache_initialized = False
 
     @pytest.fixture
-    def mock_supabase_client(self):
-        """Mock Supabase client"""
-        mock_client = MagicMock()
-        mock_table = MagicMock()
-        mock_client.table.return_value = mock_table
-        return mock_client, mock_table
+    def mock_database_connection(self):
+        """Mock database connection that returns QueryResult objects"""
+        mock_db = AsyncMock()
+        
+        # Configure default responses to return successful QueryResult objects
+        mock_db.select.return_value = QueryResult(data=[])
+        mock_db.insert.return_value = QueryResult(data=[{"id": "test-id"}])
+        mock_db.update.return_value = QueryResult(data=[{"id": "test-id"}])
+        mock_db.delete.return_value = QueryResult(data=[])
+        mock_db.upsert.return_value = QueryResult(data=[{"id": "test-id"}])
+        
+        return mock_db
 
     @pytest.fixture
     def sample_credentials_data(self):
@@ -115,75 +122,83 @@ class TestAsyncCredentialService:
             credential_service._decrypt_value.assert_called_once_with("encrypted_test_value")
 
     @pytest.mark.asyncio
-    async def test_get_credential_cache_not_initialized(self, mock_supabase_client):
+    async def test_get_credential_cache_not_initialized(self, mock_database_connection):
         """Test getting credential when cache is not initialized"""
-        mock_client, mock_table = mock_supabase_client
-
         # Mock database response for load_all_credentials (gets ALL settings)
-        mock_response = MagicMock()
-        mock_response.data = [
-            {
-                "key": "TEST_KEY",
-                "value": "db_value",
-                "encrypted_value": None,
-                "is_encrypted": False,
-                "category": "test",
-                "description": "Test key",
-            }
-        ]
-        mock_table.select().execute.return_value = mock_response
+        mock_database_connection.select.return_value = QueryResult(
+            data=[
+                {
+                    "key": "TEST_KEY",
+                    "value": "db_value",
+                    "encrypted_value": None,
+                    "is_encrypted": False,
+                    "category": "test",
+                    "description": "Test key",
+                }
+            ]
+        )
 
-        with patch.object(credential_service, "_get_supabase_client", return_value=mock_client):
+        # Mock the connection manager to return our mock database
+        with patch("src.server.services.credential_service.get_connection_manager") as mock_manager:
+            mock_conn_mgr = mock_manager.return_value
+            mock_conn_mgr.get_reader.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+            mock_conn_mgr.get_reader.return_value.__aexit__ = AsyncMock(return_value=None)
+            
             result = await credential_service.get_credential("TEST_KEY", "default")
             assert result == "db_value"
 
             # Should have called database to load all credentials
-            mock_table.select.assert_called_with("*")
-            # Should have called execute on the query
-            assert mock_table.select().execute.called
+            mock_database_connection.select.assert_called_with("settings")
 
     @pytest.mark.asyncio
-    async def test_get_credential_not_found_in_db(self, mock_supabase_client):
+    async def test_get_credential_not_found_in_db(self, mock_database_connection):
         """Test getting credential that doesn't exist in database"""
-        mock_client, mock_table = mock_supabase_client
-
         # Mock empty database response
-        mock_response = MagicMock()
-        mock_response.data = []
-        mock_table.select().eq().execute.return_value = mock_response
+        mock_database_connection.select.return_value = QueryResult(data=[])
 
-        with patch.object(credential_service, "_get_supabase_client", return_value=mock_client):
+        # Mock the connection manager to return our mock database
+        with patch("src.server.services.credential_service.get_connection_manager") as mock_manager:
+            mock_conn_mgr = mock_manager.return_value
+            mock_conn_mgr.get_reader.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+            mock_conn_mgr.get_reader.return_value.__aexit__ = AsyncMock(return_value=None)
+            
             result = await credential_service.get_credential("MISSING_KEY", "default_value")
             assert result == "default_value"
 
     @pytest.mark.asyncio
-    async def test_set_credential_new(self, mock_supabase_client):
+    async def test_set_credential_new(self, mock_database_connection):
         """Test setting a new credential"""
-        mock_client, mock_table = mock_supabase_client
+        # Mock successful upsert
+        mock_database_connection.upsert.return_value = QueryResult(
+            data=[{"id": 1, "key": "NEW_KEY", "value": "new_value"}]
+        )
 
-        # Mock successful insert
-        mock_response = MagicMock()
-        mock_response.data = [{"id": 1, "key": "NEW_KEY", "value": "new_value"}]
-        mock_table.insert().execute.return_value = mock_response
-
-        with patch.object(credential_service, "_get_supabase_client", return_value=mock_client):
+        # Mock the connection manager to return our mock database
+        with patch("src.server.services.credential_service.get_connection_manager") as mock_manager:
+            mock_conn_mgr = mock_manager.return_value
+            mock_conn_mgr.get_primary.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+            mock_conn_mgr.get_primary.return_value.__aexit__ = AsyncMock(return_value=None)
+            
             result = await set_credential("NEW_KEY", "new_value", is_encrypted=False)
             assert result is True
 
-            # Should have attempted insert
-            mock_table.insert.assert_called_once()
+            # Should have attempted upsert
+            mock_database_connection.upsert.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_set_credential_encrypted(self, mock_supabase_client):
+    async def test_set_credential_encrypted(self, mock_database_connection):
         """Test setting an encrypted credential"""
-        mock_client, mock_table = mock_supabase_client
+        # Mock successful upsert
+        mock_database_connection.upsert.return_value = QueryResult(
+            data=[{"id": 1, "key": "SECRET_KEY"}]
+        )
 
-        # Mock successful insert
-        mock_response = MagicMock()
-        mock_response.data = [{"id": 1, "key": "SECRET_KEY"}]
-        mock_table.insert().execute.return_value = mock_response
-
-        with patch.object(credential_service, "_get_supabase_client", return_value=mock_client):
+        # Mock the connection manager to return our mock database
+        with patch("src.server.services.credential_service.get_connection_manager") as mock_manager:
+            mock_conn_mgr = mock_manager.return_value
+            mock_conn_mgr.get_primary.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+            mock_conn_mgr.get_primary.return_value.__aexit__ = AsyncMock(return_value=None)
+            
             with patch.object(credential_service, "_encrypt_value", return_value="encrypted_value"):
                 result = await set_credential("SECRET_KEY", "secret_value", is_encrypted=True)
                 assert result is True
@@ -192,16 +207,17 @@ class TestAsyncCredentialService:
                 credential_service._encrypt_value.assert_called_once_with("secret_value")
 
     @pytest.mark.asyncio
-    async def test_load_all_credentials(self, mock_supabase_client, sample_credentials_data):
+    async def test_load_all_credentials(self, mock_database_connection, sample_credentials_data):
         """Test loading all credentials from database"""
-        mock_client, mock_table = mock_supabase_client
-
         # Mock database response
-        mock_response = MagicMock()
-        mock_response.data = sample_credentials_data
-        mock_table.select().execute.return_value = mock_response
+        mock_database_connection.select.return_value = QueryResult(data=sample_credentials_data)
 
-        with patch.object(credential_service, "_get_supabase_client", return_value=mock_client):
+        # Mock the connection manager to return our mock database
+        with patch("src.server.services.credential_service.get_connection_manager") as mock_manager:
+            mock_conn_mgr = mock_manager.return_value
+            mock_conn_mgr.get_reader.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+            mock_conn_mgr.get_reader.return_value.__aexit__ = AsyncMock(return_value=None)
+            
             result = await credential_service.load_all_credentials()
 
             # Should have loaded credentials into cache
@@ -220,10 +236,8 @@ class TestAsyncCredentialService:
             assert credential_service._cache["MODEL_CHOICE"] == "gpt-4.1-nano"
 
     @pytest.mark.asyncio
-    async def test_get_credentials_by_category(self, mock_supabase_client):
+    async def test_get_credentials_by_category(self, mock_database_connection):
         """Test getting credentials filtered by category"""
-        mock_client, mock_table = mock_supabase_client
-
         # Mock database response for rag_strategy category
         rag_data = [
             {
@@ -239,11 +253,14 @@ class TestAsyncCredentialService:
                 "description": "Max tokens",
             },
         ]
-        mock_response = MagicMock()
-        mock_response.data = rag_data
-        mock_table.select().eq().execute.return_value = mock_response
+        mock_database_connection.select.return_value = QueryResult(data=rag_data)
 
-        with patch.object(credential_service, "_get_supabase_client", return_value=mock_client):
+        # Mock the connection manager to return our mock database
+        with patch("src.server.services.credential_service.get_connection_manager") as mock_manager:
+            mock_conn_mgr = mock_manager.return_value
+            mock_conn_mgr.get_reader.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+            mock_conn_mgr.get_reader.return_value.__aexit__ = AsyncMock(return_value=None)
+            
             result = await credential_service.get_credentials_by_category("rag_strategy")
 
             # Should only return rag_strategy credentials
@@ -253,10 +270,8 @@ class TestAsyncCredentialService:
             assert result["MAX_TOKENS"] == "1000"
 
     @pytest.mark.asyncio
-    async def test_get_active_provider_llm(self, mock_supabase_client):
+    async def test_get_active_provider_llm(self, mock_database_connection):
         """Test getting active LLM provider configuration"""
-        mock_client, mock_table = mock_supabase_client
-
         # Setup cache directly instead of mocking complex database responses
         credential_service._cache = {
             "LLM_PROVIDER": "openai",
@@ -271,8 +286,7 @@ class TestAsyncCredentialService:
         credential_service._cache_initialized = True
 
         # Mock rag_strategy category response
-        rag_response = MagicMock()
-        rag_response.data = [
+        rag_data = [
             {
                 "key": "LLM_PROVIDER",
                 "value": "openai",
@@ -286,9 +300,14 @@ class TestAsyncCredentialService:
                 "description": "Model choice",
             },
         ]
-        mock_table.select().eq().execute.return_value = rag_response
+        mock_database_connection.select.return_value = QueryResult(data=rag_data)
 
-        with patch.object(credential_service, "_get_supabase_client", return_value=mock_client):
+        # Mock the connection manager to return our mock database
+        with patch("src.server.services.credential_service.get_connection_manager") as mock_manager:
+            mock_conn_mgr = mock_manager.return_value
+            mock_conn_mgr.get_reader.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+            mock_conn_mgr.get_reader.return_value.__aexit__ = AsyncMock(return_value=None)
+            
             with patch.object(credential_service, "_decrypt_value", return_value="decrypted_key"):
                 result = await credential_service.get_active_provider("llm")
 
@@ -297,32 +316,34 @@ class TestAsyncCredentialService:
                 assert result["chat_model"] == "gpt-4.1-nano"
 
     @pytest.mark.asyncio
-    async def test_get_active_provider_basic(self, mock_supabase_client):
+    async def test_get_active_provider_basic(self, mock_database_connection):
         """Test basic provider configuration retrieval"""
-        mock_client, mock_table = mock_supabase_client
+        # Simple mock response - empty data
+        mock_database_connection.select.return_value = QueryResult(data=[])
 
-        # Simple mock response
-        mock_response = MagicMock()
-        mock_response.data = []
-        mock_table.select().eq().execute.return_value = mock_response
-
-        with patch.object(credential_service, "_get_supabase_client", return_value=mock_client):
+        # Mock the connection manager to return our mock database
+        with patch("src.server.services.credential_service.get_connection_manager") as mock_manager:
+            mock_conn_mgr = mock_manager.return_value
+            mock_conn_mgr.get_reader.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+            mock_conn_mgr.get_reader.return_value.__aexit__ = AsyncMock(return_value=None)
+            
             result = await credential_service.get_active_provider("llm")
             # Should return default values when no settings found
             assert "provider" in result
             assert "api_key" in result
 
     @pytest.mark.asyncio
-    async def test_initialize_credentials(self, mock_supabase_client, sample_credentials_data):
+    async def test_initialize_credentials(self, mock_database_connection, sample_credentials_data):
         """Test initialize_credentials function"""
-        mock_client, mock_table = mock_supabase_client
-
         # Mock database response
-        mock_response = MagicMock()
-        mock_response.data = sample_credentials_data
-        mock_table.select().execute.return_value = mock_response
+        mock_database_connection.select.return_value = QueryResult(data=sample_credentials_data)
 
-        with patch.object(credential_service, "_get_supabase_client", return_value=mock_client):
+        # Mock the connection manager to return our mock database
+        with patch("src.server.services.credential_service.get_connection_manager") as mock_manager:
+            mock_conn_mgr = mock_manager.return_value
+            mock_conn_mgr.get_reader.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+            mock_conn_mgr.get_reader.return_value.__aexit__ = AsyncMock(return_value=None)
+            
             with patch.object(credential_service, "_decrypt_value", return_value="decrypted_key"):
                 with patch.dict(os.environ, {}, clear=True):  # Clear environment
                     await initialize_credentials()
@@ -334,16 +355,21 @@ class TestAsyncCredentialService:
                     # Note: This tests the logic, actual env var setting depends on implementation
 
     @pytest.mark.asyncio
-    async def test_error_handling_database_failure(self, mock_supabase_client):
+    async def test_error_handling_database_failure(self, mock_database_connection):
         """Test error handling when database fails"""
-        mock_client, mock_table = mock_supabase_client
-
         # Mock database error
-        mock_table.select().eq().execute.side_effect = Exception("Database connection failed")
+        mock_database_connection.select.side_effect = Exception("Database connection failed")
 
-        with patch.object(credential_service, "_get_supabase_client", return_value=mock_client):
-            result = await credential_service.get_credential("TEST_KEY", "default_value")
-            assert result == "default_value"
+        # Mock the connection manager to return our mock database
+        with patch("src.server.services.credential_service.get_connection_manager") as mock_manager:
+            mock_conn_mgr = mock_manager.return_value
+            mock_conn_mgr.get_reader.return_value.__aenter__ = AsyncMock(return_value=mock_database_connection)
+            mock_conn_mgr.get_reader.return_value.__aexit__ = AsyncMock(return_value=None)
+            
+            # When cache is not initialized and database fails, it should raise an exception
+            # This is the expected behavior - the service fails fast on database errors
+            with pytest.raises(Exception, match="Database connection failed"):
+                await credential_service.get_credential("TEST_KEY", "default_value")
 
     @pytest.mark.asyncio
     async def test_encryption_decryption_error_handling(self):

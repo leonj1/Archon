@@ -146,8 +146,8 @@ test-postgres: check-dependencies start-postgres verify-postgres-schema ## Run P
 	@echo ""
 	@echo "$(GREEN)✓ PostgreSQL integration tests passed$(NC)"
 
-.PHONY: test-dal
-test-dal: ## Test Database Abstraction Layer components
+.PHONY: test-dal-imports
+test-dal-imports: ## Test Database Abstraction Layer components
 	@echo "$(BLUE)Testing DAL components...$(NC)"
 	@$(PYTHON) -c "from src.server.dal import ConnectionManager, DatabaseType, QueryBuilder, query; print('✓ DAL imports successful')" || { echo "$(RED)✗ DAL import test failed$(NC)"; exit 1; }
 	@echo "$(GREEN)✓ DAL component tests passed$(NC)"
@@ -282,6 +282,108 @@ install-deps: ## Install Python dependencies
 	@echo "$(BLUE)Installing dependencies...$(NC)"
 	@uv sync
 	@echo "$(GREEN)✓ Dependencies installed$(NC)"
+
+# =====================================
+# PYTEST TEST TARGETS
+# =====================================
+
+.PHONY: test
+test: ## Run all pytest tests
+	@echo "$(BLUE)Running all pytest tests...$(NC)"
+	@uv run pytest tests/ -v --tb=short || { echo "$(RED)✗ Tests failed$(NC)"; exit 1; }
+	@echo "$(GREEN)✓ All tests passed$(NC)"
+
+.PHONY: test-unit
+test-unit: ## Run unit tests only
+	@echo "$(BLUE)Running unit tests...$(NC)"
+	@uv run pytest tests/ -v --tb=short -k "not integration" || { echo "$(RED)✗ Unit tests failed$(NC)"; exit 1; }
+	@echo "$(GREEN)✓ Unit tests passed$(NC)"
+
+.PHONY: test-integration-pytest
+test-integration-pytest: ## Run integration tests via pytest
+	@echo "$(BLUE)Running integration tests via pytest...$(NC)"
+	@uv run pytest tests/test_service_integration.py tests/test_api_essentials.py -v --tb=short || { echo "$(RED)✗ Integration tests failed$(NC)"; exit 1; }
+	@echo "$(GREEN)✓ Integration tests passed$(NC)"
+
+.PHONY: test-coverage
+test-coverage: ## Run tests with coverage report
+	@echo "$(BLUE)Running tests with coverage...$(NC)"
+	@uv run pytest tests/ --cov=src --cov-report=html --cov-report=term-missing -v || { echo "$(RED)✗ Tests with coverage failed$(NC)"; exit 1; }
+	@echo "$(GREEN)✓ Coverage report generated$(NC)"
+	@echo "$(YELLOW)HTML coverage report: htmlcov/index.html$(NC)"
+
+.PHONY: test-verbose
+test-verbose: ## Run tests with verbose output
+	@echo "$(BLUE)Running tests with verbose output...$(NC)"
+	@uv run pytest tests/ -vvv --tb=long -s || { echo "$(RED)✗ Verbose tests failed$(NC)"; exit 1; }
+	@echo "$(GREEN)✓ Verbose tests completed$(NC)"
+
+.PHONY: test-failed
+test-failed: ## Re-run only failed tests
+	@echo "$(BLUE)Re-running only failed tests...$(NC)"
+	@uv run pytest --lf -v --tb=short || { echo "$(RED)✗ Failed tests still failing$(NC)"; exit 1; }
+	@echo "$(GREEN)✓ Previously failed tests now pass$(NC)"
+
+.PHONY: test-watch
+test-watch: ## Run tests in watch mode (requires pytest-watch)
+	@echo "$(BLUE)Starting test watch mode...$(NC)"
+	@echo "$(YELLOW)Press Ctrl+C to exit$(NC)"
+	@uv run ptw tests/ -- -v --tb=short
+
+.PHONY: test-api
+test-api: ## Test API endpoints
+	@echo "$(BLUE)Running API tests...$(NC)"
+	@uv run pytest tests/test_api_essentials.py tests/test_settings_api.py -v --tb=short || { echo "$(RED)✗ API tests failed$(NC)"; exit 1; }
+	@echo "$(GREEN)✓ API tests passed$(NC)"
+
+.PHONY: test-services
+test-services: ## Test service layer
+	@echo "$(BLUE)Running service tests...$(NC)"
+	@uv run pytest tests/test_service_integration.py tests/test_async_credential_service.py tests/test_business_logic.py -v --tb=short || { echo "$(RED)✗ Service tests failed$(NC)"; exit 1; }
+	@echo "$(GREEN)✓ Service tests passed$(NC)"
+
+.PHONY: test-dal
+test-dal: ## Test database abstraction layer
+	@echo "$(BLUE)Running DAL tests...$(NC)"
+	@uv run pytest tests/ -v --tb=short -k "dal or repository or database" || { echo "$(RED)✗ DAL tests failed$(NC)"; exit 1; }
+	@echo "$(GREEN)✓ DAL tests passed$(NC)"
+
+.PHONY: test-specific
+test-specific: ## Run specific test file (usage: make test-specific TEST=test_file.py)
+	@if [ -z "$(TEST)" ]; then \
+		echo "$(RED)Error: TEST parameter required$(NC)"; \
+		echo "Usage: make test-specific TEST=test_file.py"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)Running specific test: $(TEST)$(NC)"
+	@uv run pytest tests/$(TEST) -v --tb=short || { echo "$(RED)✗ Test $(TEST) failed$(NC)"; exit 1; }
+	@echo "$(GREEN)✓ Test $(TEST) passed$(NC)"
+
+.PHONY: test-clean
+test-clean: ## Clean test cache and coverage files
+	@echo "$(YELLOW)Cleaning test artifacts...$(NC)"
+	@rm -rf .pytest_cache/
+	@rm -rf htmlcov/
+	@rm -rf .coverage
+	@rm -rf **/__pycache__/
+	@rm -rf **/*.pyc
+	@echo "$(GREEN)✓ Test artifacts cleaned$(NC)"
+
+.PHONY: test-report
+test-report: ## Open HTML coverage report
+	@if [ -f "htmlcov/index.html" ]; then \
+		echo "$(BLUE)Opening coverage report...$(NC)"; \
+		python -m webbrowser htmlcov/index.html; \
+	else \
+		echo "$(YELLOW)No coverage report found. Run 'make test-coverage' first.$(NC)"; \
+	fi
+
+.PHONY: test-all
+test-all: test-clean test test-coverage ## Run all tests and generate coverage report
+	@echo ""
+	@echo "$(GREEN)╔════════════════════════════════════════╗$(NC)"
+	@echo "$(GREEN)║     ALL PYTEST TESTS COMPLETED!       ║$(NC)"
+	@echo "$(GREEN)╚════════════════════════════════════════╝$(NC)"
 
 # Default target
 .DEFAULT_GOAL := help

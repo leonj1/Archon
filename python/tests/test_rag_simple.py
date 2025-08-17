@@ -33,11 +33,14 @@ def mock_supabase():
 @pytest.fixture
 def rag_service(mock_supabase):
     """Create RAGService with mocked dependencies"""
-    with patch("src.server.utils.get_supabase_client", return_value=mock_supabase):
+    with patch("src.server.services.client_manager.get_connection_manager") as mock_cm:
         with patch("src.server.services.credential_service.credential_service"):
             from src.server.services.search.rag_service import RAGService
+            from unittest.mock import MagicMock
 
-            service = RAGService(supabase_client=mock_supabase)
+            mock_connection_manager = MagicMock()
+            mock_cm.return_value = mock_connection_manager
+            service = RAGService(connection_manager=mock_connection_manager)
             return service
 
 
@@ -68,19 +71,24 @@ class TestRAGServiceSearch:
     @pytest.mark.asyncio
     async def test_basic_vector_search(self, rag_service, mock_supabase):
         """Test basic vector search functionality"""
-        # Mock the RPC response
-        mock_response = MagicMock()
-        mock_response.data = [
-            {
-                "id": "1",
-                "content": "Test content",
-                "similarity": 0.8,
-                "metadata": {},
-                "url": "test.com",
-            }
+        from unittest.mock import AsyncMock, MagicMock
+        from src.server.dal.interfaces import VectorSearchResult
+        
+        # Mock the connection manager's vector store
+        mock_vector_store = AsyncMock()
+        mock_search_results = [
+            VectorSearchResult(
+                id="1",
+                score=0.8,  # Above 0.15 threshold
+                metadata={},
+                content="Test content"
+            )
         ]
-        mock_supabase.rpc.return_value.execute.return_value = mock_response
-
+        mock_vector_store.search.return_value = mock_search_results
+        
+        # Mock the connection manager to return our mock vector store
+        rag_service.base_strategy.connection_manager.get_vector_store.return_value.__aenter__ = AsyncMock(return_value=mock_vector_store)
+        
         # Test the search
         query_embedding = [0.1] * 1536
         results = await rag_service.base_strategy.vector_search(
@@ -89,12 +97,11 @@ class TestRAGServiceSearch:
 
         assert isinstance(results, list)
         assert len(results) == 1
-        assert results[0]["content"] == "Test content"
+        assert results[0]["content"] == "Test content"  # Dictionary access
+        assert results[0]["similarity"] == 0.8         # Converted to "similarity" key
 
-        # Verify RPC was called correctly
-        mock_supabase.rpc.assert_called_once()
-        call_args = mock_supabase.rpc.call_args[0]
-        assert call_args[0] == "match_archon_crawled_pages"
+        # Verify vector store search was called
+        mock_vector_store.search.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_search_documents_with_embedding(self, rag_service):

@@ -153,8 +153,16 @@ class MySQLAdapter(IDatabaseWithVectors):
                 async with conn.cursor(aiomysql.DictCursor) as cursor:
                     # MySQL uses %s for parameter substitution
                     if params:
-                        # Convert dict params to list for MySQL
-                        param_list = list(params.values()) if isinstance(params, dict) else params
+                        # Handle parameter conversion for MySQL
+                        if isinstance(params, dict):
+                            # Convert dict params to list for MySQL
+                            param_list = list(params.values())
+                        elif isinstance(params, (list, tuple)):
+                            # Use list/tuple directly
+                            param_list = params
+                        else:
+                            # Single parameter
+                            param_list = [params]
                         await cursor.execute(query, param_list)
                     else:
                         await cursor.execute(query)
@@ -654,12 +662,12 @@ class MySQLAdapter(IDatabaseWithVectors):
             search_logger.error(f"Error deleting vector collection '{name}': {e}")
             return False
     
-    async def list_collections(self) -> List[str]:
+    async def list_collections(self) -> List[Dict[str, Any]]:
         """
-        List all vector collections.
+        List all vector collections with metadata.
         
         Returns:
-            List of collection names
+            List of collection metadata (implements IVectorStore interface)
         """
         try:
             result = await self.execute("SHOW TABLES")
@@ -680,12 +688,54 @@ class MySQLAdapter(IDatabaseWithVectors):
                     
                     check_result = await self.execute(check_sql)
                     if check_result.success and check_result.first.get('has_vector_cols', 0) >= 3:
-                        collections.append(table_name)
+                        # Get additional metadata for this collection
+                        info_sql = """
+                        SELECT 
+                            TABLE_NAME as name,
+                            TABLE_COMMENT as comment,
+                            CREATE_TIME as created_at
+                        FROM INFORMATION_SCHEMA.TABLES 
+                        WHERE TABLE_SCHEMA = DATABASE()
+                        AND TABLE_NAME = %s
+                        """
+                        
+                        info_result = await self.execute(info_sql, [table_name])
+                        
+                        if info_result.success and info_result.data:
+                            table_info = info_result.data[0]
+                            collection_meta = {
+                                'name': table_info.get('name', table_name),
+                                'comment': table_info.get('comment', ''),
+                                'created_at': table_info.get('created_at'),
+                                'type': 'mysql_vector_fallback'
+                            }
+                        else:
+                            # Fallback metadata
+                            collection_meta = {
+                                'name': table_name,
+                                'type': 'mysql_vector_fallback'
+                            }
+                        
+                        collections.append(collection_meta)
                 
                 return collections
             return []
         except Exception as e:
             search_logger.error(f"Error listing vector collections: {e}")
+            return []
+    
+    async def list_collection_names(self) -> List[str]:
+        """
+        Helper method to get just collection names (for backward compatibility).
+        
+        Returns:
+            List of collection names
+        """
+        try:
+            collections = await self.list_collections()
+            return [coll['name'] for coll in collections]
+        except Exception as e:
+            search_logger.error(f"Error getting collection names: {e}")
             return []
     
     async def upsert_vectors(
@@ -956,6 +1006,223 @@ class MySQLAdapter(IDatabaseWithVectors):
         except Exception as e:
             search_logger.warning(f"Error applying metadata filters: {e}")
             return True  # Default to include if filtering fails
+    
+    # Required abstract methods from IVectorStore interface
+    
+    async def insert_vectors(
+        self,
+        collection: str,
+        vectors: List[np.ndarray],
+        ids: Optional[List[str]] = None,
+        metadata: Optional[List[Dict[str, Any]]] = None,
+    ) -> List[str]:
+        """
+        Insert vectors with metadata.
+        
+        Args:
+            collection: Collection name
+            vectors: List of embedding vectors
+            ids: Optional vector IDs (auto-generated if not provided)
+            metadata: Optional metadata for each vector
+            
+        Returns:
+            List of inserted vector IDs
+        """
+        try:
+            if not vectors:
+                return []
+            
+            # Generate IDs if not provided
+            if ids is None:
+                ids = [str(uuid4()) for _ in vectors]
+            
+            # Ensure metadata list matches vectors length
+            if metadata is None:
+                metadata = [{} for _ in vectors]
+            
+            # Build vector data for upsert
+            vector_data = []
+            for i, (vector, vector_id) in enumerate(zip(vectors, ids)):
+                vector_meta = metadata[i] if i < len(metadata) else {}
+                vector_data.append({
+                    'id': vector_id,
+                    'embedding': vector,
+                    'metadata': vector_meta
+                })
+            
+            # Use existing upsert_vectors method
+            success = await self.upsert_vectors(collection, vector_data)
+            
+            if success:
+                return ids
+            else:
+                return []
+                
+        except Exception as e:
+            search_logger.error(f"Error inserting vectors to collection '{collection}': {e}")
+            return []
+    
+    async def update_vectors(
+        self,
+        collection: str,
+        ids: List[str],
+        vectors: Optional[List[np.ndarray]] = None,
+        metadata: Optional[List[Dict[str, Any]]] = None,
+    ) -> bool:
+        """
+        Update vectors or their metadata.
+        
+        Args:
+            collection: Collection name
+            ids: Vector IDs to update
+            vectors: Optional new vectors
+            metadata: Optional new metadata
+            
+        Returns:
+            True if updated successfully
+        """
+        try:
+            if not ids:
+                return True
+            
+            # Build update data
+            for i, vector_id in enumerate(ids):
+                update_data = {}
+                
+                # Add vector if provided
+                if vectors and i < len(vectors):
+                    update_data['embedding'] = self._encode_vector(vectors[i])
+                
+                # Add metadata if provided
+                if metadata and i < len(metadata):
+                    update_data['metadata'] = metadata[i]
+                
+                if update_data:
+                    result = await self.update(
+                        table=collection,
+                        data=update_data,
+                        filters={'id': vector_id}
+                    )
+                    
+                    if not result.success:
+                        search_logger.error(f"Failed to update vector {vector_id}: {result.error}")
+                        return False
+            
+            return True
+            
+        except Exception as e:
+            search_logger.error(f"Error updating vectors in collection '{collection}': {e}")
+            return False
+    
+    async def delete_vectors(
+        self,
+        collection: str,
+        ids: Optional[List[str]] = None,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        """
+        Delete vectors by ID or metadata filter.
+        
+        Args:
+            collection: Collection name
+            ids: Optional vector IDs to delete
+            filters: Optional metadata filters
+            
+        Returns:
+            Number of deleted vectors
+        """
+        try:
+            delete_filters = {}
+            
+            # Build filters for deletion
+            if ids:
+                if len(ids) == 1:
+                    delete_filters['id'] = ids[0]
+                else:
+                    # Use OR condition for multiple IDs
+                    delete_filters['id'] = {'or': [{'eq': id_val} for id_val in ids]}
+            
+            # Add metadata filters if provided
+            if filters:
+                delete_filters.update(filters)
+            
+            if not delete_filters:
+                search_logger.warning("No filters provided for vector deletion")
+                return 0
+            
+            # Execute deletion
+            result = await self.delete(table=collection, filters=delete_filters)
+            
+            if result.success:
+                return result.affected_rows or 0
+            else:
+                search_logger.error(f"Failed to delete vectors: {result.error}")
+                return 0
+                
+        except Exception as e:
+            search_logger.error(f"Error deleting vectors from collection '{collection}': {e}")
+            return 0
+    
+    async def search(
+        self,
+        collection: str,
+        query_vector: np.ndarray,
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None,
+        include_metadata: bool = True,
+        include_vectors: bool = False,
+    ) -> List[VectorSearchResult]:
+        """
+        Search for similar vectors.
+        
+        Args:
+            collection: Collection name
+            query_vector: Query embedding vector
+            top_k: Number of results to return
+            filters: Optional metadata filters
+            include_metadata: Include metadata in results
+            include_vectors: Include vectors in results
+            
+        Returns:
+            List of search results ordered by similarity
+        """
+        # Use existing search_vectors method with proper parameter mapping
+        return await self.search_vectors(
+            collection=collection,
+            query_vector=query_vector,
+            top_k=top_k,
+            filters=filters,
+            include_metadata=include_metadata,
+            include_content=True  # Always include content for compatibility
+        )
+    
+    async def batch_search(
+        self,
+        collection: str,
+        query_vectors: List[np.ndarray],
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[List[VectorSearchResult]]:
+        """
+        Batch search for multiple query vectors.
+        
+        Args:
+            collection: Collection name
+            query_vectors: List of query vectors
+            top_k: Number of results per query
+            filters: Optional metadata filters
+            
+        Returns:
+            List of search results for each query
+        """
+        # Use existing search_vectors_batch method
+        return await self.search_vectors_batch(
+            collection=collection,
+            query_vectors=query_vectors,
+            top_k=top_k,
+            filters=filters
+        )
+    
     
     # Legacy method for backward compatibility
     async def search_vectors_fallback(
