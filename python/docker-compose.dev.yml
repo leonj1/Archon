@@ -1,0 +1,69 @@
+services:
+  # PostgreSQL with pgvector
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: archon-postgres
+    environment:
+      POSTGRES_USER: archon
+      POSTGRES_PASSWORD: archon_secure_password
+      POSTGRES_DB: archon_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./migrations/postgres/schema.sql:/docker-entrypoint-initdb.d/02-schema.sql
+      - ./migrations/postgres/functions.sql:/docker-entrypoint-initdb.d/03-functions.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U archon"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - archon-network
+
+  # MySQL 8.0
+  mysql:
+    image: mysql:8.0
+    container_name: archon-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secure_password
+      MYSQL_DATABASE: archon_db
+      MYSQL_USER: archon
+      MYSQL_PASSWORD: archon_secure_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./migrations/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./migrations/mysql/schema.sql:/docker-entrypoint-initdb.d/02-schema.sql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secure_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - archon-network
+
+  # Adminer for database management
+  adminer:
+    image: adminer
+    container_name: archon-adminer
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    depends_on:
+      - postgres
+      - mysql
+    networks:
+      - archon-network
+
+volumes:
+  postgres_data:
+  mysql_data:
+
+networks:
+  archon-network:
+    driver: bridge

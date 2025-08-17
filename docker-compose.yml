@@ -6,10 +6,10 @@ services:
       dockerfile: Dockerfile.server
       args:
         BUILDKIT_INLINE_CACHE: 1
-        ARCHON_SERVER_PORT: ${ARCHON_SERVER_PORT:-8181}
+        ARCHON_SERVER_PORT: 8181
     container_name: Archon-Server
     ports:
-      - "${ARCHON_SERVER_PORT:-8181}:${ARCHON_SERVER_PORT:-8181}"
+      - "${ARCHON_SERVER_PORT:-8181}:8181"
     environment:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
@@ -17,7 +17,7 @@ services:
       - LOGFIRE_TOKEN=${LOGFIRE_TOKEN:-}
       - SERVICE_DISCOVERY_MODE=docker_compose
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - ARCHON_SERVER_PORT=${ARCHON_SERVER_PORT:-8181}
+      - ARCHON_SERVER_PORT=8181
       - ARCHON_MCP_PORT=${ARCHON_MCP_PORT:-8051}
       - ARCHON_AGENTS_PORT=${ARCHON_AGENTS_PORT:-8052}
     networks:
@@ -26,9 +26,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for MCP container control
       - ./python/src:/app/src  # Mount source code for hot reload
       - ./python/tests:/app/tests  # Mount tests for UI test execution
-    command: ["python", "-m", "uvicorn", "src.server.main:socket_app", "--host", "0.0.0.0", "--port", "${ARCHON_SERVER_PORT:-8181}", "--reload"]
+    command: ["python", "-m", "uvicorn", "src.server.main:socket_app", "--host", "0.0.0.0", "--port", "8181", "--reload"]
     healthcheck:
-      test: ["CMD", "sh", "-c", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${ARCHON_SERVER_PORT:-8181}/health')\""]
+      test: ["CMD", "sh", "-c", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8181/health')\""]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -53,10 +53,10 @@ services:
       - TRANSPORT=sse
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       # MCP needs to know where to find other services
-      - API_SERVICE_URL=http://archon-server:${ARCHON_SERVER_PORT:-8181}
+      - API_SERVICE_URL=http://archon-server:8181
       - AGENTS_SERVICE_URL=http://archon-agents:${ARCHON_AGENTS_PORT:-8052}
       - ARCHON_MCP_PORT=${ARCHON_MCP_PORT:-8051}
-      - ARCHON_SERVER_PORT=${ARCHON_SERVER_PORT:-8181}
+      - ARCHON_SERVER_PORT=8181
       - ARCHON_AGENTS_PORT=${ARCHON_AGENTS_PORT:-8052}
     networks:
       - app-network
@@ -106,7 +106,7 @@ services:
       - "${ARCHON_UI_PORT:-3737}:5173"
     environment:
       - VITE_API_URL=http://${HOST:-localhost}:${ARCHON_SERVER_PORT:-8181}
-      - ARCHON_SERVER_PORT=${ARCHON_SERVER_PORT:-8181}
+      - ARCHON_SERVER_PORT=8181
       - HOST=${HOST:-localhost}
     networks:
       - app-network
@@ -118,6 +118,7 @@ services:
     volumes:
       - ./archon-ui-main/src:/app/src
       - ./archon-ui-main/public:/app/public
+      - ./archon-ui-main/vite.config.ts:/app/vite.config.ts
     depends_on:
       - archon-server
 

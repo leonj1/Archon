@@ -1,0 +1,6 @@
+[2025-04-22 02:30:19] Failed to initialize Supabase: Invalid API key
+[2025-04-22 02:30:53] Failed to initialize Supabase: Invalid API key
+[2025-04-22 02:30:53] Failed to initialize Supabase: Invalid API key
+[2025-04-22 02:30:58] Failed to initialize Supabase: Invalid API key
+[2025-04-22 02:31:02] Failed to initialize Supabase: Invalid API key
+[2025-04-22 02:31:25] Failed to initialize Supabase: Invalid API key

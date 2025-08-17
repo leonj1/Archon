@@ -3,3 +3,6 @@ __pycache__
 .serena
 .claude/settings.local.json
 PRPs/local
+
+# Sensitive configuration files
+utils/env_vars.json
