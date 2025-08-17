@@ -13,7 +13,7 @@ from supabase import Client, create_client
 
 from ..config.logfire_config import search_logger
 from ..dal import ConnectionManager, DatabaseType
-from ..dal.adapters import SupabaseAdapter
+from ..dal.adapters import SupabaseAdapter, MySQLAdapter, PostgreSQLAdapter
 
 # Global connection manager instance
 _connection_manager: Optional[ConnectionManager] = None
@@ -64,13 +64,26 @@ def get_connection_manager() -> ConnectionManager:
     """
     global _connection_manager
     if not _connection_manager:
-        # Register Supabase adapter
-        ConnectionManager.register_adapter(DatabaseType.SUPABASE, SupabaseAdapter)
+        # Detect database type from environment
+        db_type = os.getenv("DATABASE_TYPE", "supabase").lower()
+        
+        # Register appropriate adapter based on DATABASE_TYPE
+        if db_type == "mysql":
+            ConnectionManager.register_adapter(DatabaseType.MYSQL, MySQLAdapter)
+            search_logger.info("Registering MySQL adapter")
+        elif db_type == "postgresql":
+            # Register PostgreSQL adapter
+            ConnectionManager.register_adapter(DatabaseType.POSTGRESQL, PostgreSQLAdapter)
+            search_logger.info("Registering PostgreSQL adapter")
+        else:
+            # Default to Supabase for backward compatibility
+            ConnectionManager.register_adapter(DatabaseType.SUPABASE, SupabaseAdapter)
+            search_logger.info("Registering Supabase adapter (default)")
         
         # Create connection manager from environment
         _connection_manager = ConnectionManager.from_env()
         
-        search_logger.info("Connection manager initialized with DAL")
+        search_logger.info(f"Connection manager initialized with {db_type} adapter")
     
     return _connection_manager
 

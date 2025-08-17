@@ -5,10 +5,12 @@ Handles:
 - OpenAI API key management
 - Other credentials and configuration
 - Settings storage and retrieval
+- Database backend information
 """
 
+import os
 from datetime import datetime
-from typing import Any
+from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -329,6 +331,94 @@ async def database_metrics():
 
     except Exception as e:
         logfire.error(f"Error getting database metrics | error={str(e)}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.get("/database/info")
+async def get_database_info():
+    """Get current database backend configuration information."""
+    try:
+        logfire.info("Getting database configuration info")
+        
+        # Get database type from environment
+        db_type = os.getenv("DATABASE_TYPE", "supabase").lower()
+        
+        # Build configuration info based on database type
+        config_info: Dict[str, Any] = {
+            "type": db_type,
+            "configured": True
+        }
+        
+        if db_type == "mysql":
+            config_info.update({
+                "backend": "MySQL 8.0+",
+                "host": os.getenv("MYSQL_HOST", "localhost"),
+                "port": int(os.getenv("MYSQL_PORT", "3306")),
+                "database": os.getenv("MYSQL_DATABASE", "archon_db"),
+                "user": os.getenv("MYSQL_USER", "archon"),
+                "features": {
+                    "vector_search": "External/Fallback",
+                    "json_support": True,
+                    "transactions": True,
+                    "connection_pooling": True
+                }
+            })
+        elif db_type == "postgresql":
+            config_info.update({
+                "backend": "PostgreSQL with pgvector",
+                "host": os.getenv("POSTGRES_HOST", "localhost"),
+                "port": int(os.getenv("POSTGRES_PORT", "5432")),
+                "database": os.getenv("POSTGRES_DB", "archon_db"),
+                "user": os.getenv("POSTGRES_USER", "archon"),
+                "features": {
+                    "vector_search": "Native (pgvector)",
+                    "json_support": True,
+                    "transactions": True,
+                    "connection_pooling": True
+                }
+            })
+        else:  # supabase
+            supabase_url = os.getenv("SUPABASE_URL", "")
+            # Extract project ID from URL
+            project_id = ""
+            if supabase_url:
+                import re
+                match = re.match(r"https://([^.]+)\.supabase\.co", supabase_url)
+                if match:
+                    project_id = match.group(1)
+            
+            config_info.update({
+                "backend": "Supabase (PostgreSQL + pgvector)",
+                "url": supabase_url,
+                "project_id": project_id,
+                "features": {
+                    "vector_search": "Native (pgvector)",
+                    "json_support": True,
+                    "transactions": True,
+                    "connection_pooling": True,
+                    "row_level_security": True,
+                    "realtime": True
+                }
+            })
+        
+        # Add connection status
+        try:
+            from ..services.client_manager import get_connection_manager
+            manager = get_connection_manager()
+            # Try to check if connection is healthy
+            async with manager.get_primary() as db:
+                is_healthy = await db.health_check()
+                config_info["status"] = "connected" if is_healthy else "disconnected"
+        except Exception as e:
+            config_info["status"] = "error"
+            config_info["error_message"] = str(e)
+        
+        logfire.info(f"Database info retrieved | type={db_type} | status={config_info.get('status', 'unknown')}")
+        
+        return config_info
+        
+    except Exception as e:
+        logfire.error(f"Error getting database info | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 

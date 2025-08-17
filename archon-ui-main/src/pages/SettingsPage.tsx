@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader, Settings, ChevronDown, ChevronUp, Palette, Key, Brain, Code, Activity, FileCode, Bug } from 'lucide-react';
+import { Loader, Settings, ChevronDown, ChevronUp, Palette, Key, Brain, Code, Activity, FileCode, Bug, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -11,6 +11,7 @@ import { CodeExtractionSettings } from '../components/settings/CodeExtractionSet
 import { TestStatus } from '../components/settings/TestStatus';
 import { IDEGlobalRules } from '../components/settings/IDEGlobalRules';
 import { ButtonPlayground } from '../components/settings/ButtonPlayground';
+import { DatabaseInfo } from '../components/settings/DatabaseInfo';
 import { CollapsibleSettingsCard } from '../components/ui/CollapsibleSettingsCard';
 import { BugReportButton } from '../components/bug-report/BugReportButton';
 import { credentialsService, RagSettings, CodeExtractionSettings as CodeExtractionSettingsType } from '../services/credentialsService';
@@ -107,6 +108,17 @@ export const SettingsPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column */}
         <div className="space-y-6">
+          <motion.div variants={itemVariants}>
+            <CollapsibleSettingsCard
+              title="Database Configuration"
+              icon={Database}
+              accentColor="blue"
+              storageKey="database-config"
+              defaultExpanded={true}
+            >
+              <DatabaseInfo />
+            </CollapsibleSettingsCard>
+          </motion.div>
           <motion.div variants={itemVariants}>
             <CollapsibleSettingsCard
               title="Features"
