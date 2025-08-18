@@ -57,111 +57,31 @@ def register_project_tools(mcp: FastMCP):
         github_repo: str = None,
     ) -> str:
         """
-        Unified tool for Archon project lifecycle management with integrated PRP support.
+        Manage Archon projects with automatic version control.
 
-        🚀 PRP-DRIVEN PROJECT ARCHITECTURE:
-        Archon projects are designed around the PRP (Product Requirement Prompt) methodology:
-        - Projects contain structured documents (PRPs, specs, designs)
-        - Each project has automatic version control for all content
-        - Tasks are generated from PRP implementation blueprints
-        - Progress is tracked through task status workflows
-        - All changes are auditable with complete history
-
-        ⚠️ DATA SAFETY FEATURES:
-        - ALL project data is versioned automatically (docs, tasks, features)
-        - DELETE operations preserve version history for audit compliance
-        - Documents and tasks remain recoverable through version management
-        - Use manage_versions tool to restore accidentally deleted content
+        Projects use PRP (Product Requirement Prompt) methodology for task-driven development.
+        All data is auto-versioned - deletions preserve history for recovery via manage_versions.
 
         Args:
-            action: Project operation - "create" | "list" | "get" | "delete"
-                   - create: Initialize new PRP-driven project with version control
-                   - list: Retrieve all projects with metadata summary
-                   - get: Fetch complete project details including documents and tasks
-                   - delete: Archive project (preserves all version history)
-
-            project_id: UUID of the project (required for get/delete operations)
-                       Obtained from list operation or project creation response
-
-            title: Human-readable project title (required for create)
-                  Should be descriptive and specific (e.g., "OAuth2 Authentication System", "E-commerce API v3.0")
-
-            prd: Product Requirements Document as structured JSON (optional for create)
-                Format: {
-                    "product_vision": "Clear vision statement",
-                    "target_users": ["User persona 1", "User persona 2"],
-                    "key_features": ["Feature 1", "Feature 2"],
-                    "success_metrics": ["Metric 1", "Metric 2"],
-                    "constraints": ["Technical constraints", "Business constraints"]
-                }
-
-            github_repo: GitHub repository URL (optional for create)
-                        Format: "https://github.com/username/repository"
-                        Used for linking project to source code repository
+            action: "create" | "list" | "get" | "delete"
+            project_id: Project UUID (required for get/delete)
+            title: Project title (required for create)
+            prd: Product requirements dict with vision, features, metrics (optional)
+            github_repo: GitHub URL (optional)
 
         Returns:
-            JSON string with project operation results:
-            - success: Boolean indicating operation success
-            - project: Complete project object (for create/get actions)
-            - projects: Array of projects (for list action)
-            - message: Human-readable status message
-            - error: Error description (if success=false)
+            JSON string with structure:
+            - success: bool - Operation success status
+            - project: dict - Project object (for create/get actions)
+            - projects: list[dict] - Array of projects (for list action)
+            - message: str - "Project deleted successfully" (for delete action)
+            - error: str - Error description if success=false
 
-        🏗️ COMPREHENSIVE EXAMPLES:
-
-        Create New PRP-Driven Project:
-            manage_project(
-                action="create",
-                title="OAuth2 Authentication System",
-                prd={
-                    "product_vision": "Secure, user-friendly authentication system supporting multiple OAuth2 providers",
-                    "target_users": ["Web application users", "Mobile app users", "API developers"],
-                    "key_features": [
-                        "Google OAuth2 integration",
-                        "GitHub OAuth2 integration",
-                        "Automatic token refresh",
-                        "User profile synchronization",
-                        "Security compliance (PKCE, CSRF protection)"
-                    ],
-                    "success_metrics": [
-                        "< 3 clicks for user authentication",
-                        "99.9% authentication success rate",
-                        "< 2 second authentication flow completion",
-                        "Zero security incidents in production"
-                    ],
-                    "constraints": [
-                        "Must work with existing user database schema",
-                        "GDPR compliance required for EU users",
-                        "Maximum 2MB additional bundle size"
-                    ]
-                },
-                github_repo="https://github.com/company/auth-service"
-            )
-
-        List All Projects:
-            manage_project(action="list")
-            # Returns: Array of all projects with basic metadata
-
-        Get Project with Full Details:
-            manage_project(
-                action="get",
-                project_id="550e8400-e29b-41d4-a716-446655440000"
-            )
-            # Returns: Complete project object with documents, tasks, features, version history
-
-        Archive Project (Preserves Version History):
-            manage_project(
-                action="delete",
-                project_id="550e8400-e29b-41d4-a716-446655440000"
-            )
-            # Note: All project data remains recoverable through version management
-
-        Create Minimal Project:
-            manage_project(
-                action="create",
-                title="Quick Prototype - User Dashboard"
-            )
-            # Creates project with basic structure, PRD and GitHub repo can be added later
+        Examples:
+            Create: manage_project(action="create", title="OAuth System", prd={...})
+            List: manage_project(action="list")
+            Get: manage_project(action="get", project_id="uuid")
+            Delete: manage_project(action="delete", project_id="uuid")
         """
         try:
             api_url = get_api_url()
@@ -270,146 +190,43 @@ def register_project_tools(mcp: FastMCP):
         per_page: int = 50,
     ) -> str:
         """
-        Unified tool for task management operations within PRP-driven projects.
+        Manage tasks within PRP-driven projects.
 
-        🎯 PRP TASK LIFECYCLE MANAGEMENT:
-        Tasks follow the PRP methodology lifecycle: todo → doing → review → done
-        - todo: Task is ready to be started, all dependencies resolved
-        - doing: Task is actively being worked on (limit: 1 task per agent)
-        - review: Task implementation complete, awaiting validation
-        - done: Task validated and integrated, no further work needed
-
-        📋 TASK STATUS WORKFLOW:
-        1. PRP breaks down into implementation tasks (created as 'todo')
-        2. Agent moves task to 'doing' before starting work
-        3. Agent completes implementation and moves to 'review'
-        4. prp-validator runs validation gates and moves to 'done' or back to 'doing'
-        5. Completed tasks feed back into PRP progress tracking
-
-        👥 AGENT ASSIGNMENTS:
-        - 'User': Manual tasks requiring human intervention
-        - 'Archon': AI-driven development tasks
-        - 'AI IDE Agent': Direct code implementation tasks
-        - 'prp-executor': PRP implementation coordination
-        - 'prp-validator': Quality assurance and testing
-        - 'archon-task-manager': Workflow orchestration
+        Status flow: todo → doing → review → done
+        Only one task in 'doing' per agent. Tasks auto-versioned for recovery.
 
         Args:
-            action: Task operation - "create" | "list" | "get" | "update" | "delete" | "archive"
-                   - create: Generate new task from PRP implementation plan
-                   - list: Retrieve tasks with filtering (by status, project, assignee)
-                   - get: Fetch complete task details including sources and code examples
-                   - update: Modify task properties (primarily status transitions)
-                   - delete/archive: Remove completed or obsolete tasks
-
-            task_id: UUID of the task (required for get/update/delete/archive)
-
-            project_id: UUID of the project (required for create, optional for list filtering)
-
-            filter_by: List filtering type - "status" | "project" | "assignee"
-            filter_value: Value for the filter (e.g., "todo", "doing", "review", "done")
-
-            title: Task title (required for create) - should be specific and actionable
-                  ✅ Good: "Implement OAuth2 Google provider configuration"
-                  ✅ Good: "Add unit tests for token refresh mechanism"
-                  ❌ Bad: "Work on auth", "Fix OAuth stuff"
-
-            description: Detailed task description (for create) - include context and acceptance criteria
-
-            assignee: Agent responsible for task execution
-                     - 'User': Tasks requiring manual review or configuration
-                     - 'Archon': General AI implementation tasks
-                     - 'AI IDE Agent': Direct code modification tasks
-                     - 'prp-executor': PRP coordination and orchestration
-                     - 'prp-validator': Testing and quality validation
-
-            task_order: Priority within status (0-100, higher = more priority)
-                       Use to sequence dependent tasks within each status
-
-            feature: Feature label for grouping related tasks (e.g., "authentication", "oauth2")
-
-            sources: List of source metadata for task context
-                    [{"url": "docs/oauth.md", "type": "documentation", "relevance": "OAuth2 implementation guide"}]
-
-            code_examples: List of relevant code examples for implementation
-                          [{"file": "src/auth/base.py", "function": "authenticate_user", "purpose": "Base auth pattern"}]
-
+            action: "create" | "list" | "get" | "update" | "delete" | "archive"
+            task_id: Task UUID (required for get/update/delete/archive)
+            project_id: Project UUID (required for create, optional for list)
+            filter_by: "status" | "project" | "assignee" (for list)
+            filter_value: Filter value (e.g., "todo", "doing", "review", "done")
+            title: Task title (required for create)
+            description: Task description with acceptance criteria
+            assignee: "User" | "Archon" | "AI IDE Agent" | "prp-executor" | "prp-validator"
+            task_order: Priority (0-100, higher = more priority)
+            feature: Feature label for grouping
+            sources: List of source metadata dicts [{"url": str, "type": str, "relevance": str}]
+            code_examples: List of code example dicts [{"file": str, "function": str, "purpose": str}]
             update_fields: Dict of fields to update (for update action)
-                          Common updates: {"status": "doing"}, {"assignee": "prp-validator"},
-                          {"description": "Updated requirements based on testing feedback"}
-
-            include_closed: Include 'done' tasks in list results (default: False)
-                           Set to True for progress reporting and audit trails
-
-            page: Page number for pagination (default: 1, for large task lists)
-            per_page: Items per page (default: 50, max: 100)
+            include_closed: Include done tasks in list (default: False)
+            page/per_page: Pagination controls
 
         Returns:
-            JSON string with task operation results:
-            - success: Boolean indicating operation success
-            - task/tasks: Task object(s) with complete metadata
-            - pagination: Pagination info for list operations
-            - message: Human-readable status message
-            - error: Error description (if success=false)
+            JSON string with structure:
+            - success: bool - Operation success status
+            - task: dict - Task object (for create/get/update/delete/archive actions)
+            - tasks: list[dict] - Array of tasks (for list action)
+            - pagination: dict|null - Page info if available (for list action)
+            - total_count: int - Total tasks count (for list action)
+            - message: str - Operation message (for create/update/delete/archive actions)
+            - error: str - Error description if success=false
 
-        📚 COMPREHENSIVE EXAMPLES:
-
-        Create PRP Implementation Task:
-            manage_task(
-                action="create",
-                project_id="550e8400-e29b-41d4-a716-446655440000",
-                title="Implement OAuth2 Google provider configuration",
-                description="Create GoogleOAuthProvider class with proper endpoints, scopes, and client configuration. Must handle authorization URL generation with PKCE security.",
-                assignee="AI IDE Agent",
-                task_order=10,
-                feature="authentication",
-                sources=[
-                    {"url": "https://developers.google.com/identity/protocols/oauth2", "type": "documentation", "relevance": "Official OAuth2 spec"},
-                    {"file": "docs/auth/README.md", "type": "internal_docs", "relevance": "Current auth architecture"}
-                ],
-                code_examples=[
-                    {"file": "src/auth/base.py", "class": "BaseAuthProvider", "purpose": "Provider interface pattern"},
-                    {"file": "examples/oauth-flow.py", "function": "generate_auth_url", "purpose": "URL generation example"}
-                ]
-            )
-
-        Update Task Status (todo → doing):
-            manage_task(
-                action="update",
-                task_id="task-123e4567-e89b-12d3-a456-426614174000",
-                update_fields={"status": "doing", "assignee": "prp-executor"}
-            )
-
-        List Tasks by Status for Progress Tracking:
-            manage_task(
-                action="list",
-                filter_by="status",
-                filter_value="review",
-                project_id="550e8400-e29b-41d4-a716-446655440000",
-                per_page=25
-            )
-
-        List All Tasks for Project Audit:
-            manage_task(
-                action="list",
-                filter_by="project",
-                filter_value="550e8400-e29b-41d4-a716-446655440000",
-                include_closed=True,
-                per_page=100
-            )
-
-        Get Task with Full Context:
-            manage_task(
-                action="get",
-                task_id="task-123e4567-e89b-12d3-a456-426614174000"
-            )
-            # Returns: Complete task object with sources, code_examples, and metadata
-
-        Archive Completed Task:
-            manage_task(
-                action="archive",
-                task_id="task-123e4567-e89b-12d3-a456-426614174000"
-            )
+        Examples:
+            Create: manage_task(action="create", project_id="uuid", title="Implement OAuth")
+            Update status: manage_task(action="update", task_id="uuid", update_fields={"status": "doing"})
+            List todos: manage_task(action="list", filter_by="status", filter_value="todo")
+            Get details: manage_task(action="get", task_id="uuid")
         """
         try:
             api_url = get_api_url()
@@ -604,216 +421,33 @@ def register_project_tools(mcp: FastMCP):
         metadata: dict[str, Any] = None,
     ) -> str:
         """
-        Unified tool for document management within projects with AUTOMATIC VERSION CONTROL.
+        Manage project documents with automatic version control.
 
-        🔒 CRITICAL SAFETY FEATURES:
-        - AUTOMATIC VERSION SNAPSHOTS: Every update creates immutable backup before changes
-        - PREVENTS DOCUMENTATION ERASURE: Complete version history preserved permanently
-        - ROLLBACK CAPABILITY: Use manage_versions to restore any previous version
-        - AUDIT TRAIL: All changes tracked with timestamps, authors, and change summaries
-
-        📋 PRP (Product Requirement Prompt) FORMAT REQUIREMENTS:
-        For PRP documents (document_type="prp"), content MUST be structured JSON compatible
-        with PRPViewer component, NOT raw markdown. This ensures proper rendering and validation.
-
-        Required PRP Metadata Fields:
-        - title: Clear, descriptive document title
-        - version: Semantic version (e.g., "1.0", "2.1", "3.0-beta")
-        - author: Agent identifier ("prp-creator", "prp-executor", "prp-validator", "AI IDE Agent")
-        - date: ISO date format (YYYY-MM-DD)
-        - status: Lifecycle status ("draft", "review", "approved", "deprecated")
-        - document_type: Always "prp" for PRP documents
-
-        📊 COMPLETE PRP Structure Template:
-        {
-            "document_type": "prp",
-            "title": "OAuth2 Authentication Implementation",
-            "version": "1.0",
-            "author": "prp-creator",
-            "date": "2025-07-30",
-            "status": "draft",
-
-            "goal": "Implement secure OAuth2 authentication with Google and GitHub providers",
-
-            "why": [
-                "Enable secure user authentication without password management",
-                "Reduce registration friction and improve user conversion rates",
-                "Comply with enterprise security requirements for SSO integration"
-            ],
-
-            "what": {
-                "description": "Complete OAuth2 flow with provider selection, token management, and user profile integration",
-                "success_criteria": [
-                    "Users can authenticate with Google/GitHub in <3 clicks",
-                    "Secure token storage with automatic refresh handling",
-                    "Profile data synchronization with local user accounts",
-                    "Graceful error handling for failed authentication attempts"
-                ],
-                "user_stories": [
-                    "As a new user, I want to sign up with my Google account to avoid creating another password",
-                    "As a developer, I want to use GitHub auth to leverage my existing developer identity"
-                ]
-            },
-
-            "context": {
-                "documentation": [
-                    {"source": "https://developers.google.com/identity/protocols/oauth2", "why": "Official OAuth2 implementation guide"},
-                    {"source": "docs/auth/README.md", "why": "Current authentication architecture"},
-                    {"source": "examples/oauth-flow.py", "why": "Reference implementation pattern"}
-                ],
-                "existing_code": [
-                    {"file": "src/auth/base.py", "purpose": "Base authentication classes and interfaces"},
-                    {"file": "src/auth/session.py", "purpose": "Session management and token storage"}
-                ],
-                "gotchas": [
-                    "OAuth2 state parameter MUST be validated to prevent CSRF attacks",
-                    "Token refresh must happen before expiration to avoid user session loss",
-                    "Provider-specific scopes vary - Google uses 'openid profile email', GitHub uses 'user:email'",
-                    "PKCE (Proof Key for Code Exchange) required for mobile/SPA applications"
-                ],
-                "current_state": "Basic username/password authentication exists. Session management handles JWT tokens. Need to integrate OAuth2 providers alongside existing system.",
-                "dependencies": [
-                    "requests-oauthlib", "cryptography", "python-jose[cryptography]"
-                ],
-                "environment_variables": [
-                    "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
-                    "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET",
-                    "OAUTH_REDIRECT_URI"
-                ]
-            },
-
-            "implementation_blueprint": {
-                "phase_1_provider_setup": {
-                    "description": "Configure OAuth2 providers and basic flow",
-                    "tasks": [
-                        {
-                            "title": "Create OAuth2 provider configurations",
-                            "files": ["src/auth/oauth/providers.py"],
-                            "details": "Define GoogleOAuthProvider and GitHubOAuthProvider classes with endpoints, scopes, and client configuration"
-                        },
-                        {
-                            "title": "Implement authorization URL generation",
-                            "files": ["src/auth/oauth/flow.py"],
-                            "details": "Generate secure authorization URLs with state parameter and PKCE for enhanced security"
-                        },
-                        {
-                            "title": "Add OAuth2 routes to FastAPI",
-                            "files": ["src/api/auth.py"],
-                            "details": "Add /auth/oauth/{provider} and /auth/oauth/{provider}/callback endpoints"
-                        }
-                    ]
-                },
-                "phase_2_token_handling": {
-                    "description": "Implement secure token exchange and storage",
-                    "tasks": [
-                        {
-                            "title": "Implement authorization code exchange",
-                            "files": ["src/auth/oauth/token_handler.py"],
-                            "details": "Exchange authorization code for access/refresh tokens with proper error handling"
-                        },
-                        {
-                            "title": "Add token storage to database",
-                            "files": ["src/models/oauth_token.py", "migrations/add_oauth_tokens.py"],
-                            "details": "Create OAuthToken model with encrypted storage and automatic cleanup of expired tokens"
-                        }
-                    ]
-                },
-                "phase_3_user_integration": {
-                    "description": "Link OAuth2 accounts with user profiles",
-                    "tasks": [
-                        {
-                            "title": "Fetch and normalize user profiles",
-                            "files": ["src/auth/oauth/profile.py"],
-                            "details": "Retrieve user profile data from providers and normalize to common User model fields"
-                        },
-                        {
-                            "title": "Implement account linking logic",
-                            "files": ["src/auth/oauth/account_linking.py"],
-                            "details": "Link OAuth2 accounts to existing users or create new accounts with proper conflict resolution"
-                        }
-                    ]
-                }
-            },
-
-            "validation": {
-                "level_1_syntax": [
-                    "ruff check --fix src/auth/oauth/",
-                    "mypy src/auth/oauth/",
-                    "black src/auth/oauth/"
-                ],
-                "level_2_unit_tests": [
-                    "pytest tests/auth/test_oauth_providers.py -v",
-                    "pytest tests/auth/test_oauth_flow.py -v",
-                    "pytest tests/auth/test_token_handler.py -v"
-                ],
-                "level_3_integration": [
-                    "pytest tests/integration/test_oauth_flow_complete.py -v",
-                    "curl -X GET http://localhost:8181/auth/oauth/google",
-                    "curl -X POST http://localhost:8181/auth/oauth/google/callback -d 'code=test&state=valid_state'"
-                ],
-                "level_4_end_to_end": [
-                    "Start development server: uvicorn main:app --reload",
-                    "Navigate to /auth/oauth/google in browser",
-                    "Complete OAuth2 flow and verify user profile creation",
-                    "Test token refresh mechanism with expired tokens",
-                    "Verify secure logout clears OAuth2 tokens"
-                ]
-            },
-
-            "additional_context": {
-                "security_considerations": [
-                    "Always validate OAuth2 state parameter to prevent CSRF",
-                    "Use HTTPS for all OAuth2 redirects in production",
-                    "Implement rate limiting on OAuth2 endpoints",
-                    "Store refresh tokens encrypted in database",
-                    "Set appropriate token expiration times"
-                ],
-                "testing_strategies": [
-                    "Mock OAuth2 provider responses for unit tests",
-                    "Use test OAuth2 applications for integration testing",
-                    "Test error scenarios: network failures, invalid codes, expired tokens",
-                    "Verify proper cleanup of test data between test runs"
-                ],
-                "monitoring_and_logging": [
-                    "Log OAuth2 authentication attempts with success/failure metrics",
-                    "Monitor token refresh rates and failures",
-                    "Alert on unusual OAuth2 error patterns",
-                    "Track user adoption of OAuth2 vs traditional auth"
-                ]
-            }
-        }
-
-        🔄 Version Control Behavior:
-        - AUTOMATIC SNAPSHOTS: Every update creates immutable version before applying changes
-        - COMPLETE STATE PRESERVATION: Full document content, metadata, and structure saved
-        - CHRONOLOGICAL HISTORY: All versions timestamped with change summaries
-        - INSTANT ROLLBACK: Use manage_versions(action="restore") to revert to any previous version
-        - AUDIT COMPLIANCE: Permanent record of who changed what and when
+        Every update creates immutable version backup. Use manage_versions to restore.
+        PRP documents require structured JSON format, not markdown.
 
         Args:
-            action: Operation - "add" | "list" | "get" | "update" | "delete"
-            project_id: UUID of the project (always required)
-            doc_id: UUID of the document (required for get/update/delete)
-            document_type: Type of document (required for add) - use "prp" for PRP documents
-            title: Document title (required for add, optional for update)
-            content: Document content as structured JSON (for add/update)
-                     For PRPs: Use structured JSON format above, NOT markdown
-            metadata: Dict with optional fields: tags, status, version, author
-                      For PRPs: Include required fields (title, version, author, date, status, document_type)
+            action: "add" | "list" | "get" | "update" | "delete"
+            project_id: Project UUID (always required)
+            doc_id: Document UUID (required for get/update/delete)
+            document_type: Document type (required for add, "prp" for PRPs)
+            title: Document title (required for add)
+            content: Structured JSON content (for add/update)
+            metadata: Optional metadata dict with tags, author fields
 
         Returns:
-            JSON string with operation results
+            JSON string with structure:
+            - success: bool - Operation success status
+            - document: dict - Document object (for add/get/update actions)
+            - documents: list[dict] - Array of documents (for list action, via spread operator)
+            - message: str - Operation message (for add/update/delete actions)
+            - error: str - Error description if success=false
 
         Examples:
-            Add PRP: manage_document(action="add", project_id="uuid", document_type="prp",
-                                   title="OAuth Implementation", content={PRP_JSON_STRUCTURE})
-            Add Document: manage_document(action="add", project_id="uuid", document_type="spec",
-                                        title="API Spec", content={"sections": {...}})
+            Add PRP: manage_document(action="add", project_id="uuid", document_type="prp", title="OAuth", content={...})
             List: manage_document(action="list", project_id="uuid")
             Get: manage_document(action="get", project_id="uuid", doc_id="doc-uuid")
-            Update PRP: manage_document(action="update", project_id="uuid", doc_id="doc-uuid",
-                                      content={UPDATED_PRP_JSON})
-            Delete: manage_document(action="delete", project_id="uuid", doc_id="doc-uuid")
+            Update: manage_document(action="update", project_id="uuid", doc_id="doc-uuid", content={...})
         """
         try:
             api_url = get_api_url()
@@ -1049,136 +683,33 @@ def register_project_tools(mcp: FastMCP):
         created_by: str = "system",
     ) -> str:
         """
-        Unified tool for IMMUTABLE document version management and complete change history.
+        Manage immutable version history for project data.
 
-        🛡️ AUTOMATIC VERSION PROTECTION:
-        - EVERY UPDATE to manage_document triggers automatic version snapshot BEFORE applying changes
-        - PREVENTS DATA LOSS: Complete document state preserved before any modification
-        - NO MANUAL ACTION REQUIRED: Version control is transparent and automatic
-        - ROLLBACK SAFETY NET: Any change can be instantly reverted using restore action
-
-        📈 VERSION MANAGEMENT BEST PRACTICES:
-
-        Change Summary Guidelines (be specific and actionable):
-        ✅ GOOD: "Added OAuth2 validation gates and security considerations to implementation blueprint"
-        ✅ GOOD: "Fixed task dependencies in phase_2_token_handling, added missing error handling"
-        ✅ GOOD: "Updated success criteria to include performance benchmarks and user experience metrics"
-        ❌ BAD: "Updated document", "Fixed stuff", "Changes made"
-
-        Created By Identifiers (use consistent agent names):
-        - "prp-creator": Initial PRP creation and major structural changes
-        - "prp-executor": Implementation progress updates and task completion
-        - "prp-validator": Quality assurance, testing validation, and approval workflows
-        - "AI IDE Agent": Direct user-driven modifications and quick fixes
-        - "archon-task-manager": Automated task lifecycle updates
-        - "archon-project-orchestrator": Project-wide coordination changes
-
-        🔍 PRP VERSION TRACKING:
-        For PRP documents, versions capture COMPLETE structured content:
-        - Full metadata: title, version, author, date, status, document_type
-        - Complete goal and business justification sections
-        - Entire context: documentation links, gotchas, current state, dependencies
-        - Full implementation blueprint with all phases and tasks
-        - Complete validation gates at all levels
-        - Additional context: security considerations, testing strategies, monitoring
-
-        📚 IMMUTABLE AUDIT TRAIL:
-        - PERMANENT RECORD: Versions cannot be modified once created
-        - CHRONOLOGICAL EVOLUTION: List action shows document development over time
-        - METADATA TRACKING: Each version includes timestamp, creator, change summary
-        - RESTORE WITHOUT LOSS: Restoration creates new version while preserving all history
-        - COMPLIANCE READY: Complete audit trail for regulatory and process compliance
-
-        🔄 VERSION LIFECYCLE:
-        1. Document updated via manage_document → Automatic version snapshot created
-        2. Changes applied to current document state
-        3. New version number assigned (auto-incremented)
-        4. Historical versions remain permanently accessible
-        5. Any version can be restored, creating new current version
-
-        🚨 DISASTER RECOVERY:
-        - If document corruption occurs: Use list action to find last good version
-        - If incorrect changes applied: Use restore action with specific version_number
-        - If need to compare versions: Use get action to examine specific historical states
-        - If need change audit: Version list shows complete modification history
+        Auto-versions created on every document update. Versions are permanent and restorable.
 
         Args:
-            action: Version control operation - "create" | "list" | "get" | "restore"
-                   - "create": Make manual version snapshot (automatic versions created by manage_document)
-                   - "list": Show chronological version history with metadata
-                   - "get": Retrieve complete content of specific historical version
-                   - "restore": Rollback to previous version (creates new version, preserves history)
-
-            project_id: UUID of the project (ALWAYS required for all actions)
-
-            field_name: JSONB field name for version tracking
-                       - "docs": Document versions (PRPs, specs, designs, notes)
-                       - "features": Feature development snapshots
-                       - "data": Project data and configuration snapshots
-                       - "prd": Product Requirements Document versions
-
-            version_number: Specific version number (required for get/restore actions)
-                          Obtained from list action results (auto-incremented integers)
-
-            content: Complete content to snapshot (required for create action)
-                    ⚠️ For PRPs: Must include ALL sections - goal, why, what, context, implementation_blueprint, validation
-                    ⚠️ For Features: Complete feature definitions with status and components
-                    ⚠️ Use structured JSON, not strings or markdown
-
-            change_summary: Descriptive summary of what changed (for create action)
-                          ✅ Be specific: "Added OAuth2 validation section with security checklist"
-                          ✅ Include impact: "Updated implementation blueprint to fix dependency ordering"
-                          ✅ Reference context: "Milestone checkpoint before major refactoring"
-                          ❌ Avoid generic: "Updated document", "Made changes"
-
-            document_id: Specific document UUID within docs array (for create action with docs field)
-                        Used to associate version with specific document
-
-            created_by: Agent or user identifier who created this version
-                       Standard identifiers: "prp-creator", "prp-executor", "prp-validator",
-                       "AI IDE Agent", "archon-task-manager", "archon-project-orchestrator"
+            action: "create" | "list" | "get" | "restore"
+            project_id: Project UUID (always required)
+            field_name: "docs" | "features" | "data" | "prd"
+            version_number: Version number (for get/restore)
+            content: Complete content to snapshot (for create)
+            change_summary: Description of changes (for create)
+            document_id: Document UUID (optional, for docs field)
+            created_by: Creator identifier (default: "system")
 
         Returns:
-            JSON string with version operation results:
-            - success: Boolean indicating operation success
-            - version: Version object with metadata (for create/get actions)
-            - versions: Array of version history (for list action)
-            - message: Human-readable status message
-            - content: Full versioned content (for get action)
-            - error: Error description (if success=false)
-
-            Version Object Structure:
-            {
-                "id": "version-uuid",
-                "version_number": 3,
-                "field_name": "docs",
-                "change_summary": "Added comprehensive validation gates",
-                "change_type": "manual",  # or "automatic"
-                "created_by": "prp-creator",
-                "created_at": "2025-07-30T10:30:00Z",
-                "document_id": "doc-uuid",  # if applicable
-                "content_preview": "First 200 chars of content..."
-            }
+            JSON string with structure:
+            - success: bool - Operation success status
+            - version: dict - Version object with metadata (for create action)
+            - versions: list[dict] - Array of versions (for list action, via spread operator)
+            - content: Any - Full versioned content (for get action, via spread operator)
+            - message: str - Operation message (for create/restore actions)
+            - error: str - Error description if success=false
 
         Examples:
-            Manual PRP Checkpoint:
-                manage_versions(action="create", project_id="uuid", field_name="docs",
-                              content={COMPLETE_PRP_JSON}, change_summary="Added validation gates for OAuth implementation",
-                              document_id="doc-uuid", created_by="prp-creator")
-
-            List PRP History:
-                manage_versions(action="list", project_id="uuid", field_name="docs")
-
-            View Specific Version:
-                manage_versions(action="get", project_id="uuid", field_name="docs", version_number=3)
-
-            Restore Previous PRP:
-                manage_versions(action="restore", project_id="uuid", field_name="docs",
-                              version_number=2, created_by="prp-validator")
-
-            Create Feature Snapshot:
-                manage_versions(action="create", project_id="uuid", field_name="features",
-                              content={...}, change_summary="Added user authentication feature set")
+            List history: manage_versions(action="list", project_id="uuid", field_name="docs")
+            Get version: manage_versions(action="get", project_id="uuid", field_name="docs", version_number=3)
+            Restore: manage_versions(action="restore", project_id="uuid", field_name="docs", version_number=2)
         """
         try:
             api_url = get_api_url()
@@ -1297,14 +828,14 @@ def register_project_tools(mcp: FastMCP):
         """
         Get features from a project's features JSONB field.
 
-        This remains a standalone tool as it's a specific query operation
-        that doesn't fit the CRUD pattern of the other tools.
-
         Args:
             project_id: UUID of the project
 
         Returns:
-            JSON string with list of features
+            JSON string with structure:
+            - success: bool - Operation success status
+            - features: list[dict] - Array of project features (via spread operator)
+            - error: str - Error description if success=false
         """
         try:
             api_url = get_api_url()

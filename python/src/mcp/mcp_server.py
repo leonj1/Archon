@@ -187,6 +187,64 @@ async def lifespan(server: FastMCP) -> AsyncIterator[ArchonContext]:
             logger.info("✅ MCP server shutdown complete")
 
 
+# Define MCP instructions for Claude Code and other clients
+MCP_INSTRUCTIONS = """
+# Archon MCP Server Instructions
+
+## 🚨 CRITICAL RULES (ALWAYS FOLLOW)
+1. **Task Management**: ALWAYS use Archon MCP tools for task management,
+You can combine them with your TODO tools but always make that the first todo is to update archon
+and the last todo is to update archon.
+
+Example: Use TodoWrite to create a set of new todos
+[]Create the task in archon
+[]Research deeply using archon rag
+[]Research on the web using websearch tools
+[]Deeply look into the codebase patterns and integration points
+[]Update Archon tasks with the findings
+[]Create implementation tasks in Archon
+
+This is to ensure efficient task management and collaboration.
+Making sure all critical details are in Archon.
+
+You can think of it as Archon is where you manage the task that needs to be shared with the team
+And your todo is your internal subtasks/todos that does not need to be shared with the team.
+
+2. **Research First**: Before implementing, use perform_rag_query and search_code_examples
+3. **Task-Driven Development**: Never code without checking current tasks first
+
+## 📋 Core Workflow
+For every coding task, follow this cycle:
+1. Check current task: manage_task(action="get", task_id="...")
+2. Research: perform_rag_query() + search_code_examples()
+3. Update to doing: manage_task(action="update", update_fields={"status": "doing"})
+4. Implement based on research findings
+5. Mark for review: manage_task(action="update", update_fields={"status": "review"})
+6. Get next task: manage_task(action="list", filter_by="status", filter_value="todo")
+
+## 🏗️ Project Initialization
+- New project: manage_project(action="create", title="...", prd={...})
+- Existing project: manage_task(action="list", filter_by="project", filter_value="...")
+- Always create atomic tasks (1-4 hours of work each)
+
+## 🔍 Research Patterns
+- Architecture: perform_rag_query(query="[tech] patterns", match_count=5)
+- Implementation: search_code_examples(query="[feature] example", match_count=3)
+- Keep match_count around (5) for focused results
+- Combine RAG with websearch tools for better results
+
+## 📊 Task Status Flow
+todo → doing → review → done
+- Only one task in 'doing' at a time
+- Use 'review' for completed work awaiting validation
+- Archive obsolete tasks
+
+## 💾 Version Control
+- All documents auto-versioned on update
+- Use manage_versions to view history or restore
+- Deletions preserve version history
+"""
+
 # Initialize the main FastMCP server with fixed configuration
 try:
     logger.info("🏗️ MCP SERVER INITIALIZATION:")
@@ -196,6 +254,7 @@ try:
     mcp = FastMCP(
         "archon-mcp-server",
         description="MCP server for Archon - uses HTTP calls to other services",
+        instructions=MCP_INSTRUCTIONS,
         lifespan=lifespan,
         host=server_host,
         port=server_port,
@@ -212,10 +271,10 @@ except Exception as e:
 @mcp.tool()
 async def health_check(ctx: Context) -> str:
     """
-    Perform a health check on the MCP server and its dependencies.
+    Check health status of MCP server and dependencies.
 
     Returns:
-        JSON string with current health status
+        JSON with health status, uptime, and service availability
     """
     try:
         # Try to get the lifespan context
@@ -261,10 +320,10 @@ async def health_check(ctx: Context) -> str:
 @mcp.tool()
 async def session_info(ctx: Context) -> str:
     """
-    Get information about the current session and all active sessions.
+    Get current and active session information.
 
     Returns:
-        JSON string with session information
+        JSON with active sessions count and server uptime
     """
     try:
         session_manager = get_session_manager()
