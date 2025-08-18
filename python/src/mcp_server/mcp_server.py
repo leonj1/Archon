@@ -193,7 +193,7 @@ MCP_INSTRUCTIONS = """
 
 ## 🚨 CRITICAL RULES (ALWAYS FOLLOW)
 1. **Task Management**: ALWAYS use Archon MCP tools for task management,
-You can combine them with your TODO tools but always make that the first todo is to update archon
+You can combine them with your TODO tools but always make sure that the first todo is to update archon
 and the last todo is to update archon.
 
 Example: Use TodoWrite to create a set of new todos
@@ -374,39 +374,72 @@ def register_modules():
         logger.error(f"✗ Error registering RAG module: {e}")
         logger.error(traceback.format_exc())
 
-    # Import and register Project module - only if Projects are enabled
-    projects_enabled = os.getenv("PROJECTS_ENABLED", "true").lower() == "true"
-    use_separate_project_tools = os.getenv("USE_SEPARATE_PROJECT_TOOLS", "false").lower() == "true"
-    
-    if projects_enabled:
-        if use_separate_project_tools:
-            # Use new separated project tools
-            try:
-                from src.mcp_server.features.projects import register_project_tools
+    # Import and register all feature tools - separated and focused
 
-                register_project_tools(mcp)
-                modules_registered += 1
-                logger.info("✓ Project tools registered (separate tools)")
-            except ImportError as e:
-                logger.warning(f"⚠ Separate project tools not available: {e}")
-            except Exception as e:
-                logger.error(f"✗ Error registering separate project tools: {e}")
-                logger.error(traceback.format_exc())
-        else:
-            # Use consolidated project module (for backward compatibility)
-            try:
-                from src.mcp_server.modules.project_module import register_project_tools
+    # Project Management Tools
+    try:
+        from src.mcp_server.features.projects import register_project_tools
 
-                register_project_tools(mcp)
-                modules_registered += 1
-                logger.info("✓ Project module registered (consolidated)")
-            except ImportError as e:
-                logger.warning(f"⚠ Project module not available: {e}")
-            except Exception as e:
-                logger.error(f"✗ Error registering Project module: {e}")
-                logger.error(traceback.format_exc())
-    else:
-        logger.info("⚠ Project module skipped - Projects are disabled")
+        register_project_tools(mcp)
+        modules_registered += 1
+        logger.info("✓ Project tools registered")
+    except ImportError as e:
+        logger.warning(f"⚠ Project tools not available: {e}")
+    except Exception as e:
+        logger.error(f"✗ Error registering project tools: {e}")
+        logger.error(traceback.format_exc())
+
+    # Task Management Tools
+    try:
+        from src.mcp_server.features.tasks import register_task_tools
+
+        register_task_tools(mcp)
+        modules_registered += 1
+        logger.info("✓ Task tools registered")
+    except ImportError as e:
+        logger.warning(f"⚠ Task tools not available: {e}")
+    except Exception as e:
+        logger.error(f"✗ Error registering task tools: {e}")
+        logger.error(traceback.format_exc())
+
+    # Document Management Tools
+    try:
+        from src.mcp_server.features.documents import register_document_tools
+
+        register_document_tools(mcp)
+        modules_registered += 1
+        logger.info("✓ Document tools registered")
+    except ImportError as e:
+        logger.warning(f"⚠ Document tools not available: {e}")
+    except Exception as e:
+        logger.error(f"✗ Error registering document tools: {e}")
+        logger.error(traceback.format_exc())
+
+    # Version Management Tools
+    try:
+        from src.mcp_server.features.documents import register_version_tools
+
+        register_version_tools(mcp)
+        modules_registered += 1
+        logger.info("✓ Version tools registered")
+    except ImportError as e:
+        logger.warning(f"⚠ Version tools not available: {e}")
+    except Exception as e:
+        logger.error(f"✗ Error registering version tools: {e}")
+        logger.error(traceback.format_exc())
+
+    # Feature Management Tools
+    try:
+        from src.mcp_server.features.feature_tools import register_feature_tools
+
+        register_feature_tools(mcp)
+        modules_registered += 1
+        logger.info("✓ Feature tools registered")
+    except ImportError as e:
+        logger.warning(f"⚠ Feature tools not available: {e}")
+    except Exception as e:
+        logger.error(f"✗ Error registering feature tools: {e}")
+        logger.error(traceback.format_exc())
 
     logger.info(f"📦 Total modules registered: {modules_registered}")
 
