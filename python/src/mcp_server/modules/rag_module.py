@@ -85,7 +85,7 @@ def register_rag_tools(mcp: FastMCP):
 
         Args:
             query: Search query
-            source_domain: Optional domain filter (e.g., 'docs.anthropic.com'). 
+            source_domain: Optional domain filter (e.g., 'docs.anthropic.com').
                           Note: This is a domain name, not the source_id from get_available_sources.
             match_count: Max results (default: 5)
 
