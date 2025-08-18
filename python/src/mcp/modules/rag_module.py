@@ -78,14 +78,15 @@ def register_rag_tools(mcp: FastMCP):
 
     @mcp.tool()
     async def perform_rag_query(
-        ctx: Context, query: str, source: str = None, match_count: int = 5
+        ctx: Context, query: str, source_domain: str = None, match_count: int = 5
     ) -> str:
         """
         Search knowledge base for relevant content using RAG.
 
         Args:
             query: Search query
-            source: Optional source filter (use get_available_sources first)
+            source_domain: Optional domain filter (e.g., 'docs.anthropic.com'). 
+                          Note: This is a domain name, not the source_id from get_available_sources.
             match_count: Max results (default: 5)
 
         Returns:
@@ -101,8 +102,8 @@ def register_rag_tools(mcp: FastMCP):
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 request_data = {"query": query, "match_count": match_count}
-                if source:
-                    request_data["source"] = source
+                if source_domain:
+                    request_data["source"] = source_domain
 
                 response = await client.post(urljoin(api_url, "/api/rag/query"), json=request_data)
 
@@ -134,14 +135,15 @@ def register_rag_tools(mcp: FastMCP):
 
     @mcp.tool()
     async def search_code_examples(
-        ctx: Context, query: str, source_id: str = None, match_count: int = 5
+        ctx: Context, query: str, source_domain: str = None, match_count: int = 5
     ) -> str:
         """
         Search for relevant code examples in the knowledge base.
 
         Args:
             query: Search query
-            source_id: Optional source filter (use get_available_sources first)
+            source_domain: Optional domain filter (e.g., 'docs.anthropic.com').
+                          Note: This is a domain name, not the source_id from get_available_sources.
             match_count: Max results (default: 5)
 
         Returns:
@@ -157,8 +159,8 @@ def register_rag_tools(mcp: FastMCP):
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 request_data = {"query": query, "match_count": match_count}
-                if source_id:
-                    request_data["source"] = source_id
+                if source_domain:
+                    request_data["source"] = source_domain
 
                 # Call the dedicated code examples endpoint
                 response = await client.post(

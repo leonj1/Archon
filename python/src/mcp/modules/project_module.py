@@ -241,7 +241,7 @@ def register_project_tools(mcp: FastMCP):
                 if not title:
                     return json.dumps({
                         "success": False,
-                        "error": "title is required for create action",
+                        "error": "title is required for create action. Provide a clear, actionable task title.",
                     })
 
                 # Call Server API to create task
@@ -424,16 +424,18 @@ def register_project_tools(mcp: FastMCP):
         Manage project documents with automatic version control.
 
         Every update creates immutable version backup. Use manage_versions to restore.
-        PRP documents require structured JSON format, not markdown.
+        Documents can be simple JSON objects or structured PRPs for PRPViewer compatibility.
 
         Args:
             action: "add" | "list" | "get" | "update" | "delete"
             project_id: Project UUID (always required)
             doc_id: Document UUID (required for get/update/delete)
-            document_type: Document type (required for add, "prp" for PRPs)
+            document_type: Document type (required for add) - "spec", "design", "note", "prp", etc.
             title: Document title (required for add)
             content: Structured JSON content (for add/update)
-            metadata: Optional metadata dict with tags, author fields
+                    - For simple docs: Any JSON structure you need
+                    - For PRP docs: Must include goal, why, what, context, implementation_blueprint, validation
+            metadata: Optional metadata dict with tags, status, version, author
 
         Returns:
             JSON string with structure:
@@ -444,7 +446,25 @@ def register_project_tools(mcp: FastMCP):
             - error: str - Error description if success=false
 
         Examples:
-            Add PRP: manage_document(action="add", project_id="uuid", document_type="prp", title="OAuth", content={...})
+            Add simple spec document:
+                manage_document(action="add", project_id="uuid", document_type="spec",
+                              title="API Specification", 
+                              content={"endpoints": [...], "schemas": {...}},
+                              metadata={"tags": ["api", "v2"], "status": "draft"})
+            
+            Add design document:
+                manage_document(action="add", project_id="uuid", document_type="design",
+                              title="Architecture Design",
+                              content={"overview": "...", "components": [...], "diagrams": [...]})
+            
+            Add PRP document (requires specific structure):
+                manage_document(action="add", project_id="uuid", document_type="prp",
+                              title="Feature PRP", content={
+                                  "goal": "...", "why": [...], "what": {...},
+                                  "context": {...}, "implementation_blueprint": {...},
+                                  "validation": {...}
+                              })
+            
             List: manage_document(action="list", project_id="uuid")
             Get: manage_document(action="get", project_id="uuid", doc_id="doc-uuid")
             Update: manage_document(action="update", project_id="uuid", doc_id="doc-uuid", content={...})
@@ -457,12 +477,12 @@ def register_project_tools(mcp: FastMCP):
                 if not document_type:
                     return json.dumps({
                         "success": False,
-                        "error": "document_type is required for add action",
+                        "error": "document_type is required for add action. Examples: 'spec', 'design', 'note', 'prp'. Use 'prp' only for structured PRP documents.",
                     })
                 if not title:
                     return json.dumps({
                         "success": False,
-                        "error": "title is required for add action",
+                        "error": "title is required for add action. Provide a descriptive title for your document.",
                     })
 
                 # CRITICAL VALIDATION: PRP documents must use structured JSON format
@@ -606,7 +626,8 @@ def register_project_tools(mcp: FastMCP):
                                     return json.dumps({
                                         "success": False,
                                         "error": f"PRP content missing required fields: {', '.join(missing_fields)}. "
-                                        f"Required fields: {', '.join(required_fields)}",
+                                        f"Required fields: {', '.join(required_fields)}. "
+                                        "Each field should contain appropriate content (goal: string, why: array, what: object, etc.).",
                                     })
 
                                 # Ensure document_type is set for PRPViewer compatibility
@@ -677,7 +698,7 @@ def register_project_tools(mcp: FastMCP):
         project_id: str,
         field_name: str,
         version_number: int = None,
-        content: dict[str, Any] = None,
+        content: Any = None,
         change_summary: str = None,
         document_id: str = None,
         created_by: str = "system",
@@ -692,7 +713,12 @@ def register_project_tools(mcp: FastMCP):
             project_id: Project UUID (always required)
             field_name: "docs" | "features" | "data" | "prd"
             version_number: Version number (for get/restore)
-            content: Complete content to snapshot (for create)
+            content: Complete content to snapshot (for create). 
+                    IMPORTANT: This should be the exact content you want to version.
+                    - For docs field: Pass the complete docs array
+                    - For features field: Pass the complete features object
+                    - For data field: Pass the complete data object
+                    - For prd field: Pass the complete prd object
             change_summary: Description of changes (for create)
             document_id: Document UUID (optional, for docs field)
             created_by: Creator identifier (default: "system")
@@ -701,12 +727,22 @@ def register_project_tools(mcp: FastMCP):
             JSON string with structure:
             - success: bool - Operation success status
             - version: dict - Version object with metadata (for create action)
-            - versions: list[dict] - Array of versions (for list action, via spread operator)
-            - content: Any - Full versioned content (for get action, via spread operator)
+            - versions: list[dict] - Array of versions (for list action)
+            - content: Any - Full versioned content (for get action)
             - message: str - Operation message (for create/restore actions)
             - error: str - Error description if success=false
 
         Examples:
+            Create version for docs:
+                manage_versions(action="create", project_id="uuid", field_name="docs",
+                              content=[{"id": "doc1", "title": "My Doc", "content": {...}}],
+                              change_summary="Updated documentation")
+            
+            Create version for features:
+                manage_versions(action="create", project_id="uuid", field_name="features",
+                              content={"auth": {"status": "done"}, "api": {"status": "todo"}},
+                              change_summary="Added auth feature")
+            
             List history: manage_versions(action="list", project_id="uuid", field_name="docs")
             Get version: manage_versions(action="get", project_id="uuid", field_name="docs", version_number=3)
             Restore: manage_versions(action="restore", project_id="uuid", field_name="docs", version_number=2)
@@ -719,7 +755,7 @@ def register_project_tools(mcp: FastMCP):
                 if not content:
                     return json.dumps({
                         "success": False,
-                        "error": "content is required for create action",
+                        "error": "content is required for create action. It should contain the complete data to version (e.g., for 'docs' field pass the entire docs array, for 'features' pass the features object).",
                     })
 
                 # Call Server API to create version
@@ -828,14 +864,38 @@ def register_project_tools(mcp: FastMCP):
         """
         Get features from a project's features JSONB field.
 
+        Features track the functional components and capabilities of a project,
+        typically organized by feature name with status and metadata. This is useful
+        for tracking development progress, feature flags, and component status.
+
+        The features field is a flexible JSONB structure that can contain:
+        - Feature status tracking (e.g., {"auth": {"status": "done"}, "api": {"status": "in_progress"}})
+        - Feature flags (e.g., {"dark_mode": {"enabled": true, "rollout": 0.5}})
+        - Component metadata (e.g., {"payment": {"provider": "stripe", "version": "2.0"}})
+
         Args:
-            project_id: UUID of the project
+            project_id: UUID of the project (get from manage_project list action)
 
         Returns:
             JSON string with structure:
             - success: bool - Operation success status
-            - features: list[dict] - Array of project features (via spread operator)
+            - features: list[dict] - Array of project features or empty list if none defined
+            - count: int - Number of features
             - error: str - Error description if success=false
+
+        Examples:
+            Get features for a project:
+                get_project_features(project_id="550e8400-e29b-41d4-a716-446655440000")
+            
+            Returns something like:
+                {
+                    "success": true,
+                    "features": [
+                        {"name": "authentication", "status": "completed", "components": ["oauth", "jwt"]},
+                        {"name": "api", "status": "in_progress", "endpoints": 12}
+                    ],
+                    "count": 2
+                }
         """
         try:
             api_url = get_api_url()
