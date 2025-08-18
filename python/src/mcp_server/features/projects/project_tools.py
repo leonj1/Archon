@@ -31,7 +31,7 @@ def register_project_tools(mcp: FastMCP):
     ) -> str:
         """
         Create a new project with automatic AI assistance.
-        
+
         The project creation starts a background process that generates PRP documentation
         and initial tasks based on the title and description.
 
@@ -55,7 +55,7 @@ def register_project_tools(mcp: FastMCP):
                 title="Task Management API",
                 description="RESTful API for managing tasks and projects"
             )
-            
+
             # Project with GitHub integration
             create_project(
                 title="OAuth2 Authentication System",

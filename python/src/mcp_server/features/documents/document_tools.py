@@ -75,7 +75,7 @@ def register_document_tools(mcp: FastMCP):
                 tags=["api", "backend"],
                 author="API Team"
             )
-            
+
             # Create design document
             create_document(
                 project_id="550e8400-e29b-41d4-a716-446655440000",
@@ -227,7 +227,7 @@ def register_document_tools(mcp: FastMCP):
             timeout = httpx.Timeout(30.0, connect=5.0)
 
             # Build update fields
-            update_fields = {}
+            update_fields: Dict[str, Any] = {}
             if title is not None:
                 update_fields["title"] = title
             if content is not None:

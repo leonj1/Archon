@@ -41,27 +41,27 @@ def register_feature_tools(mcp: FastMCP):
                 ],
                 "count": 3
             }
-            
+
             Note: Returns empty array if no features are defined yet.
 
         Examples:
             get_project_features(project_id="550e8400-e29b-41d4-a716-446655440000")
-            
+
         Feature Structure Examples:
             Features can have various structures depending on your needs:
-            
+
             1. Simple status tracking:
                {"name": "feature_name", "status": "todo|in_progress|done"}
-            
+
             2. Component tracking:
                {"name": "auth", "status": "done", "components": ["oauth", "jwt", "sessions"]}
-            
+
             3. Progress tracking:
                {"name": "api", "status": "in_progress", "endpoints_done": 12, "endpoints_total": 20}
-            
+
             4. Metadata rich:
                {"name": "payments", "provider": "stripe", "version": "2.0", "enabled": true}
-        
+
         How Features Are Populated:
             - Features are typically added via update_project() with features field
             - Can be automatically populated by AI during project creation

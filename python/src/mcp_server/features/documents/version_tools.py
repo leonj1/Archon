@@ -33,7 +33,7 @@ def register_version_tools(mcp: FastMCP):
     ) -> str:
         """
         Create a new version snapshot of project data.
-        
+
         Creates an immutable snapshot that can be restored later. The content format
         depends on which field_name you're versioning.
 
@@ -45,19 +45,19 @@ def register_version_tools(mcp: FastMCP):
                 - "data": For general data objects
                 - "prd": For product requirement documents
             content: Complete content to snapshot. Format depends on field_name:
-                
+
                 For "docs" - pass array of document objects:
                     [{"id": "doc-123", "title": "API Guide", "content": {...}}]
-                
+
                 For "features" - pass dictionary of features:
                     {"auth": {"status": "done"}, "api": {"status": "in_progress"}}
-                
+
                 For "data" - pass any JSON object:
                     {"config": {"theme": "dark"}, "settings": {...}}
-                
+
                 For "prd" - pass PRD object:
                     {"vision": "...", "features": [...], "metrics": [...]}
-                    
+
             change_summary: Description of what changed (e.g., "Added OAuth docs")
             document_id: Optional - for versioning specific doc in docs array
             created_by: Who created this version (default: "system")
@@ -78,7 +78,7 @@ def register_version_tools(mcp: FastMCP):
                 content=[{"id": "doc-1", "title": "Guide", "content": {"text": "..."}}],
                 change_summary="Updated user guide"
             )
-            
+
             # Version features  
             create_version(
                 project_id="550e8400-e29b-41d4-a716-446655440000",

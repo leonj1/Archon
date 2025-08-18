@@ -7,7 +7,7 @@ Mirrors the functionality of the original manage_task tool but with individual t
 
 import json
 import logging
-from typing import Any, Optional, List, Dict
+from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
 import httpx
@@ -73,7 +73,7 @@ def register_task_tools(mcp: FastMCP):
                 title="Add user authentication",
                 description="Implement JWT-based authentication with refresh tokens"
             )
-            
+
             # Task with sources and examples
             create_task(
                 project_id="550e8400-e29b-41d4-a716-446655440000",
@@ -177,7 +177,7 @@ def register_task_tools(mcp: FastMCP):
             timeout = httpx.Timeout(30.0, connect=5.0)
 
             # Build URL and parameters based on filter type
-            params = {
+            params: Dict[str, Any] = {
                 "page": page,
                 "per_page": per_page,
                 "exclude_large_fields": True,  # Always exclude large fields in MCP responses
@@ -314,7 +314,7 @@ def register_task_tools(mcp: FastMCP):
     async def delete_task(ctx: Context, task_id: str) -> str:
         """
         Delete/archive a task.
-        
+
         This removes the task from active lists but preserves it in the database
         for audit purposes (soft delete).
 
