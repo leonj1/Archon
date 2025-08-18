@@ -424,7 +424,9 @@ class CrawlingService:
                 unregister_orchestration(self.progress_id)
                 safe_logfire_info(f"Unregistered orchestration service on cancellation | progress_id={self.progress_id}")
         except Exception as e:
-            safe_logfire_error(f"Async crawl orchestration failed | error={str(e)}")
+            import traceback
+            tb_str = traceback.format_exc()
+            safe_logfire_error(f"Async crawl orchestration failed | error={str(e)}\n{tb_str}")
             await self._handle_progress_update(task_id, {
                 'status': 'error',
                 'percentage': -1,

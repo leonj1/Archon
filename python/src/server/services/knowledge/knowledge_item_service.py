@@ -60,7 +60,7 @@ class KnowledgeItemService:
                 else:
                     # Need to count filtered results
                     count_result = await db.select("sources", columns=["source_id"])
-                    if count_result.success:
+                    if count_result and count_result.success and count_result.data:
                         all_sources = count_result.data
                         # Apply filters in memory for count
                         filtered_sources = await self._apply_filters_in_memory(
@@ -81,11 +81,11 @@ class KnowledgeItemService:
                         limit=per_page,
                         offset=start_idx
                     )
-                    sources = sources_result.data if sources_result.success else []
+                    sources = sources_result.data if sources_result and sources_result.success and sources_result.data else []
                 else:
                     # Get all and filter in memory
                     all_result = await db.select("sources", order_by="source_id")
-                    if all_result.success:
+                    if all_result and all_result.success and all_result.data:
                         all_sources = all_result.data
                         filtered_sources = await self._apply_filters_in_memory(
                             all_sources, knowledge_type, search, db
@@ -136,7 +136,7 @@ class KnowledgeItemService:
                 items = []
                 for source in sources:
                     source_id = source["source_id"]
-                    source_metadata = source.get("metadata", {})
+                    source_metadata = source.get("metadata", {}) or {}
 
                     # Use batched data instead of individual queries
                     first_page_url = first_urls.get(source_id, f"source://{source_id}")
@@ -435,8 +435,11 @@ class KnowledgeItemService:
         except Exception:
             return []
 
-    def _determine_source_type(self, metadata: dict[str, Any], url: str) -> str:
+    def _determine_source_type(self, metadata: dict[str, Any] | None, url: str) -> str:
         """Determine the source type from metadata or URL pattern."""
+        if metadata is None:
+            metadata = {}
+            
         stored_source_type = metadata.get("source_type")
         if stored_source_type:
             return stored_source_type

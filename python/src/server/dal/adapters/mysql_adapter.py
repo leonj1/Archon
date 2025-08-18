@@ -159,11 +159,24 @@ class MySQLAdapter(IDatabaseWithVectors):
                             param_list = list(params.values())
                         elif isinstance(params, (list, tuple)):
                             # Use list/tuple directly
-                            param_list = params
+                            param_list = list(params)
                         else:
                             # Single parameter
                             param_list = [params]
-                        await cursor.execute(query, param_list)
+                        
+                        # Count expected parameters in query
+                        expected_params = query.count('%s')
+                        if len(param_list) != expected_params:
+                            search_logger.warning(f"Parameter count mismatch: query expects {expected_params}, got {len(param_list)} | Query: {query[:100]}...")
+                            # If no parameters expected but some provided, execute without params
+                            if expected_params == 0:
+                                await cursor.execute(query)
+                            else:
+                                # Try to match parameter count
+                                param_list = param_list[:expected_params] + [None] * max(0, expected_params - len(param_list))
+                                await cursor.execute(query, param_list)
+                        else:
+                            await cursor.execute(query, param_list)
                     else:
                         await cursor.execute(query)
                     
@@ -186,6 +199,8 @@ class MySQLAdapter(IDatabaseWithVectors):
                         )
         except Exception as e:
             search_logger.error(f"MySQL query execution failed: {e}")
+            search_logger.error(f"Query: {query}")
+            search_logger.error(f"Params: {params}")
             return QueryResult(data=[], error=str(e))
     
     def _build_where_clause(self, filters: Dict[str, Any]) -> tuple[str, List[Any]]:
@@ -310,7 +325,11 @@ class MySQLAdapter(IDatabaseWithVectors):
             # Execute query
             async with self.pool.acquire() as conn:
                 async with conn.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute(query, params)
+                    # Ensure params is a list for MySQL
+                    if params and not isinstance(params, (list, tuple)):
+                        params = list(params) if hasattr(params, '__iter__') else [params]
+                    
+                    await cursor.execute(query, params if params else None)
                     rows = await cursor.fetchall()
                     
                     # Convert JSON strings to dicts
@@ -371,7 +390,11 @@ class MySQLAdapter(IDatabaseWithVectors):
             # Execute query
             async with self.pool.acquire() as conn:
                 async with conn.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute(query, all_values)
+                    # Ensure all_values is properly formatted for MySQL
+                    if all_values:
+                        await cursor.execute(query, all_values)
+                    else:
+                        await cursor.execute(query)
                     await conn.commit()
                     
                     # Get inserted IDs if possible
@@ -584,6 +607,36 @@ class MySQLAdapter(IDatabaseWithVectors):
         
         conn = await self.pool.acquire()
         return MySQLTransaction(conn, self)
+    
+    async def count(
+        self,
+        table: str,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        """
+        Count records in table with proper WHERE clause handling.
+        
+        Args:
+            table: Table name
+            filters: Filter conditions
+            
+        Returns:
+            Number of records
+        """
+        query = f"SELECT COUNT(*) as count FROM `{table}`"
+        params = []
+        
+        if filters:
+            where_clauses = []
+            for key, value in filters.items():
+                where_clauses.append(f"`{key}` = %s")
+                params.append(value)
+            
+            if where_clauses:
+                query += " WHERE " + " AND ".join(where_clauses)
+        
+        result = await self.execute(query, params if params else None)
+        return result.first.get("count", 0) if result.success else 0
     
     # Helper methods for vector operations (stored as BLOB)
     

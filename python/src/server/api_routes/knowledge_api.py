@@ -141,9 +141,16 @@ async def get_knowledge_items(
         return result
 
     except Exception as e:
+        import traceback
+        tb_str = traceback.format_exc()
         safe_logfire_error(
-            f"Failed to get knowledge items | error={str(e)} | page={page} | per_page={per_page}"
+            f"Failed to get knowledge items | error={str(e)} | page={page} | per_page={per_page}\n{tb_str}"
         )
+        logger.error(f"=== KNOWLEDGE ITEMS ERROR ===")
+        logger.error(f"Error: {str(e)}")
+        logger.error(f"Exception Type: {type(e).__name__}")
+        logger.error(f"Traceback:\n{tb_str}")
+        logger.error("=== END KNOWLEDGE ITEMS ERROR ===")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
@@ -172,8 +179,10 @@ async def update_knowledge_item(source_id: str, updates: dict):
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
-@router.delete("/knowledge-items/{source_id}")
-async def delete_knowledge_item(source_id: str):
+from fastapi import Path
+
+@router.delete("/knowledge-items/{source_id:path}")
+async def delete_knowledge_item(source_id: str = Path(..., title="The source ID to delete")):
     """Delete a knowledge item from the database."""
     try:
         logger.debug(f"Starting delete_knowledge_item for source_id: {source_id}")
@@ -187,7 +196,7 @@ async def delete_knowledge_item(source_id: str):
         logger.debug("Successfully created SourceManagementService")
 
         logger.debug("Calling delete_source function...")
-        success, result_data = source_service.delete_source(source_id)
+        success, result_data = await source_service.delete_source(source_id)
         logger.debug(f"delete_source returned: success={success}, data={result_data}")
 
         # Convert to expected format
@@ -210,13 +219,13 @@ async def delete_knowledge_item(source_id: str):
             )
 
     except Exception as e:
+        import traceback
+        tb_str = traceback.format_exc()
         logger.error(f"Exception in delete_knowledge_item: {e}")
         logger.error(f"Exception type: {type(e)}")
-        import traceback
-
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"Traceback: {tb_str}")
         safe_logfire_error(
-            f"Failed to delete knowledge item | error={str(e)} | source_id={source_id}"
+            f"Failed to delete knowledge item | error={str(e)} | source_id={source_id}\n{tb_str}"
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 

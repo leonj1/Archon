@@ -14,7 +14,7 @@ maintaining the microservices architecture.
 import json
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, List
 from urllib.parse import urljoin
 
 import httpx
