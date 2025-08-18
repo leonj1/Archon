@@ -30,18 +30,38 @@ def register_project_tools(mcp: FastMCP):
         github_repo: Optional[str] = None,
     ) -> str:
         """
-        Create a new project.
+        Create a new project with automatic AI assistance.
+        
+        The project creation starts a background process that generates PRP documentation
+        and initial tasks based on the title and description.
 
         Args:
-            title: Project title (required)
-            description: Project description (optional)
-            github_repo: GitHub repository URL (optional)
+            title: Project title - should be descriptive (required)
+            description: Project description explaining goals and scope
+            github_repo: GitHub repository URL (e.g., "https://github.com/org/repo")
 
         Returns:
-            JSON with project details including project_id
+            JSON with project details:
+            {
+                "success": true,
+                "project": {...},
+                "project_id": "550e8400-e29b-41d4-a716-446655440000",
+                "message": "Project created successfully"
+            }
 
-        Example:
-            create_project(title="My New Project", description="A test project")
+        Examples:
+            # Simple project
+            create_project(
+                title="Task Management API",
+                description="RESTful API for managing tasks and projects"
+            )
+            
+            # Project with GitHub integration
+            create_project(
+                title="OAuth2 Authentication System",
+                description="Implement secure OAuth2 authentication with multiple providers",
+                github_repo="https://github.com/myorg/auth-service"
+            )
         """
         try:
             api_url = get_api_url()
@@ -55,13 +75,13 @@ def register_project_tools(mcp: FastMCP):
 
                 if response.status_code == 200:
                     result = response.json()
-                    
+
                     # Handle async project creation
                     if "progress_id" in result:
                         # Poll for completion (max 30 seconds)
                         for attempt in range(30):
                             await asyncio.sleep(1)
-                            
+
                             # List projects to find the newly created one
                             list_response = await client.get(urljoin(api_url, "/api/projects"))
                             if list_response.status_code == 200:
@@ -73,14 +93,14 @@ def register_project_tools(mcp: FastMCP):
                                             "success": True,
                                             "project": proj,
                                             "project_id": proj["id"],
-                                            "message": f"Project created successfully with ID: {proj['id']}"
+                                            "message": f"Project created successfully with ID: {proj['id']}",
                                         })
-                        
+
                         # If we couldn't find it after polling
                         return json.dumps({
                             "success": True,
                             "progress_id": result["progress_id"],
-                            "message": "Project creation started. Use list_projects to find it once complete."
+                            "message": "Project creation started. Use list_projects to find it once complete.",
                         })
                     else:
                         # Direct response (shouldn't happen with current API)
@@ -116,13 +136,10 @@ def register_project_tools(mcp: FastMCP):
                     return json.dumps({
                         "success": True,
                         "projects": projects,
-                        "count": len(projects)
+                        "count": len(projects),
                     })
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": "Failed to list projects"
-                    })
+                    return json.dumps({"success": False, "error": "Failed to list projects"})
 
         except Exception as e:
             logger.error(f"Error listing projects: {e}")
@@ -155,13 +172,10 @@ def register_project_tools(mcp: FastMCP):
                 elif response.status_code == 404:
                     return json.dumps({
                         "success": False,
-                        "error": f"Project {project_id} not found"
+                        "error": f"Project {project_id} not found",
                     })
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": "Failed to get project"
-                    })
+                    return json.dumps({"success": False, "error": "Failed to get project"})
 
         except Exception as e:
             logger.error(f"Error getting project: {e}")
@@ -186,25 +200,20 @@ def register_project_tools(mcp: FastMCP):
             timeout = httpx.Timeout(30.0, connect=5.0)
 
             async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.delete(
-                    urljoin(api_url, f"/api/projects/{project_id}")
-                )
+                response = await client.delete(urljoin(api_url, f"/api/projects/{project_id}"))
 
                 if response.status_code == 200:
                     return json.dumps({
                         "success": True,
-                        "message": f"Project {project_id} deleted successfully"
+                        "message": f"Project {project_id} deleted successfully",
                     })
                 elif response.status_code == 404:
                     return json.dumps({
                         "success": False,
-                        "error": f"Project {project_id} not found"
+                        "error": f"Project {project_id} not found",
                     })
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": "Failed to delete project"
-                    })
+                    return json.dumps({"success": False, "error": "Failed to delete project"})
 
         except Exception as e:
             logger.error(f"Error deleting project: {e}")
@@ -248,15 +257,11 @@ def register_project_tools(mcp: FastMCP):
                 update_data["github_repo"] = github_repo
 
             if not update_data:
-                return json.dumps({
-                    "success": False,
-                    "error": "No fields to update"
-                })
+                return json.dumps({"success": False, "error": "No fields to update"})
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.put(
-                    urljoin(api_url, f"/api/projects/{project_id}"),
-                    json=update_data
+                    urljoin(api_url, f"/api/projects/{project_id}"), json=update_data
                 )
 
                 if response.status_code == 200:
@@ -264,18 +269,15 @@ def register_project_tools(mcp: FastMCP):
                     return json.dumps({
                         "success": True,
                         "project": project,
-                        "message": "Project updated successfully"
+                        "message": "Project updated successfully",
                     })
                 elif response.status_code == 404:
                     return json.dumps({
                         "success": False,
-                        "error": f"Project {project_id} not found"
+                        "error": f"Project {project_id} not found",
                     })
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": "Failed to update project"
-                    })
+                    return json.dumps({"success": False, "error": "Failed to update project"})
 
         except Exception as e:
             logger.error(f"Error updating project: {e}")
