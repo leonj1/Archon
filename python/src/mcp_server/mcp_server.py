@@ -363,7 +363,7 @@ def register_modules():
 
     # Import and register RAG module (HTTP-based version)
     try:
-        from src.mcp.modules.rag_module import register_rag_tools
+        from src.mcp_server.modules.rag_module import register_rag_tools
 
         register_rag_tools(mcp)
         modules_registered += 1
@@ -376,18 +376,35 @@ def register_modules():
 
     # Import and register Project module - only if Projects are enabled
     projects_enabled = os.getenv("PROJECTS_ENABLED", "true").lower() == "true"
+    use_separate_project_tools = os.getenv("USE_SEPARATE_PROJECT_TOOLS", "false").lower() == "true"
+    
     if projects_enabled:
-        try:
-            from src.mcp.modules.project_module import register_project_tools
+        if use_separate_project_tools:
+            # Use new separated project tools
+            try:
+                from src.mcp_server.features.projects import register_project_tools
 
-            register_project_tools(mcp)
-            modules_registered += 1
-            logger.info("✓ Project module registered (HTTP-based)")
-        except ImportError as e:
-            logger.warning(f"⚠ Project module not available: {e}")
-        except Exception as e:
-            logger.error(f"✗ Error registering Project module: {e}")
-            logger.error(traceback.format_exc())
+                register_project_tools(mcp)
+                modules_registered += 1
+                logger.info("✓ Project tools registered (separate tools)")
+            except ImportError as e:
+                logger.warning(f"⚠ Separate project tools not available: {e}")
+            except Exception as e:
+                logger.error(f"✗ Error registering separate project tools: {e}")
+                logger.error(traceback.format_exc())
+        else:
+            # Use consolidated project module (for backward compatibility)
+            try:
+                from src.mcp_server.modules.project_module import register_project_tools
+
+                register_project_tools(mcp)
+                modules_registered += 1
+                logger.info("✓ Project module registered (consolidated)")
+            except ImportError as e:
+                logger.warning(f"⚠ Project module not available: {e}")
+            except Exception as e:
+                logger.error(f"✗ Error registering Project module: {e}")
+                logger.error(traceback.format_exc())
     else:
         logger.info("⚠ Project module skipped - Projects are disabled")
 
