@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class TaskUpdateFields(TypedDict, total=False):
     """Valid fields that can be updated on a task."""
+
     title: str
     description: str
     status: str  # "todo" | "doing" | "review" | "done"
@@ -263,7 +264,9 @@ def register_task_tools(mcp: FastMCP):
                 })
 
         except httpx.RequestError as e:
-            return MCPErrorFormatter.from_exception(e, "list tasks", {"filter_by": filter_by, "filter_value": filter_value})
+            return MCPErrorFormatter.from_exception(
+                e, "list tasks", {"filter_by": filter_by, "filter_value": filter_value}
+            )
         except Exception as e:
             logger.error(f"Error listing tasks: {e}", exc_info=True)
             return MCPErrorFormatter.from_exception(e, "list tasks")
@@ -393,8 +396,8 @@ def register_task_tools(mcp: FastMCP):
                     })
                 elif response.status_code == 404:
                     return json.dumps({
-                        "success": False, 
-                        "error": f"Task {task_id} not found. Use list_tasks to find valid task IDs."
+                        "success": False,
+                        "error": f"Task {task_id} not found. Use list_tasks to find valid task IDs.",
                     })
                 elif response.status_code == 400:
                     # More specific error for bad requests
@@ -420,4 +423,3 @@ def register_task_tools(mcp: FastMCP):
         except Exception as e:
             logger.error(f"Error deleting task: {e}", exc_info=True)
             return MCPErrorFormatter.from_exception(e, "delete task")
-

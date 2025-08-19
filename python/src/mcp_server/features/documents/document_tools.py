@@ -157,9 +157,7 @@ def register_document_tools(mcp: FastMCP):
                     return MCPErrorFormatter.from_http_error(response, "list documents")
 
         except httpx.RequestError as e:
-            return MCPErrorFormatter.from_exception(
-                e, "list documents", {"project_id": project_id}
-            )
+            return MCPErrorFormatter.from_exception(e, "list documents", {"project_id": project_id})
         except Exception as e:
             logger.error(f"Error listing documents: {e}", exc_info=True)
             return MCPErrorFormatter.from_exception(e, "list documents")

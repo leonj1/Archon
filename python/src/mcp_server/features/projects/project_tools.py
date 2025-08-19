@@ -88,18 +88,22 @@ def register_project_tools(mcp: FastMCP):
                         # Poll for completion with proper error handling and backoff
                         max_attempts = get_max_polling_attempts()
                         polling_timeout = get_polling_timeout()
-                        
+
                         for attempt in range(max_attempts):
                             try:
                                 # Exponential backoff
                                 sleep_interval = get_polling_interval(attempt)
                                 await asyncio.sleep(sleep_interval)
-                                
+
                                 # Create new client with polling timeout
-                                async with httpx.AsyncClient(timeout=polling_timeout) as poll_client:
-                                    list_response = await poll_client.get(urljoin(api_url, "/api/projects"))
+                                async with httpx.AsyncClient(
+                                    timeout=polling_timeout
+                                ) as poll_client:
+                                    list_response = await poll_client.get(
+                                        urljoin(api_url, "/api/projects")
+                                    )
                                     list_response.raise_for_status()  # Raise on HTTP errors
-                                    
+
                                     projects = list_response.json()
                                     # Find project with matching title created recently
                                     for proj in projects:
@@ -110,9 +114,11 @@ def register_project_tools(mcp: FastMCP):
                                                 "project_id": proj["id"],
                                                 "message": f"Project created successfully with ID: {proj['id']}",
                                             })
-                                            
+
                             except httpx.RequestError as poll_error:
-                                logger.warning(f"Polling attempt {attempt + 1}/{max_attempts} failed: {poll_error}")
+                                logger.warning(
+                                    f"Polling attempt {attempt + 1}/{max_attempts} failed: {poll_error}"
+                                )
                                 if attempt == max_attempts - 1:  # Last attempt
                                     return MCPErrorFormatter.format_error(
                                         error_type="polling_timeout",
@@ -125,7 +131,9 @@ def register_project_tools(mcp: FastMCP):
                                         suggestion="The project may still be creating. Use list_projects to check status",
                                     )
                             except Exception as poll_error:
-                                logger.warning(f"Unexpected error during polling attempt {attempt + 1}: {poll_error}")
+                                logger.warning(
+                                    f"Unexpected error during polling attempt {attempt + 1}: {poll_error}"
+                                )
 
                         # If we couldn't find it after polling
                         return json.dumps({

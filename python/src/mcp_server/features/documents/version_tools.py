@@ -81,7 +81,7 @@ def register_version_tools(mcp: FastMCP):
                 change_summary="Updated user guide"
             )
 
-            # Version features  
+            # Version features
             create_version(
                 project_id="550e8400-e29b-41d4-a716-446655440000",
                 field_name="features",
@@ -113,7 +113,7 @@ def register_version_tools(mcp: FastMCP):
                         "success": True,
                         "version": result.get("version"),
                         "version_number": version_num,
-                        "message": f"Version {version_num} created successfully for {field_name} field"
+                        "message": f"Version {version_num} created successfully for {field_name} field",
                     })
                 elif response.status_code == 400:
                     error_text = response.text.lower()
@@ -122,14 +122,14 @@ def register_version_tools(mcp: FastMCP):
                             error_type="validation_error",
                             message=f"Invalid field_name '{field_name}'. Must be one of: docs, features, data, or prd",
                             suggestion="Use one of the valid field names: docs, features, data, or prd",
-                            http_status=400
+                            http_status=400,
                         )
                     elif "content" in error_text and "required" in error_text:
                         return MCPErrorFormatter.format_error(
                             error_type="validation_error",
                             message="Content is required and cannot be empty. Provide the complete data to version.",
                             suggestion="Provide the complete data to version",
-                            http_status=400
+                            http_status=400,
                         )
                     elif "format" in error_text or "type" in error_text:
                         if field_name == "docs":
@@ -137,14 +137,14 @@ def register_version_tools(mcp: FastMCP):
                                 error_type="validation_error",
                                 message=f"For field_name='docs', content must be an array. Example: [{{'id': 'doc1', 'title': 'Guide', 'content': {{...}}}}]",
                                 suggestion="Ensure content is an array of document objects",
-                                http_status=400
+                                http_status=400,
                             )
                         else:
                             return MCPErrorFormatter.format_error(
                                 error_type="validation_error",
                                 message=f"For field_name='{field_name}', content must be a dictionary/object. Example: {{'key': 'value'}}",
                                 suggestion="Ensure content is a dictionary/object",
-                                http_status=400
+                                http_status=400,
                             )
                     return MCPErrorFormatter.format_error(
                         error_type="validation_error",
@@ -171,11 +171,7 @@ def register_version_tools(mcp: FastMCP):
             return MCPErrorFormatter.from_exception(e, "create version")
 
     @mcp.tool()
-    async def list_versions(
-        ctx: Context, 
-        project_id: str, 
-        field_name: Optional[str] = None
-    ) -> str:
+    async def list_versions(ctx: Context, project_id: str, field_name: Optional[str] = None) -> str:
         """
         List version history for a project.
 
@@ -199,8 +195,7 @@ def register_version_tools(mcp: FastMCP):
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.get(
-                    urljoin(api_url, f"/api/projects/{project_id}/versions"), 
-                    params=params
+                    urljoin(api_url, f"/api/projects/{project_id}/versions"), params=params
                 )
 
                 if response.status_code == 200:
@@ -208,7 +203,7 @@ def register_version_tools(mcp: FastMCP):
                     return json.dumps({
                         "success": True,
                         "versions": result.get("versions", []),
-                        "count": len(result.get("versions", []))
+                        "count": len(result.get("versions", [])),
                     })
                 else:
                     return MCPErrorFormatter.from_http_error(response, "list versions")
@@ -223,10 +218,7 @@ def register_version_tools(mcp: FastMCP):
 
     @mcp.tool()
     async def get_version(
-        ctx: Context, 
-        project_id: str, 
-        field_name: str, 
-        version_number: int
+        ctx: Context, project_id: str, field_name: str, version_number: int
     ) -> str:
         """
         Get detailed information about a specific version.
@@ -248,7 +240,10 @@ def register_version_tools(mcp: FastMCP):
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.get(
-                    urljoin(api_url, f"/api/projects/{project_id}/versions/{field_name}/{version_number}")
+                    urljoin(
+                        api_url,
+                        f"/api/projects/{project_id}/versions/{field_name}/{version_number}",
+                    )
                 )
 
                 if response.status_code == 200:
@@ -256,7 +251,7 @@ def register_version_tools(mcp: FastMCP):
                     return json.dumps({
                         "success": True,
                         "version": result.get("version"),
-                        "content": result.get("content")
+                        "content": result.get("content"),
                     })
                 elif response.status_code == 404:
                     return MCPErrorFormatter.format_error(
@@ -270,8 +265,13 @@ def register_version_tools(mcp: FastMCP):
 
         except httpx.RequestError as e:
             return MCPErrorFormatter.from_exception(
-                e, "get version", 
-                {"project_id": project_id, "field_name": field_name, "version_number": version_number}
+                e,
+                "get version",
+                {
+                    "project_id": project_id,
+                    "field_name": field_name,
+                    "version_number": version_number,
+                },
             )
         except Exception as e:
             logger.error(f"Error getting version: {e}", exc_info=True)
@@ -290,7 +290,7 @@ def register_version_tools(mcp: FastMCP):
 
         Args:
             project_id: Project UUID (required)
-            field_name: Field name - "docs", "features", "data", "prd" (required) 
+            field_name: Field name - "docs", "features", "data", "prd" (required)
             version_number: Version number to restore (required)
             restored_by: Identifier of who is restoring (optional, defaults to "system")
 
@@ -306,7 +306,10 @@ def register_version_tools(mcp: FastMCP):
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
-                    urljoin(api_url, f"/api/projects/{project_id}/versions/{field_name}/{version_number}/restore"),
+                    urljoin(
+                        api_url,
+                        f"/api/projects/{project_id}/versions/{field_name}/{version_number}/restore",
+                    ),
                     json={"restored_by": restored_by},
                 )
 
@@ -314,7 +317,9 @@ def register_version_tools(mcp: FastMCP):
                     result = response.json()
                     return json.dumps({
                         "success": True,
-                        "message": result.get("message", f"Version {version_number} restored successfully")
+                        "message": result.get(
+                            "message", f"Version {version_number} restored successfully"
+                        ),
                     })
                 elif response.status_code == 404:
                     return MCPErrorFormatter.format_error(
@@ -328,8 +333,13 @@ def register_version_tools(mcp: FastMCP):
 
         except httpx.RequestError as e:
             return MCPErrorFormatter.from_exception(
-                e, "restore version",
-                {"project_id": project_id, "field_name": field_name, "version_number": version_number}
+                e,
+                "restore version",
+                {
+                    "project_id": project_id,
+                    "field_name": field_name,
+                    "version_number": version_number,
+                },
             )
         except Exception as e:
             logger.error(f"Error restoring version: {e}", exc_info=True)
