@@ -138,12 +138,15 @@ def register_task_tools(mcp: FastMCP):
                         "message": result.get("message", "Task created successfully"),
                     })
                 else:
-                    error_detail = response.text
-                    return json.dumps({"success": False, "error": error_detail})
+                    return MCPErrorFormatter.from_http_error(response, "create task")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(
+                e, "create task", {"project_id": project_id, "title": title}
+            )
         except Exception as e:
-            logger.error(f"Error creating task: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error creating task: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "create task")
 
     @mcp.tool()
     async def list_tasks(
@@ -278,13 +281,20 @@ def register_task_tools(mcp: FastMCP):
                     task = response.json()
                     return json.dumps({"success": True, "task": task})
                 elif response.status_code == 404:
-                    return json.dumps({"success": False, "error": f"Task {task_id} not found"})
+                    return MCPErrorFormatter.format_error(
+                        error_type="not_found",
+                        message=f"Task {task_id} not found",
+                        suggestion="Verify the task ID is correct",
+                        http_status=404,
+                    )
                 else:
-                    return json.dumps({"success": False, "error": "Failed to get task"})
+                    return MCPErrorFormatter.from_http_error(response, "get task")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(e, "get task", {"task_id": task_id})
         except Exception as e:
-            logger.error(f"Error getting task: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error getting task: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "get task")
 
     @mcp.tool()
     async def update_task(
@@ -323,12 +333,15 @@ def register_task_tools(mcp: FastMCP):
                         "message": result.get("message", "Task updated successfully"),
                     })
                 else:
-                    error_detail = response.text
-                    return json.dumps({"success": False, "error": error_detail})
+                    return MCPErrorFormatter.from_http_error(response, "update task")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(
+                e, "update task", {"task_id": task_id, "update_fields": list(update_fields.keys())}
+            )
         except Exception as e:
-            logger.error(f"Error updating task: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error updating task: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "update task")
 
     @mcp.tool()
     async def delete_task(ctx: Context, task_id: str) -> str:
@@ -375,21 +388,24 @@ def register_task_tools(mcp: FastMCP):
                     # More specific error for bad requests
                     error_text = response.text
                     if "already archived" in error_text.lower():
-                        return json.dumps({
-                            "success": False,
-                            "error": f"Task {task_id} is already archived. No further action needed."
-                        })
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Cannot delete task: {error_text}"
-                    })
+                        return MCPErrorFormatter.format_error(
+                            error_type="already_archived",
+                            message=f"Task {task_id} is already archived",
+                            suggestion="No further action needed - task is already archived",
+                            http_status=400,
+                        )
+                    return MCPErrorFormatter.format_error(
+                        error_type="validation_error",
+                        message=f"Cannot delete task: {error_text}",
+                        suggestion="Check if the task meets deletion requirements",
+                        http_status=400,
+                    )
                 else:
-                    return json.dumps({
-                        "success": False, 
-                        "error": f"Failed to delete task (HTTP {response.status_code}): {response.text}"
-                    })
+                    return MCPErrorFormatter.from_http_error(response, "delete task")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(e, "delete task", {"task_id": task_id})
         except Exception as e:
-            logger.error(f"Error deleting task: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error deleting task: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "delete task")
 

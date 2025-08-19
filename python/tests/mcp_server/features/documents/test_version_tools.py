@@ -95,7 +95,10 @@ async def test_create_version_invalid_field(mock_mcp, mock_context):
         
         result_data = json.loads(result)
         assert result_data["success"] is False
-        assert "Must be one of: docs, features, data, or prd" in result_data["error"]
+        # Error must be structured format (dict), not string
+        assert "error" in result_data
+        assert isinstance(result_data["error"], dict), "Error should be structured format, not string"
+        assert result_data["error"]["type"] == "validation_error"
 
 
 @pytest.mark.asyncio

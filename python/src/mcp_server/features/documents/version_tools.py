@@ -13,6 +13,8 @@ from urllib.parse import urljoin
 import httpx
 from mcp.server.fastmcp import Context, FastMCP
 
+from src.mcp_server.utils.error_handling import MCPErrorFormatter
+from src.mcp_server.utils.timeout_config import get_default_timeout
 from src.server.config.service_discovery import get_api_url
 
 logger = logging.getLogger(__name__)
@@ -89,7 +91,7 @@ def register_version_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
@@ -116,41 +118,57 @@ def register_version_tools(mcp: FastMCP):
                 elif response.status_code == 400:
                     error_text = response.text.lower()
                     if "invalid field_name" in error_text:
-                        return json.dumps({
-                            "success": False,
-                            "error": f"Invalid field_name '{field_name}'. Must be one of: docs, features, data, or prd"
-                        })
+                        return MCPErrorFormatter.format_error(
+                            error_type="validation_error",
+                            message=f"Invalid field_name '{field_name}'. Must be one of: docs, features, data, or prd",
+                            suggestion="Use one of the valid field names: docs, features, data, or prd",
+                            http_status=400
+                        )
                     elif "content" in error_text and "required" in error_text:
-                        return json.dumps({
-                            "success": False,
-                            "error": "Content is required and cannot be empty. Provide the complete data to version."
-                        })
+                        return MCPErrorFormatter.format_error(
+                            error_type="validation_error",
+                            message="Content is required and cannot be empty. Provide the complete data to version.",
+                            suggestion="Provide the complete data to version",
+                            http_status=400
+                        )
                     elif "format" in error_text or "type" in error_text:
                         if field_name == "docs":
-                            return json.dumps({
-                                "success": False,
-                                "error": f"For field_name='docs', content must be an array. Example: [{{'id': 'doc1', 'title': 'Guide', 'content': {{...}}}}]"
-                            })
+                            return MCPErrorFormatter.format_error(
+                                error_type="validation_error",
+                                message=f"For field_name='docs', content must be an array. Example: [{{'id': 'doc1', 'title': 'Guide', 'content': {{...}}}}]",
+                                suggestion="Ensure content is an array of document objects",
+                                http_status=400
+                            )
                         else:
-                            return json.dumps({
-                                "success": False,
-                                "error": f"For field_name='{field_name}', content must be a dictionary/object. Example: {{'key': 'value'}}"
-                            })
-                    return json.dumps({"success": False, "error": f"Bad request: {response.text}"})
+                            return MCPErrorFormatter.format_error(
+                                error_type="validation_error",
+                                message=f"For field_name='{field_name}', content must be a dictionary/object. Example: {{'key': 'value'}}",
+                                suggestion="Ensure content is a dictionary/object",
+                                http_status=400
+                            )
+                    return MCPErrorFormatter.format_error(
+                        error_type="validation_error",
+                        message=f"Invalid request: {response.text}",
+                        suggestion="Check that all required fields are provided and valid",
+                        http_status=400,
+                    )
                 elif response.status_code == 404:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Project {project_id} not found. Please check the project ID."
-                    })
+                    return MCPErrorFormatter.format_error(
+                        error_type="not_found",
+                        message=f"Project {project_id} not found",
+                        suggestion="Please check the project ID is correct",
+                        http_status=404,
+                    )
                 else:
-                    return json.dumps({
-                        "success": False, 
-                        "error": f"Failed to create version (HTTP {response.status_code}): {response.text}"
-                    })
+                    return MCPErrorFormatter.from_http_error(response, "create version")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(
+                e, "create version", {"project_id": project_id, "field_name": field_name}
+            )
         except Exception as e:
-            logger.error(f"Error creating version: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error creating version: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "create version")
 
     @mcp.tool()
     async def list_versions(
@@ -173,7 +191,7 @@ def register_version_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             params = {}
             if field_name:
@@ -193,14 +211,15 @@ def register_version_tools(mcp: FastMCP):
                         "count": len(result.get("versions", []))
                     })
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"HTTP {response.status_code}: {response.text}"
-                    })
+                    return MCPErrorFormatter.from_http_error(response, "list versions")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(
+                e, "list versions", {"project_id": project_id, "field_name": field_name}
+            )
         except Exception as e:
-            logger.error(f"Error listing versions: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error listing versions: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "list versions")
 
     @mcp.tool()
     async def get_version(
@@ -225,7 +244,7 @@ def register_version_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.get(
@@ -245,14 +264,16 @@ def register_version_tools(mcp: FastMCP):
                         "error": f"Version {version_number} not found for field {field_name}"
                     })
                 else:
-                    return json.dumps({
-                        "success": False,
-                        "error": "Failed to get version"
-                    })
+                    return MCPErrorFormatter.from_http_error(response, "get version")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(
+                e, "get version", 
+                {"project_id": project_id, "field_name": field_name, "version_number": version_number}
+            )
         except Exception as e:
-            logger.error(f"Error getting version: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error getting version: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "get version")
 
     @mcp.tool()
     async def restore_version(
@@ -279,7 +300,7 @@ def register_version_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
@@ -294,14 +315,20 @@ def register_version_tools(mcp: FastMCP):
                         "message": result.get("message", f"Version {version_number} restored successfully")
                     })
                 elif response.status_code == 404:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Version {version_number} not found for field {field_name}"
-                    })
+                    return MCPErrorFormatter.format_error(
+                        error_type="not_found",
+                        message=f"Version {version_number} not found for field {field_name}",
+                        suggestion="Check that the version number exists for this field",
+                        http_status=404,
+                    )
                 else:
-                    error_detail = response.text
-                    return json.dumps({"success": False, "error": error_detail})
+                    return MCPErrorFormatter.from_http_error(response, "restore version")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(
+                e, "restore version",
+                {"project_id": project_id, "field_name": field_name, "version_number": version_number}
+            )
         except Exception as e:
-            logger.error(f"Error restoring version: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error restoring version: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "restore version")

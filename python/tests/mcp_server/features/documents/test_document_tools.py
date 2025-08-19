@@ -169,4 +169,8 @@ async def test_delete_document_not_found(mock_mcp, mock_context):
         
         result_data = json.loads(result)
         assert result_data["success"] is False
-        assert "not found" in result_data["error"]
+        # Error must be structured format (dict), not string
+        assert "error" in result_data
+        assert isinstance(result_data["error"], dict), "Error should be structured format, not string"
+        assert result_data["error"]["type"] == "not_found"
+        assert "not found" in result_data["error"]["message"].lower()

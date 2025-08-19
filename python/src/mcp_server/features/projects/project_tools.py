@@ -201,7 +201,7 @@ def register_project_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.get(urljoin(api_url, f"/api/projects/{project_id}"))
@@ -210,16 +210,20 @@ def register_project_tools(mcp: FastMCP):
                     project = response.json()
                     return json.dumps({"success": True, "project": project})
                 elif response.status_code == 404:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Project {project_id} not found",
-                    })
+                    return MCPErrorFormatter.format_error(
+                        error_type="not_found",
+                        message=f"Project {project_id} not found",
+                        suggestion="Verify the project ID is correct",
+                        http_status=404,
+                    )
                 else:
-                    return json.dumps({"success": False, "error": "Failed to get project"})
+                    return MCPErrorFormatter.from_http_error(response, "get project")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(e, "get project", {"project_id": project_id})
         except Exception as e:
-            logger.error(f"Error getting project: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error getting project: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "get project")
 
     @mcp.tool()
     async def delete_project(ctx: Context, project_id: str) -> str:
@@ -237,7 +241,7 @@ def register_project_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.delete(urljoin(api_url, f"/api/projects/{project_id}"))
@@ -248,16 +252,20 @@ def register_project_tools(mcp: FastMCP):
                         "message": f"Project {project_id} deleted successfully",
                     })
                 elif response.status_code == 404:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Project {project_id} not found",
-                    })
+                    return MCPErrorFormatter.format_error(
+                        error_type="not_found",
+                        message=f"Project {project_id} not found",
+                        suggestion="Verify the project ID is correct",
+                        http_status=404,
+                    )
                 else:
-                    return json.dumps({"success": False, "error": "Failed to delete project"})
+                    return MCPErrorFormatter.from_http_error(response, "delete project")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(e, "delete project", {"project_id": project_id})
         except Exception as e:
-            logger.error(f"Error deleting project: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error deleting project: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "delete project")
 
     @mcp.tool()
     async def update_project(
@@ -285,7 +293,7 @@ def register_project_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             # Build update payload with only provided fields
             update_data = {}
@@ -297,7 +305,11 @@ def register_project_tools(mcp: FastMCP):
                 update_data["github_repo"] = github_repo
 
             if not update_data:
-                return json.dumps({"success": False, "error": "No fields to update"})
+                return MCPErrorFormatter.format_error(
+                    error_type="validation_error",
+                    message="No fields to update",
+                    suggestion="Provide at least one field to update (title, description, or github_repo)",
+                )
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.put(
@@ -312,13 +324,17 @@ def register_project_tools(mcp: FastMCP):
                         "message": "Project updated successfully",
                     })
                 elif response.status_code == 404:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Project {project_id} not found",
-                    })
+                    return MCPErrorFormatter.format_error(
+                        error_type="not_found",
+                        message=f"Project {project_id} not found",
+                        suggestion="Verify the project ID is correct",
+                        http_status=404,
+                    )
                 else:
-                    return json.dumps({"success": False, "error": "Failed to update project"})
+                    return MCPErrorFormatter.from_http_error(response, "update project")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(e, "update project", {"project_id": project_id})
         except Exception as e:
-            logger.error(f"Error updating project: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error updating project: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "update project")
