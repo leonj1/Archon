@@ -13,6 +13,8 @@ from urllib.parse import urljoin
 import httpx
 from mcp.server.fastmcp import Context, FastMCP
 
+from src.mcp_server.utils.error_handling import MCPErrorFormatter
+from src.mcp_server.utils.timeout_config import get_default_timeout
 from src.server.config.service_discovery import get_api_url
 
 logger = logging.getLogger(__name__)
@@ -110,7 +112,7 @@ def register_task_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
@@ -174,7 +176,7 @@ def register_task_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             # Build URL and parameters based on filter type
             params: Dict[str, Any] = {
@@ -207,31 +209,49 @@ def register_task_tools(mcp: FastMCP):
 
                 result = response.json()
 
-                # Handle both direct array and paginated response formats
+                # Normalize response format - handle both array and object responses
                 if isinstance(result, list):
+                    # Direct array response
                     tasks = result
-                    pagination_info = None
-                else:
+                    total_count = len(result)
+                elif isinstance(result, dict):
+                    # Object response - check for standard fields
                     if "tasks" in result:
-                        tasks = result.get("tasks", [])
-                        pagination_info = result.get("pagination", {})
+                        tasks = result["tasks"]
+                        total_count = result.get("total_count", len(tasks))
+                    elif "data" in result:
+                        # Alternative format with 'data' field
+                        tasks = result["data"]
+                        total_count = result.get("total", len(tasks))
                     else:
-                        tasks = result if isinstance(result, list) else []
-                        pagination_info = None
+                        # Unknown object format
+                        return MCPErrorFormatter.format_error(
+                            error_type="invalid_response",
+                            message="Unexpected response format from API",
+                            details={"response_keys": list(result.keys())},
+                            suggestion="The API response format may have changed. Please check for updates.",
+                        )
+                else:
+                    # Completely unexpected format
+                    return MCPErrorFormatter.format_error(
+                        error_type="invalid_response",
+                        message="Invalid response type from API",
+                        details={"response_type": type(result).__name__},
+                        suggestion="Expected list or object, got different type.",
+                    )
 
                 return json.dumps({
                     "success": True,
                     "tasks": tasks,
-                    "pagination": pagination_info,
-                    "total_count": len(tasks)
-                    if pagination_info is None
-                    else pagination_info.get("total", len(tasks)),
+                    "total_count": total_count,
                     "count": len(tasks),
                 })
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(e, "list tasks", {"filter_by": filter_by, "filter_value": filter_value})
         except Exception as e:
-            logger.error(f"Error listing tasks: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error listing tasks: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "list tasks")
 
     @mcp.tool()
     async def get_task(ctx: Context, task_id: str) -> str:
@@ -249,7 +269,7 @@ def register_task_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.get(urljoin(api_url, f"/api/tasks/{task_id}"))
@@ -288,7 +308,7 @@ def register_task_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.put(
@@ -334,7 +354,7 @@ def register_task_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.delete(urljoin(api_url, f"/api/tasks/{task_id}"))

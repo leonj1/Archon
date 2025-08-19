@@ -384,10 +384,18 @@ def register_modules():
         modules_registered += 1
         logger.info("✓ Project tools registered")
     except ImportError as e:
-        logger.warning(f"⚠ Project tools not available: {e}")
-    except Exception as e:
-        logger.error(f"✗ Error registering project tools: {e}")
+        # Module not found - this is acceptable in modular architecture
+        logger.warning(f"⚠ Project tools module not available (optional): {e}")
+    except (SyntaxError, NameError, AttributeError) as e:
+        # Code errors that should not be ignored
+        logger.error(f"✗ Code error in project tools - MUST FIX: {e}")
         logger.error(traceback.format_exc())
+        raise  # Re-raise to prevent running with broken code
+    except Exception as e:
+        # Unexpected errors during registration
+        logger.error(f"✗ Failed to register project tools: {e}")
+        logger.error(traceback.format_exc())
+        # Don't raise - allow other modules to register
 
     # Task Management Tools
     try:
@@ -397,9 +405,13 @@ def register_modules():
         modules_registered += 1
         logger.info("✓ Task tools registered")
     except ImportError as e:
-        logger.warning(f"⚠ Task tools not available: {e}")
+        logger.warning(f"⚠ Task tools module not available (optional): {e}")
+    except (SyntaxError, NameError, AttributeError) as e:
+        logger.error(f"✗ Code error in task tools - MUST FIX: {e}")
+        logger.error(traceback.format_exc())
+        raise
     except Exception as e:
-        logger.error(f"✗ Error registering task tools: {e}")
+        logger.error(f"✗ Failed to register task tools: {e}")
         logger.error(traceback.format_exc())
 
     # Document Management Tools
@@ -410,9 +422,13 @@ def register_modules():
         modules_registered += 1
         logger.info("✓ Document tools registered")
     except ImportError as e:
-        logger.warning(f"⚠ Document tools not available: {e}")
+        logger.warning(f"⚠ Document tools module not available (optional): {e}")
+    except (SyntaxError, NameError, AttributeError) as e:
+        logger.error(f"✗ Code error in document tools - MUST FIX: {e}")
+        logger.error(traceback.format_exc())
+        raise
     except Exception as e:
-        logger.error(f"✗ Error registering document tools: {e}")
+        logger.error(f"✗ Failed to register document tools: {e}")
         logger.error(traceback.format_exc())
 
     # Version Management Tools
@@ -423,9 +439,13 @@ def register_modules():
         modules_registered += 1
         logger.info("✓ Version tools registered")
     except ImportError as e:
-        logger.warning(f"⚠ Version tools not available: {e}")
+        logger.warning(f"⚠ Version tools module not available (optional): {e}")
+    except (SyntaxError, NameError, AttributeError) as e:
+        logger.error(f"✗ Code error in version tools - MUST FIX: {e}")
+        logger.error(traceback.format_exc())
+        raise
     except Exception as e:
-        logger.error(f"✗ Error registering version tools: {e}")
+        logger.error(f"✗ Failed to register version tools: {e}")
         logger.error(traceback.format_exc())
 
     # Feature Management Tools
@@ -436,9 +456,13 @@ def register_modules():
         modules_registered += 1
         logger.info("✓ Feature tools registered")
     except ImportError as e:
-        logger.warning(f"⚠ Feature tools not available: {e}")
+        logger.warning(f"⚠ Feature tools module not available (optional): {e}")
+    except (SyntaxError, NameError, AttributeError) as e:
+        logger.error(f"✗ Code error in feature tools - MUST FIX: {e}")
+        logger.error(traceback.format_exc())
+        raise
     except Exception as e:
-        logger.error(f"✗ Error registering feature tools: {e}")
+        logger.error(f"✗ Failed to register feature tools: {e}")
         logger.error(traceback.format_exc())
 
     logger.info(f"📦 Total modules registered: {modules_registered}")

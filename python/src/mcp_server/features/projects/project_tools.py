@@ -14,6 +14,13 @@ from urllib.parse import urljoin
 import httpx
 from mcp.server.fastmcp import Context, FastMCP
 
+from src.mcp_server.utils.error_handling import MCPErrorFormatter
+from src.mcp_server.utils.timeout_config import (
+    get_default_timeout,
+    get_max_polling_attempts,
+    get_polling_interval,
+    get_polling_timeout,
+)
 from src.server.config.service_discovery import get_api_url
 
 logger = logging.getLogger(__name__)
@@ -65,7 +72,7 @@ def register_project_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
@@ -78,40 +85,71 @@ def register_project_tools(mcp: FastMCP):
 
                     # Handle async project creation
                     if "progress_id" in result:
-                        # Poll for completion (max 30 seconds)
-                        for attempt in range(30):
-                            await asyncio.sleep(1)
-
-                            # List projects to find the newly created one
-                            list_response = await client.get(urljoin(api_url, "/api/projects"))
-                            if list_response.status_code == 200:
-                                projects = list_response.json()
-                                # Find project with matching title created recently
-                                for proj in projects:
-                                    if proj.get("title") == title:
-                                        return json.dumps({
-                                            "success": True,
-                                            "project": proj,
-                                            "project_id": proj["id"],
-                                            "message": f"Project created successfully with ID: {proj['id']}",
-                                        })
+                        # Poll for completion with proper error handling and backoff
+                        max_attempts = get_max_polling_attempts()
+                        polling_timeout = get_polling_timeout()
+                        
+                        for attempt in range(max_attempts):
+                            try:
+                                # Exponential backoff
+                                sleep_interval = get_polling_interval(attempt)
+                                await asyncio.sleep(sleep_interval)
+                                
+                                # Create new client with polling timeout
+                                async with httpx.AsyncClient(timeout=polling_timeout) as poll_client:
+                                    list_response = await poll_client.get(urljoin(api_url, "/api/projects"))
+                                    list_response.raise_for_status()  # Raise on HTTP errors
+                                    
+                                    projects = list_response.json()
+                                    # Find project with matching title created recently
+                                    for proj in projects:
+                                        if proj.get("title") == title:
+                                            return json.dumps({
+                                                "success": True,
+                                                "project": proj,
+                                                "project_id": proj["id"],
+                                                "message": f"Project created successfully with ID: {proj['id']}",
+                                            })
+                                            
+                            except httpx.RequestError as poll_error:
+                                logger.warning(f"Polling attempt {attempt + 1}/{max_attempts} failed: {poll_error}")
+                                if attempt == max_attempts - 1:  # Last attempt
+                                    return MCPErrorFormatter.format_error(
+                                        error_type="polling_timeout",
+                                        message=f"Project creation polling failed after {max_attempts} attempts",
+                                        details={
+                                            "progress_id": result["progress_id"],
+                                            "title": title,
+                                            "last_error": str(poll_error),
+                                        },
+                                        suggestion="The project may still be creating. Use list_projects to check status",
+                                    )
+                            except Exception as poll_error:
+                                logger.warning(f"Unexpected error during polling attempt {attempt + 1}: {poll_error}")
 
                         # If we couldn't find it after polling
                         return json.dumps({
                             "success": True,
                             "progress_id": result["progress_id"],
-                            "message": "Project creation started. Use list_projects to find it once complete.",
+                            "message": f"Project creation in progress after {max_attempts} checks. Use list_projects to find it once complete.",
                         })
                     else:
                         # Direct response (shouldn't happen with current API)
                         return json.dumps({"success": True, "project": result})
                 else:
-                    error_detail = response.json().get("detail", {}).get("error", "Unknown error")
-                    return json.dumps({"success": False, "error": error_detail})
+                    return MCPErrorFormatter.from_http_error(response, "create project")
 
+        except httpx.ConnectError as e:
+            return MCPErrorFormatter.from_exception(
+                e, "create project", {"title": title, "api_url": api_url}
+            )
+        except httpx.TimeoutException as e:
+            return MCPErrorFormatter.from_exception(
+                e, "create project", {"title": title, "timeout": str(timeout)}
+            )
         except Exception as e:
-            logger.error(f"Error creating project: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error creating project: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "create project", {"title": title})
 
     @mcp.tool()
     async def list_projects(ctx: Context) -> str:
@@ -126,7 +164,7 @@ def register_project_tools(mcp: FastMCP):
         """
         try:
             api_url = get_api_url()
-            timeout = httpx.Timeout(30.0, connect=5.0)
+            timeout = get_default_timeout()
 
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.get(urljoin(api_url, "/api/projects"))
@@ -139,11 +177,13 @@ def register_project_tools(mcp: FastMCP):
                         "count": len(projects),
                     })
                 else:
-                    return json.dumps({"success": False, "error": "Failed to list projects"})
+                    return MCPErrorFormatter.from_http_error(response, "list projects")
 
+        except httpx.RequestError as e:
+            return MCPErrorFormatter.from_exception(e, "list projects", {"api_url": api_url})
         except Exception as e:
-            logger.error(f"Error listing projects: {e}")
-            return json.dumps({"success": False, "error": str(e)})
+            logger.error(f"Error listing projects: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "list projects")
 
     @mcp.tool()
     async def get_project(ctx: Context, project_id: str) -> str:
