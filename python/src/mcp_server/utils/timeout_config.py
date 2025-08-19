@@ -55,7 +55,11 @@ def get_max_polling_attempts() -> int:
     Returns:
         Maximum polling attempts (default: 30)
     """
-    return int(os.getenv("MCP_MAX_POLLING_ATTEMPTS", "30"))
+    try:
+        return int(os.getenv("MCP_MAX_POLLING_ATTEMPTS", "30"))
+    except ValueError:
+        # Fall back to default if env var is not a valid integer
+        return 30
 
 
 def get_polling_interval(attempt: int) -> float:

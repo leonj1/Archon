@@ -7,7 +7,7 @@ Mirrors the functionality of the original manage_task tool but with individual t
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 from urllib.parse import urljoin
 
 import httpx
@@ -18,6 +18,18 @@ from src.mcp_server.utils.timeout_config import get_default_timeout
 from src.server.config.service_discovery import get_api_url
 
 logger = logging.getLogger(__name__)
+
+
+class TaskUpdateFields(TypedDict, total=False):
+    """Valid fields that can be updated on a task."""
+    title: str
+    description: str
+    status: str  # "todo" | "doing" | "review" | "done"
+    assignee: str  # "User" | "Archon" | "AI IDE Agent" | "prp-executor" | "prp-validator"
+    task_order: int  # 0-100, higher = more priority
+    feature: Optional[str]
+    sources: Optional[List[Dict[str, str]]]
+    code_examples: Optional[List[Dict[str, str]]]
 
 
 def register_task_tools(mcp: FastMCP):
@@ -300,7 +312,7 @@ def register_task_tools(mcp: FastMCP):
     async def update_task(
         ctx: Context,
         task_id: str,
-        update_fields: Dict[str, Any],
+        update_fields: TaskUpdateFields,
     ) -> str:
         """
         Update a task's properties.

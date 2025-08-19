@@ -259,10 +259,12 @@ def register_version_tools(mcp: FastMCP):
                         "content": result.get("content")
                     })
                 elif response.status_code == 404:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Version {version_number} not found for field {field_name}"
-                    })
+                    return MCPErrorFormatter.format_error(
+                        error_type="not_found",
+                        message=f"Version {version_number} not found for field {field_name}",
+                        suggestion="Check that the version number and field name are correct",
+                        http_status=404,
+                    )
                 else:
                     return MCPErrorFormatter.from_http_error(response, "get version")
 
