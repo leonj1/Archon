@@ -510,8 +510,8 @@ class ThreadingService:
             finally:
                 duration = time.time() - start_time
                 logfire_logger.debug(
-                    "Rate limited operation completed", 
-                    extra={"duration": duration, "tokens": estimated_tokens}
+                    "Rate limited operation completed",
+                    extra={"duration": duration, "tokens": estimated_tokens},
                 )
 
     async def run_cpu_intensive(self, func: Callable, *args, **kwargs) -> Any:
@@ -580,7 +580,9 @@ class ThreadingService:
                     gc.collect()
 
                 if metrics.cpu_percent > 95:
-                    logfire_logger.warning("Critical CPU usage", extra={"cpu_percent": metrics.cpu_percent})
+                    logfire_logger.warning(
+                        "Critical CPU usage", extra={"cpu_percent": metrics.cpu_percent}
+                    )
 
                 # Check for memory leaks (too many threads)
                 if metrics.active_threads > self.config.max_workers * 3:
