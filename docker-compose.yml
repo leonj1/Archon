@@ -26,6 +26,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock # Docker socket for MCP container control
       - ./python/src:/app/src # Mount source code for hot reload
       - ./python/tests:/app/tests # Mount tests for UI test execution
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command:
       [
         "python",
@@ -80,6 +82,8 @@ services:
     depends_on:
       - archon-server
       - archon-agents
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test:
         [
