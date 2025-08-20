@@ -474,7 +474,7 @@ class ThreadingService:
 
         self._running = True
         self._health_check_task = asyncio.create_task(self._health_check_loop())
-        logfire_logger.info("Threading service started", config=self.config.__dict__)
+        logfire_logger.info("Threading service started", extra={"config": self.config.__dict__})
 
     async def stop(self):
         """Stop the threading service"""
@@ -510,7 +510,8 @@ class ThreadingService:
             finally:
                 duration = time.time() - start_time
                 logfire_logger.debug(
-                    "Rate limited operation completed", duration=duration, tokens=estimated_tokens
+                    "Rate limited operation completed", 
+                    extra={"duration": duration, "tokens": estimated_tokens}
                 )
 
     async def run_cpu_intensive(self, func: Callable, *args, **kwargs) -> Any:
@@ -579,7 +580,7 @@ class ThreadingService:
                     gc.collect()
 
                 if metrics.cpu_percent > 95:
-                    logfire_logger.warning("Critical CPU usage", cpu_percent=metrics.cpu_percent)
+                    logfire_logger.warning("Critical CPU usage", extra={"cpu_percent": metrics.cpu_percent})
 
                 # Check for memory leaks (too many threads)
                 if metrics.active_threads > self.config.max_workers * 3:
@@ -592,7 +593,7 @@ class ThreadingService:
                 await asyncio.sleep(self.config.health_check_interval)
 
             except Exception as e:
-                logfire_logger.error("Health check failed", error=str(e))
+                logfire_logger.error("Health check failed", extra={"error": str(e)})
                 await asyncio.sleep(self.config.health_check_interval)
 
 
