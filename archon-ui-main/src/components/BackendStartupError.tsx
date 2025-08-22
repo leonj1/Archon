@@ -49,10 +49,10 @@ export const BackendStartupError: React.FC = () => {
                   After fixing the issue in your .env file, recreate the Docker containers:
                 </p>
                 <code className="block mt-2 p-2 bg-black/70 rounded text-red-100 font-mono text-sm">
-                  docker compose down && docker compose --profile YOUR_PROFILE up -d
+                  docker compose down && docker compose --profile full up -d
                 </code>
                 <p className="text-red-300 text-xs mt-2">
-                  Note: Use 'down' and 'up', not 'restart' - containers need to be recreated to load new environment variables
+                  Note: Use 'down' and 'up', not 'restart' - containers need to be recreated to load new environment variables. Replace the profile value (full) if needed.
                 </p>
               </div>
 
