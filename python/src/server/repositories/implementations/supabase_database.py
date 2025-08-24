@@ -54,6 +54,11 @@ class SupabaseDatabase(IUnitOfWork):
         self._settings: Optional[SupabaseSettingsRepository] = None
         self._prompts: Optional[SupabasePromptRepository] = None
         
+        # Transaction state management
+        self._active = False
+        self._savepoints = {}
+        self._savepoint_counter = 0
+        
         self._logger.info("SupabaseDatabase initialized with repository implementations")
     
     @staticmethod
@@ -166,6 +171,7 @@ class SupabaseDatabase(IUnitOfWork):
         """
         # Supabase auto-commits individual operations
         # This method is a no-op but maintained for interface compatibility
+        self._active = False
         pass
     
     async def rollback(self):
@@ -178,7 +184,91 @@ class SupabaseDatabase(IUnitOfWork):
         # Supabase doesn't support rollback in the Python client
         # Application-level rollback would need to be implemented here
         self._logger.warning("Rollback requested but not implemented for Supabase")
+        self._active = False
         pass
+    
+    async def begin(self) -> None:
+        """
+        Begin a new transaction.
+        
+        Note: With Supabase, transactions are not explicitly managed.
+        This method sets the internal active state for interface compatibility.
+        """
+        if self._active:
+            self._logger.warning("Transaction already active")
+        self._active = True
+        self._logger.debug("Transaction begun (simulated)")
+    
+    async def is_active(self) -> bool:
+        """
+        Check if a transaction is currently active.
+        
+        Returns:
+            True if a transaction is currently active, False otherwise
+        """
+        return self._active
+    
+    async def savepoint(self, name: str) -> str:
+        """
+        Create a savepoint within the current transaction.
+        
+        Note: Supabase doesn't support savepoints in the Python client.
+        This implementation provides minimal compatibility.
+        
+        Args:
+            name: Name identifier for the savepoint
+            
+        Returns:
+            The savepoint identifier that can be used for rollback
+        """
+        if not self._active:
+            self._logger.warning("Cannot create savepoint without active transaction")
+        
+        self._savepoint_counter += 1
+        savepoint_id = f"{name}_{self._savepoint_counter}"
+        self._savepoints[savepoint_id] = name
+        self._logger.debug(f"Savepoint created: {savepoint_id}")
+        return savepoint_id
+    
+    async def rollback_to_savepoint(self, savepoint_id: str) -> None:
+        """
+        Rollback to a specific savepoint within the current transaction.
+        
+        Note: Supabase doesn't support savepoint rollback in the Python client.
+        This implementation provides minimal compatibility.
+        
+        Args:
+            savepoint_id: The savepoint identifier to rollback to
+        """
+        if savepoint_id not in self._savepoints:
+            self._logger.error(f"Savepoint not found: {savepoint_id}")
+            raise ValueError(f"Savepoint '{savepoint_id}' does not exist")
+        
+        self._logger.debug(f"Rolled back to savepoint: {savepoint_id} (simulated)")
+        # Remove all savepoints created after this one
+        savepoints_to_remove = [
+            sid for sid in self._savepoints 
+            if int(sid.split('_')[-1]) > int(savepoint_id.split('_')[-1])
+        ]
+        for sid in savepoints_to_remove:
+            del self._savepoints[sid]
+    
+    async def release_savepoint(self, savepoint_id: str) -> None:
+        """
+        Release a savepoint, making its changes permanent within the transaction.
+        
+        Note: Supabase doesn't support savepoint release in the Python client.
+        This implementation provides minimal compatibility.
+        
+        Args:
+            savepoint_id: The savepoint identifier to release
+        """
+        if savepoint_id not in self._savepoints:
+            self._logger.error(f"Savepoint not found: {savepoint_id}")
+            raise ValueError(f"Savepoint '{savepoint_id}' does not exist")
+        
+        del self._savepoints[savepoint_id]
+        self._logger.debug(f"Savepoint released: {savepoint_id} (simulated)")
     
     async def health_check(self) -> bool:
         """
