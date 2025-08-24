@@ -14,4 +14,4 @@ if (isDocker) {
   process.env.RUNNING_IN_DOCKER = 'true';
 }
 
-module.exports = { isDocker };
+export { isDocker };
