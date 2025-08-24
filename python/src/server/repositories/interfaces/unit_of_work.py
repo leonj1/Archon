@@ -170,6 +170,29 @@ class IUnitOfWork(ABC):
             DatabaseError: If database release operation fails
         """
         pass
+    
+    @abstractmethod
+    async def close(self) -> None:
+        """
+        Close the database connection and clean up resources.
+        
+        This method should be called when the unit of work is no longer needed,
+        typically during application shutdown or cleanup phases.
+        
+        Raises:
+            DatabaseError: If cleanup operations fail
+        """
+        pass
+    
+    @abstractmethod
+    async def health_check(self) -> bool:
+        """
+        Perform a health check on the database connection.
+        
+        Returns:
+            True if the database is accessible and healthy, False otherwise
+        """
+        pass
 
 
 class ITransactionContext(ABC):
