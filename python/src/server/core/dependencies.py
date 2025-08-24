@@ -7,7 +7,6 @@ injection setup for managing database instances throughout the application.
 
 import logging
 import threading
-from functools import lru_cache
 from typing import AsyncGenerator, Optional
 
 from ..repositories.interfaces.unit_of_work import IUnitOfWork
@@ -110,12 +109,11 @@ class DatabaseProvider:
             return False
 
 
-@lru_cache()
 def get_database() -> IUnitOfWork:
     """
     FastAPI dependency function for database injection.
     
-    This function provides a cached database instance that can be injected
+    This function provides a database instance that can be injected
     into FastAPI route handlers and other dependency-managed functions.
     
     Returns:
