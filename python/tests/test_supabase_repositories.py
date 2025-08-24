@@ -549,7 +549,8 @@ class TestSupabaseRepositoryErrorHandling:
         mock_client.table.return_value = mock_table
         
         # Make execute methods raise exceptions
-        mock_table.select.return_value.execute.side_effect = Exception("Database error")
+        # For health_check which calls select(...).limit(1).execute()
+        mock_table.select.return_value.limit.return_value.execute.side_effect = Exception("Database error")
         mock_table.insert.return_value.execute.side_effect = Exception("Insert error")
         mock_table.update.return_value.eq.return_value.execute.side_effect = Exception("Update error")
         mock_table.delete.return_value.eq.return_value.execute.side_effect = Exception("Delete error")
