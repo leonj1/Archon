@@ -10,6 +10,7 @@ import asyncio
 import logging
 import re
 import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
@@ -1045,7 +1046,7 @@ class SupabaseSettingsRepository(ISettingsRepository):
         
         return {
             'settings': settings,
-            'exported_at': str(UUID().hex),  # Simple timestamp replacement
+            'exported_at': datetime.now().isoformat(),
             'count': len(settings)
         }
     
