@@ -8,6 +8,7 @@ interface and handles Supabase-specific operations.
 
 import asyncio
 import logging
+import re
 import time
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
@@ -951,6 +952,11 @@ class SupabaseSettingsRepository(ISettingsRepository):
                 'default_value': default_value,
                 'validation_regex': validation_regex
             }
+            
+            # Validate value against regex if validation_regex is provided
+            if validation_regex is not None:
+                if not re.fullmatch(validation_regex, value):
+                    raise ValueError(f"Value '{value}' does not match validation regex '{validation_regex}' for setting '{key}'")
             
             if existing:
                 # Update existing
