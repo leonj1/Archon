@@ -303,7 +303,7 @@ class SupabaseDatabase(IUnitOfWork):
                 return False
                 
         except Exception as e:
-            self._logger.error(f"Database health check failed: {e}")
+            self._logger.error(f"Database health check failed: {e}", exc_info=True)
             return False
     
     def get_client(self) -> Client:
