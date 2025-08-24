@@ -590,7 +590,7 @@ class MockUnitOfWork(IUnitOfWork):
         
         self._transaction_active = True
         try:
-            yield
+            yield self
             await self.commit()
         except Exception as e:
             await self.rollback()

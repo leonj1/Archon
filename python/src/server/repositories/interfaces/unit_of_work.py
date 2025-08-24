@@ -7,10 +7,16 @@ It ensures data consistency and provides rollback capabilities for complex
 operations that span multiple entities.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import AsyncContextManager, Optional, Any
+from typing import AsyncContextManager, Optional, Any, TypeVar
 import logging
+
+
+# Type variable for Unit of Work implementations
+TUnitOfWork = TypeVar('TUnitOfWork', bound='IUnitOfWork')
 
 
 class IUnitOfWork(ABC):
@@ -32,7 +38,7 @@ class IUnitOfWork(ABC):
     """
     
     @abstractmethod
-    def transaction(self) -> AsyncContextManager[None]:
+    def transaction(self) -> AsyncContextManager[IUnitOfWork]:
         """
         Context manager for database transactions.
         
@@ -41,7 +47,7 @@ class IUnitOfWork(ABC):
         will be part of the same transaction.
         
         Yields:
-            None - Context for executing transactional operations
+            IUnitOfWork - The unit of work instance for executing transactional operations
             
         Raises:
             TransactionError: If transaction management fails
@@ -49,9 +55,9 @@ class IUnitOfWork(ABC):
             
         Example:
             ```python
-            async with uow.transaction():
-                user = await uow.users.create(user_data)
-                await uow.audit_logs.create(audit_entry)
+            async with uow.transaction() as uow_context:
+                user = await uow_context.users.create(user_data)
+                await uow_context.audit_logs.create(audit_entry)
                 # Automatic commit on success, rollback on exception
             ```
         """

@@ -38,13 +38,12 @@ class MockSupabaseDatabase(SupabaseDatabase):
     
     async def begin(self):
         """Begin transaction."""
-        if self._transaction_active:
-            raise TransactionError("Transaction already active")
-        self._transaction_active = True
+        await super().begin()
+        self._transaction_active = self._active
     
     async def is_active(self) -> bool:
         """Check if transaction is active."""
-        return self._transaction_active
+        return await super().is_active()
     
     async def savepoint(self, name: str) -> str:
         """Create savepoint."""
@@ -68,12 +67,12 @@ class MockSupabaseDatabase(SupabaseDatabase):
     async def commit(self):
         """Override to set transaction inactive."""
         await super().commit()
-        self._transaction_active = False
+        self._transaction_active = self._active
     
     async def rollback(self):
         """Override to set transaction inactive."""
         await super().rollback()
-        self._transaction_active = False
+        self._transaction_active = self._active
 
 
 class TestSupabaseDatabase:
