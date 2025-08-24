@@ -399,6 +399,12 @@ class SupabaseDocumentRepository(IDocumentRepository):
             if source_filter:
                 params['source_filter'] = source_filter
             
+            # Add metadata filter if provided
+            # Note: The RPC function expects 'filter' parameter for metadata filtering
+            if metadata_filter:
+                params['filter'] = metadata_filter
+                self._logger.debug(f"Vector search with metadata filter: {metadata_filter}")
+            
             response = self._client.rpc('match_archon_crawled_pages', params).execute()
             return response.data or []
         except Exception as e:
