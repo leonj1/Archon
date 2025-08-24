@@ -43,7 +43,8 @@ class DatabaseProvider:
                 # Double-check locking pattern for thread safety
                 if cls._instance is None:
                     cls._logger.info("Initializing database instance")
-                    cls._instance = SupabaseDatabase()
+                    config = get_database_config()
+                    cls._instance = create_database_instance(config)
                     cls._logger.info("Database instance initialized successfully")
         
         return cls._instance
