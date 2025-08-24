@@ -9,6 +9,7 @@ This module tests the SupabaseDatabase class and its repository implementations:
 - Error handling for database operations
 """
 
+import logging
 import pytest
 import pytest_asyncio
 from unittest.mock import MagicMock, AsyncMock, patch, Mock
@@ -558,15 +559,22 @@ class TestSupabaseRepositoryErrorHandling:
         return mock_client
     
     @pytest.mark.asyncio
-    async def test_repository_handles_query_errors(self, mock_client_with_errors):
+    async def test_repository_handles_query_errors(self, mock_client_with_errors, caplog):
         """Test that repositories handle query errors gracefully."""
         database = MockSupabaseDatabase(client=mock_client_with_errors)
         
         # Health check should handle errors and return False
-        # But the actual health check might still return True in our mock
-        result = await database.health_check()
-        # We'll just verify the method can be called without crashing
-        assert result in [True, False]
+        with caplog.at_level(logging.ERROR):
+            result = await database.health_check()
+        
+        # Assert the health check returns False when database error occurs
+        assert result is False
+        
+        # Verify that an error was logged
+        assert len(caplog.records) > 0
+        error_records = [r for r in caplog.records if r.levelname == 'ERROR']
+        assert len(error_records) > 0
+        assert 'Database health check failed' in error_records[0].message
     
     @pytest.mark.asyncio
     async def test_multiple_repository_access(self, mock_supabase_client):
