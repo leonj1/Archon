@@ -99,7 +99,9 @@ run_shell() {
 # Function to clean up containers and images
 clean_up() {
     print_color "$YELLOW" "Cleaning up test containers and images..."
-    docker rm -f archon-ui-tests archon-ui-test-ui archon-ui-lint 2>/dev/null || true
+    # Remove any running containers using the test image
+    docker ps -a --filter "ancestor=archon-ui-test:latest" --format '{{.ID}}' | xargs -r docker rm -f 2>/dev/null || true
+    # Remove the test image
     docker rmi archon-ui-test:latest 2>/dev/null || true
     print_color "$GREEN" "✓ Cleanup completed"
 }
