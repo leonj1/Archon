@@ -425,6 +425,116 @@ class TestSupabaseRepositoryInstantiation:
         repo = SupabasePromptRepository(mock_client)
         assert repo._client is mock_client
         assert repo._table == 'archon_prompts'
+    
+    @pytest.mark.asyncio
+    async def test_code_example_vector_search(self, mock_client):
+        """Test SupabaseCodeExampleRepository vector_search method."""
+        repo = SupabaseCodeExampleRepository(mock_client)
+        
+        # Mock the RPC response
+        mock_response = MagicMock()
+        mock_response.data = [
+            {
+                'id': '123',
+                'url': 'https://example.com/code',
+                'chunk_number': 1,
+                'content': 'def hello(): pass',
+                'summary': 'A hello function',
+                'metadata': {'language': 'python'},
+                'source_id': 'src123',
+                'similarity': 0.95
+            }
+        ]
+        mock_client.rpc.return_value.execute.return_value = mock_response
+        
+        # Test vector search with valid embedding
+        embedding = [0.1] * 1536
+        results = await repo.vector_search(
+            embedding=embedding,
+            limit=10,
+            source_filter='src123',
+            metadata_filter={'language': 'python'}
+        )
+        
+        # Verify results
+        assert len(results) == 1
+        assert results[0]['id'] == '123'
+        assert results[0]['similarity_score'] == 0.95
+        assert results[0]['metadata']['similarity_score'] == 0.95
+        assert results[0]['metadata']['search_type'] == 'vector_search'
+        
+        # Verify RPC was called with correct parameters
+        mock_client.rpc.assert_called_once_with('match_archon_code_examples', {
+            'query_embedding': embedding,
+            'match_count': 10,
+            'filter': {'language': 'python'},
+            'source_filter': 'src123'
+        })
+    
+    @pytest.mark.asyncio
+    async def test_code_example_vector_search_invalid_embedding(self, mock_client):
+        """Test vector_search with invalid embedding."""
+        repo = SupabaseCodeExampleRepository(mock_client)
+        
+        # Test with empty embedding
+        results = await repo.vector_search(embedding=[], limit=10)
+        assert results == []
+        
+        # Test with wrong dimension embedding
+        results = await repo.vector_search(embedding=[0.1] * 100, limit=10)
+        assert results == []
+        
+        # Test with invalid limit
+        results = await repo.vector_search(embedding=[0.1] * 1536, limit=0)
+        assert results == []
+        
+        results = await repo.vector_search(embedding=[0.1] * 1536, limit=1001)
+        assert results == []
+    
+    def test_code_example_calculate_text_relevance(self, mock_client):
+        """Test _calculate_text_relevance helper method."""
+        repo = SupabaseCodeExampleRepository(mock_client)
+        
+        # Test exact phrase match
+        score = repo._calculate_text_relevance("hello world", "This is hello world example")
+        assert score > 0.9
+        
+        # Test word matching
+        score = repo._calculate_text_relevance("python function", "A python script with function definitions")
+        assert score > 0.5
+        
+        # Test no match
+        score = repo._calculate_text_relevance("java class", "python function definitions")
+        assert score == 0.0
+        
+        # Test empty inputs
+        assert repo._calculate_text_relevance("", "text") == 0.0
+        assert repo._calculate_text_relevance("query", "") == 0.0
+        assert repo._calculate_text_relevance("", "") == 0.0
+    
+    def test_code_example_calculate_code_relevance(self, mock_client):
+        """Test _calculate_code_relevance helper method."""
+        repo = SupabaseCodeExampleRepository(mock_client)
+        
+        # Test exact match
+        score = repo._calculate_code_relevance("hello", "def hello(): pass")
+        assert score == 1.0
+        
+        # Test function pattern match
+        score = repo._calculate_code_relevance("greet", "def greet(name): return f'Hello {name}'")
+        assert score > 0.7
+        
+        # Test class pattern match
+        score = repo._calculate_code_relevance("User", "class User: pass")
+        assert score > 0.7
+        
+        # Test no match
+        score = repo._calculate_code_relevance("java", "def python_function(): pass")
+        assert score == 0.0
+        
+        # Test empty inputs
+        assert repo._calculate_code_relevance("", "code") == 0.0
+        assert repo._calculate_code_relevance("query", "") == 0.0
 
 
 class TestSupabaseRepositoryErrorHandling:
