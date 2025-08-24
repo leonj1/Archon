@@ -324,12 +324,16 @@ class MockDocumentRepository(IDocumentRepository):
         
         # Mock similarity scoring (random for testing)
         import random
+        # Create shallow copies to avoid mutating original entities
+        results_with_similarity = []
         for result in results:
-            result['similarity'] = random.uniform(0.5, 1.0)
+            result_copy = result.copy()
+            result_copy['similarity'] = random.uniform(0.5, 1.0)
+            results_with_similarity.append(result_copy)
         
         # Sort by similarity and limit
-        results.sort(key=lambda x: x.get('similarity', 0), reverse=True)
-        return results[:limit]
+        results_with_similarity.sort(key=lambda x: x.get('similarity', 0), reverse=True)
+        return results_with_similarity[:limit]
     
     async def hybrid_search(
         self,
