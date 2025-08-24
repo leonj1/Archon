@@ -154,12 +154,14 @@ class SupabaseDatabase(IUnitOfWork):
         """
         try:
             self._logger.debug("Starting database transaction")
+            await self.begin()
             yield self
             await self.commit()
             self._logger.debug("Database transaction committed successfully")
         except Exception as e:
             self._logger.error(f"Database transaction failed: {e}")
-            await self.rollback()
+            if self._active:
+                await self.rollback()
             raise
     
     async def commit(self):
