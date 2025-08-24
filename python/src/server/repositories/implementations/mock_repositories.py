@@ -848,7 +848,7 @@ class MockSettingsRepository(ISettingsRepository):
         if setting and setting.get('validation_regex'):
             import re
             pattern = setting['validation_regex']
-            return bool(re.match(pattern, value))
+            return bool(re.fullmatch(pattern, value))
         return True
     
     async def get_categories(self) -> List[str]:
