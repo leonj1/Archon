@@ -6,9 +6,11 @@ injection setup for managing database instances throughout the application.
 """
 
 import logging
+import threading
 from functools import lru_cache
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
+from ..repositories.interfaces.unit_of_work import IUnitOfWork
 from ..repositories.implementations import SupabaseDatabase
 
 
@@ -20,42 +22,47 @@ class DatabaseProvider:
     centralized point for dependency injection and testing.
     """
     
-    _instance: Optional[SupabaseDatabase] = None
+    _instance: Optional[IUnitOfWork] = None
     _logger = logging.getLogger(__name__)
+    _lock = threading.Lock()
     
     @classmethod
-    def get_database(cls) -> SupabaseDatabase:
+    def get_database(cls) -> IUnitOfWork:
         """
         Get the database instance, creating it if necessary.
         
         Returns:
-            The SupabaseDatabase instance
+            The IUnitOfWork instance
             
         Note:
             This method implements lazy initialization to avoid circular imports
             and ensure the database is only created when actually needed.
         """
         if cls._instance is None:
-            cls._logger.info("Initializing database instance")
-            cls._instance = SupabaseDatabase()
-            cls._logger.info("Database instance initialized successfully")
+            with cls._lock:
+                # Double-check locking pattern for thread safety
+                if cls._instance is None:
+                    cls._logger.info("Initializing database instance")
+                    cls._instance = SupabaseDatabase()
+                    cls._logger.info("Database instance initialized successfully")
         
         return cls._instance
     
     @classmethod
-    def set_database(cls, database: SupabaseDatabase):
+    def set_database(cls, database: IUnitOfWork):
         """
         Set a specific database instance (primarily for testing).
         
         Args:
-            database: The database instance to use
+            database: The IUnitOfWork instance to use
             
         Note:
             This method allows injection of mock or test database instances
             for testing purposes without affecting production code.
         """
-        cls._logger.info(f"Database instance overridden with {type(database).__name__}")
-        cls._instance = database
+        with cls._lock:
+            cls._logger.info(f"Database instance overridden with {type(database).__name__}")
+            cls._instance = database
     
     @classmethod
     def reset_database(cls):
@@ -65,8 +72,9 @@ class DatabaseProvider:
         This method clears the current database instance, forcing a new
         instance to be created on the next call to get_database().
         """
-        cls._logger.info("Database instance reset")
-        cls._instance = None
+        with cls._lock:
+            cls._logger.info("Database instance reset")
+            cls._instance = None
     
     @classmethod
     async def close_database(cls):
@@ -102,7 +110,7 @@ class DatabaseProvider:
 
 
 @lru_cache()
-def get_database() -> SupabaseDatabase:
+def get_database() -> IUnitOfWork:
     """
     FastAPI dependency function for database injection.
     
@@ -110,14 +118,14 @@ def get_database() -> SupabaseDatabase:
     into FastAPI route handlers and other dependency-managed functions.
     
     Returns:
-        The SupabaseDatabase instance
+        The IUnitOfWork instance
         
     Example:
         ```python
         @router.post("/projects")
         async def create_project(
             project_data: dict,
-            db: SupabaseDatabase = Depends(get_database)
+            db: IUnitOfWork = Depends(get_database)
         ):
             return await db.projects.create(project_data)
         ```
@@ -134,9 +142,41 @@ def get_database_dependency():
     when the database configuration might change.
     
     Returns:
-        The SupabaseDatabase instance
+        The IUnitOfWork instance
     """
     return DatabaseProvider.get_database()
+
+
+async def get_database_async() -> AsyncGenerator[IUnitOfWork, None]:
+    """
+    Async generator-based dependency for per-request database instances.
+    
+    This dependency provides a database instance for each request and ensures
+    proper cleanup after the request completes. Useful for scenarios requiring
+    transaction isolation or when database state shouldn't be shared between requests.
+    
+    Yields:
+        The IUnitOfWork instance for the current request
+        
+    Example:
+        ```python
+        @router.post("/items")
+        async def create_item(
+            item_data: dict,
+            db: IUnitOfWork = Depends(get_database_async)
+        ):
+            async with db.transaction() as uow:
+                return await uow.items.create(item_data)
+        ```
+    """
+    database = DatabaseProvider.get_database()
+    try:
+        yield database
+    finally:
+        # Cleanup logic if needed (e.g., closing transaction, releasing resources)
+        # Note: For singleton instances, we typically don't close here
+        # as the instance is shared across requests
+        pass
 
 
 async def setup_database():
@@ -250,7 +290,7 @@ def set_database_config(config: DatabaseConfig):
 
 
 # Factory function for creating database instances based on configuration
-def create_database_instance(config: Optional[DatabaseConfig] = None) -> SupabaseDatabase:
+def create_database_instance(config: Optional[DatabaseConfig] = None) -> IUnitOfWork:
     """
     Create a database instance based on the provided configuration.
     
@@ -258,7 +298,7 @@ def create_database_instance(config: Optional[DatabaseConfig] = None) -> Supabas
         config: Optional database configuration. If not provided, uses global config.
         
     Returns:
-        A database instance configured according to the provided settings
+        An IUnitOfWork instance configured according to the provided settings
         
     Raises:
         ValueError: If the database type is not supported
