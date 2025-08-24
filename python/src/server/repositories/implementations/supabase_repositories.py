@@ -708,8 +708,22 @@ class SupabaseProjectRepository(IProjectRepository):
     
     # Simplified implementations for remaining interface methods
     async def merge_jsonb_field(self, project_id: UUID, field_name: str, value: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Merge data into JSONB field - simplified implementation."""
-        return await self.update_jsonb_field(project_id, field_name, value)
+        """Merge data into JSONB field."""
+        try:
+            project = await self.get_by_id(project_id)
+            if not project:
+                return None
+            
+            current = project.get(field_name, {})
+            if isinstance(current, dict) and isinstance(value, dict):
+                merged = {**current, **value}
+                return await self.update(project_id, {field_name: merged})
+            
+            # Fallback: for non-dict types, replace
+            return await self.update(project_id, {field_name: value})
+        except Exception:
+            self._logger.exception(f"Failed to merge JSONB field {field_name} for project {project_id}")
+            return None
     
     async def append_to_jsonb_array(self, project_id: UUID, field_name: str, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Append item to JSONB array - simplified implementation."""
