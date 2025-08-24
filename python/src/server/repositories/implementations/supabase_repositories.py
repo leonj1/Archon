@@ -1162,7 +1162,19 @@ class SupabaseTaskRepository(ITaskRepository):
     async def get_by_project(self, project_id, include_closed=False, limit=None, offset=None) -> List[Dict[str, Any]]:
         filters = {'project_id': str(project_id)}
         if not include_closed:
-            filters['status'] = TaskStatus.TODO.value  # Or any non-done status
+            # Exclude DONE tasks - include TODO, DOING, and REVIEW
+            try:
+                query = self._client.table(self._table).select('*').eq('project_id', str(project_id))
+                query = query.neq('status', TaskStatus.DONE.value)
+                if limit:
+                    query = query.limit(limit)
+                if offset:
+                    query = query.offset(offset)
+                response = query.execute()
+                return response.data or []
+            except Exception as e:
+                self._logger.error(f"Failed to get tasks by project: {e}")
+                return []
         return await self.list(filters=filters, limit=limit, offset=offset)
     
     async def get_by_status(self, project_id, status, limit=None) -> List[Dict[str, Any]]:
