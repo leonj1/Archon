@@ -97,7 +97,7 @@ class DatabaseProvider:
             
             return await cls._instance.health_check()
         except Exception as e:
-            cls._logger.error(f"Database health check failed: {e}")
+            cls._logger.error(f"Database health check failed: {e}", exc_info=True)
             return False
 
 
@@ -158,7 +158,7 @@ async def setup_database():
         
         logger.info("Database system setup completed successfully")
     except Exception as e:
-        logger.error(f"Database setup failed: {e}")
+        logger.error(f"Database setup failed: {e}", exc_info=True)
         raise
 
 
@@ -175,7 +175,7 @@ async def teardown_database():
         await DatabaseProvider.close_database()
         logger.info("Database system teardown completed successfully")
     except Exception as e:
-        logger.error(f"Database teardown failed: {e}")
+        logger.error(f"Database teardown failed: {e}", exc_info=True)
         # Don't re-raise during shutdown as it might mask other errors
 
 
