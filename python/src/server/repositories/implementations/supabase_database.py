@@ -167,25 +167,38 @@ class SupabaseDatabase(IUnitOfWork):
         Commit the current transaction.
         
         Note: With Supabase, individual operations are auto-committed.
-        This method is provided for interface compatibility.
+        This method validates that a transaction is active, then performs a no-op
+        for Supabase compatibility.
+        
+        Raises:
+            RuntimeError: If no active transaction exists
         """
+        if not self._active:
+            raise RuntimeError("Cannot commit: no active transaction")
+        
         # Supabase auto-commits individual operations
         # This method is a no-op but maintained for interface compatibility
         self._active = False
-        pass
+        self._logger.debug("Transaction committed (Supabase auto-commits)")
     
     async def rollback(self):
         """
         Rollback the current transaction.
         
         Note: With Supabase, rollback would need to be implemented at the application level.
-        This method is provided for interface compatibility.
+        This method validates that a transaction is active, logs a warning, then performs
+        a no-op for Supabase compatibility.
+        
+        Raises:
+            RuntimeError: If no active transaction exists
         """
+        if not self._active:
+            raise RuntimeError("Cannot rollback: no active transaction")
+        
         # Supabase doesn't support rollback in the Python client
         # Application-level rollback would need to be implemented here
-        self._logger.warning("Rollback requested but not implemented for Supabase")
+        self._logger.warning("Rollback requested but not implemented for Supabase (no-op)")
         self._active = False
-        pass
     
     async def begin(self) -> None:
         """
