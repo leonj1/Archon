@@ -6,7 +6,9 @@ for data persistence. Each repository class implements the corresponding
 interface and handles Supabase-specific operations.
 """
 
+import asyncio
 import logging
+import time
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
@@ -51,13 +53,36 @@ class SupabaseSourceRepository(ISourceRepository):
             raise
     
     async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[Dict[str, Any]]:
-        """Retrieve source by ID."""
-        try:
-            response = self._client.table(self._table).select('*').eq('id', str(id)).execute()
-            return response.data[0] if response.data else None
-        except Exception as e:
-            self._logger.error(f"Failed to get source by ID {id}: {e}")
-            return None
+        """Retrieve source by ID with retry logic and async execution."""
+        max_retries = 3
+        base_delay = 0.5  # Starting delay in seconds
+        
+        for attempt in range(max_retries):
+            try:
+                # Run blocking Supabase call in thread pool
+                response = await asyncio.to_thread(
+                    lambda: self._client.table(self._table).select('*').eq('id', str(id)).execute()
+                )
+                return response.data[0] if response.data else None
+                
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    # Last attempt failed, log with full stack trace and re-raise
+                    self._logger.error(
+                        f"Failed to get source by ID {id} after {max_retries} attempts: {e}", 
+                        exc_info=True
+                    )
+                    raise
+                else:
+                    # Calculate exponential backoff delay
+                    delay = base_delay * (2 ** attempt)
+                    self._logger.warning(
+                        f"Attempt {attempt + 1}/{max_retries} failed for source ID {id}: {e}. "
+                        f"Retrying in {delay}s..."
+                    )
+                    await asyncio.sleep(delay)
+        
+        return None
     
     async def get_by_source_id(self, source_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve source by source_id."""
