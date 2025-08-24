@@ -251,6 +251,9 @@ def set_database_config(config: DatabaseConfig):
     """
     global _database_config
     _database_config = config
+    
+    # Reset the database provider to force recreation with new config
+    DatabaseProvider.reset()
 
     logger = logging.getLogger(__name__)
     logger.info(f"Database configuration updated: {config}")
