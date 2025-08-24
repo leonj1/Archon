@@ -974,19 +974,21 @@ class SupabaseSettingsRepository(ISettingsRepository):
         """Get decrypted setting value."""
         setting = await self.get_by_key(key)
         if setting:
-            value = setting.get('value')
             if setting.get('is_encrypted', False):
-                # TODO: Implement decryption logic
-                self._logger.warning(f"Decryption not implemented for setting {key}")
-                return value
-            return value
+                raise NotImplementedError(
+                    f"Encryption/decryption not yet implemented. Cannot retrieve encrypted setting '{key}'. "
+                    "Please implement proper encryption service integration before storing encrypted values."
+                )
+            return setting.get('value')
         return None
     
     async def set_encrypted(self, key: str, value: str, category: str = "credentials") -> Dict[str, Any]:
         """Store encrypted setting."""
-        # TODO: Implement encryption logic
-        self._logger.warning(f"Encryption not implemented for setting {key}")
-        return await self.upsert(key, value, category, encrypted=True)
+        raise NotImplementedError(
+            f"Encryption not yet implemented. Cannot store encrypted setting '{key}'. "
+            "Please implement proper encryption service integration (e.g., KMS, encryption key from config) "
+            "before storing encrypted values. As a temporary measure, consider storing in environment variables."
+        )
     
     # Simplified implementations for remaining interface methods
     async def get_user_configurable(self) -> List[Dict[str, Any]]:
