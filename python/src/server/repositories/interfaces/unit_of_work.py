@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import AsyncContextManager, Optional, Any, TypeVar
+from typing import AsyncContextManager, Optional, Any, TypeVar, Self
 import logging
 
 
@@ -30,15 +30,15 @@ class IUnitOfWork(ABC):
     
     Example:
         ```python
-        async with unit_of_work.transaction():
-            await unit_of_work.users.create(user)
-            await unit_of_work.profiles.create(profile)
+        async with unit_of_work.transaction() as uow:
+            await uow.users.create(user)
+            await uow.profiles.create(profile)
             # Both operations commit together or rollback if either fails
         ```
     """
     
     @abstractmethod
-    def transaction(self) -> AsyncContextManager[IUnitOfWork]:
+    def transaction(self) -> AsyncContextManager[Self]:
         """
         Context manager for database transactions.
         
@@ -47,7 +47,7 @@ class IUnitOfWork(ABC):
         will be part of the same transaction.
         
         Yields:
-            IUnitOfWork - The unit of work instance for executing transactional operations
+            Self - The unit of work instance (or transaction-scoped UoW) for executing transactional operations
             
         Raises:
             TransactionError: If transaction management fails
