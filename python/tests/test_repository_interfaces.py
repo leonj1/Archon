@@ -638,6 +638,15 @@ class MockUnitOfWork(IUnitOfWork):
         if savepoint_id not in self._savepoints:
             raise SavepointError(f"Savepoint {savepoint_id} not found")
         del self._savepoints[savepoint_id]
+    
+    async def close(self):
+        """Mock close operation - clean up resources."""
+        self._transaction_active = False
+        self._savepoints.clear()
+    
+    async def health_check(self) -> bool:
+        """Mock health check - always returns True."""
+        return True
 
 
 class TestUnitOfWorkPattern:

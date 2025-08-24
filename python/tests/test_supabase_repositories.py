@@ -268,6 +268,9 @@ class TestSupabaseDatabase:
         """Test manual commit operation."""
         database = MockSupabaseDatabase(client=mock_supabase_client)
         
+        # Start a transaction first
+        await database.begin()
+        
         # Should not raise exception (no-op for Supabase)
         await database.commit()
     
@@ -276,13 +279,16 @@ class TestSupabaseDatabase:
         """Test manual rollback operation."""
         database = MockSupabaseDatabase(client=mock_supabase_client)
         
+        # Start a transaction first
+        await database.begin()
+        
         # Should not raise exception but log warning
         with patch.object(database._logger, 'warning') as mock_warning:
             await database.rollback()
             
             # Should log warning about rollback not implemented
             mock_warning.assert_called_once_with(
-                "Rollback requested but not implemented for Supabase"
+                "Rollback requested but not implemented for Supabase (no-op)"
             )
     
     @pytest.mark.asyncio
@@ -341,7 +347,8 @@ class TestSupabaseDatabase:
             
             # Should log error
             mock_error.assert_called_once_with(
-                "Database health check failed: Database connection failed"
+                "Database health check failed: Database connection failed",
+                exc_info=True
             )
     
     def test_get_client_method(self, mock_supabase_client):
