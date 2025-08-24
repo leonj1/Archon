@@ -12,7 +12,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from typing import AsyncContextManager, Optional, Any, TypeVar, Self
-import logging
 
 
 # Type variable for Unit of Work implementations
@@ -204,12 +203,6 @@ class TransactionError(Exception):
     def __init__(self, message: str, original_error: Optional[Exception] = None):
         super().__init__(message)
         self.original_error = original_error
-        self.logger = logging.getLogger(__name__)
-        
-        if original_error:
-            self.logger.error(f"Transaction error: {message}", exc_info=original_error)
-        else:
-            self.logger.error(f"Transaction error: {message}")
 
 
 class SavepointError(TransactionError):
