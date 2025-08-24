@@ -269,15 +269,7 @@ def create_database_instance(config: Optional[DatabaseConfig] = None) -> Supabas
     if config.database_type == "supabase":
         return SupabaseDatabase()
     elif config.database_type == "mock":
-        # Import here to avoid circular imports
-        from ..repositories.implementations.mock_repositories import (
-            MockSourceRepository,
-            MockDocumentRepository,
-            MockProjectRepository,
-            MockSettingsRepository,
-        )
-        # For mock, we'd need to create a mock database class
-        # This is a simplified approach - in practice you'd have a MockDatabase class
-        return SupabaseDatabase()  # Fallback to Supabase for now
+        # TODO: Implement a proper MockDatabase that satisfies IUnitOfWork
+        raise ValueError("Mock database backend is not implemented yet")
     else:
         raise ValueError(f"Unsupported database type: {config.database_type}")
