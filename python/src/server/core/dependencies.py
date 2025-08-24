@@ -253,7 +253,7 @@ def set_database_config(config: DatabaseConfig):
     _database_config = config
     
     # Reset the database provider to force recreation with new config
-    DatabaseProvider.reset()
+    DatabaseProvider.reset_database()
 
     logger = logging.getLogger(__name__)
     logger.info(f"Database configuration updated: {config}")
@@ -280,11 +280,8 @@ def create_database_instance(config: DatabaseConfig | None = None) -> IUnitOfWor
         # Return IUnitOfWork implementation
         return SupabaseDatabase()
     elif config.database_type == "mock":
-        # Import here to avoid circular imports
-        # For mock, we'd need to create a mock database class
-        # This is a simplified approach - in practice you'd have a MockDatabase class
-        # Return IUnitOfWork implementation
-        return SupabaseDatabase()  # Fallback to Supabase for now
+        # TODO: Implement a proper MockDatabase that satisfies IUnitOfWork
+        raise ValueError("Mock database backend is not implemented yet")
     else:
         raise ValueError(f"Unsupported database type: {config.database_type}")
 
