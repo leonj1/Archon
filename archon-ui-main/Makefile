@@ -173,11 +173,11 @@ test-results: ## Show test results summary
 
 .PHONY: coverage-report
 coverage-report: ## Open coverage report in browser
-	@if [ -d public/test-results/coverage ]; then \
+	@if [ -d test-results/coverage ]; then \
 		echo "$(YELLOW)Opening coverage report...$(NC)"; \
-		open public/test-results/coverage/index.html 2>/dev/null || \
-		xdg-open public/test-results/coverage/index.html 2>/dev/null || \
-		echo "$(YELLOW)Coverage report available at: public/test-results/coverage/index.html$(NC)"; \
+		open test-results/coverage/index.html 2>/dev/null || \
+		xdg-open test-results/coverage/index.html 2>/dev/null || \
+		echo "$(YELLOW)Coverage report available at: test-results/coverage/index.html$(NC)"; \
 	else \
 		echo "$(YELLOW)No coverage report found. Run 'make test' first.$(NC)"; \
 	fi
