@@ -7,32 +7,31 @@ injection setup for managing database instances throughout the application.
 
 import logging
 import threading
-from typing import AsyncGenerator, Optional
 
-from ..repositories.interfaces.unit_of_work import IUnitOfWork
 from ..repositories.implementations import SupabaseDatabase
+from ..repositories.interfaces.unit_of_work import IUnitOfWork
 
 
 class DatabaseProvider:
     """
     Singleton provider for database instance management.
-    
+
     This class manages the database instance lifecycle and provides a
     centralized point for dependency injection and testing.
     """
-    
-    _instance: Optional[IUnitOfWork] = None
+
+    _instance: IUnitOfWork | None = None
     _logger = logging.getLogger(__name__)
     _lock = threading.Lock()
-    
+
     @classmethod
     def get_database(cls) -> IUnitOfWork:
         """
         Get the database instance, creating it if necessary.
-        
+
         Returns:
             The IUnitOfWork instance
-            
+
         Note:
             This method implements lazy initialization to avoid circular imports
             and ensure the database is only created when actually needed.
@@ -45,17 +44,17 @@ class DatabaseProvider:
                     config = get_database_config()
                     cls._instance = create_database_instance(config)
                     cls._logger.info("Database instance initialized successfully")
-        
+
         return cls._instance
-    
+
     @classmethod
     def set_database(cls, database: IUnitOfWork):
         """
         Set a specific database instance (primarily for testing).
-        
+
         Args:
             database: The IUnitOfWork instance to use
-            
+
         Note:
             This method allows injection of mock or test database instances
             for testing purposes without affecting production code.
@@ -63,24 +62,24 @@ class DatabaseProvider:
         with cls._lock:
             cls._logger.info(f"Database instance overridden with {type(database).__name__}")
             cls._instance = database
-    
+
     @classmethod
     def reset_database(cls):
         """
         Reset the database instance (primarily for testing).
-        
+
         This method clears the current database instance, forcing a new
         instance to be created on the next call to get_database().
         """
         with cls._lock:
             cls._logger.info("Database instance reset")
             cls._instance = None
-    
+
     @classmethod
     async def close_database(cls):
         """
         Close the current database instance and clean up resources.
-        
+
         This method should be called during application shutdown to
         ensure proper cleanup of database connections and resources.
         """
@@ -89,12 +88,12 @@ class DatabaseProvider:
             await cls._instance.close()
             cls._instance = None
             cls._logger.info("Database instance closed")
-    
+
     @classmethod
     async def health_check(cls) -> bool:
         """
         Perform a health check on the current database instance.
-        
+
         Returns:
             True if the database is healthy, False otherwise
         """
@@ -103,22 +102,27 @@ class DatabaseProvider:
                 # Try to get instance, which will create it if needed
                 cls.get_database()
             
-            return await cls._instance.health_check()
+            # After get_database(), _instance should not be None
+            if cls._instance is not None:
+                return await cls._instance.health_check()
+            else:
+                return False
         except Exception as e:
             cls._logger.error(f"Database health check failed: {e}", exc_info=True)
             return False
 
 
-def get_database() -> IUnitOfWork:
+async def get_database():
     """
     FastAPI dependency function for database injection.
-    
+
     This function provides a database instance that can be injected
     into FastAPI route handlers and other dependency-managed functions.
-    
-    Returns:
+    Uses yield to properly handle cleanup after request completion.
+
+    Yields:
         The IUnitOfWork instance
-        
+
     Example:
         ```python
         @router.post("/projects")
@@ -129,59 +133,23 @@ def get_database() -> IUnitOfWork:
             return await db.projects.create(project_data)
         ```
     """
-    return DatabaseProvider.get_database()
-
-
-def get_database_dependency():
-    """
-    Get the database dependency function without caching.
-    
-    This function is useful for scenarios where you need a fresh
-    database instance for each request, such as in testing or
-    when the database configuration might change.
-    
-    Returns:
-        The IUnitOfWork instance
-    """
-    return DatabaseProvider.get_database()
-
-
-async def get_database_async() -> AsyncGenerator[IUnitOfWork, None]:
-    """
-    Async generator-based dependency for per-request database instances.
-    
-    This dependency provides a database instance for each request and ensures
-    proper cleanup after the request completes. Useful for scenarios requiring
-    transaction isolation or when database state shouldn't be shared between requests.
-    
-    Yields:
-        The IUnitOfWork instance for the current request
-        
-    Example:
-        ```python
-        @router.post("/items")
-        async def create_item(
-            item_data: dict,
-            db: IUnitOfWork = Depends(get_database_async)
-        ):
-            async with db.transaction() as uow:
-                return await uow.items.create(item_data)
-        ```
-    """
     database = DatabaseProvider.get_database()
     try:
         yield database
     finally:
-        # Cleanup logic if needed (e.g., closing transaction, releasing resources)
-        # Note: For singleton instances, we typically don't close here
+        # Cleanup logic if needed
+        # For singleton instances, we typically don't close here
         # as the instance is shared across requests
         pass
+
+
+
 
 
 async def setup_database():
     """
     Initialize the database system during application startup.
-    
+
     This function should be called during application startup to
     ensure the database is properly initialized and ready for use.
     """
@@ -189,12 +157,12 @@ async def setup_database():
     try:
         logger.info("Setting up database system")
         database = DatabaseProvider.get_database()
-        
+
         # Perform health check to ensure database is accessible
         is_healthy = await database.health_check()
         if not is_healthy:
             raise Exception("Database health check failed during startup")
-        
+
         logger.info("Database system setup completed successfully")
     except Exception as e:
         logger.error(f"Database setup failed: {e}", exc_info=True)
@@ -204,7 +172,7 @@ async def setup_database():
 async def teardown_database():
     """
     Clean up the database system during application shutdown.
-    
+
     This function should be called during application shutdown to
     ensure proper cleanup of database connections and resources.
     """
@@ -222,11 +190,11 @@ async def teardown_database():
 class DatabaseConfig:
     """
     Configuration container for database settings.
-    
+
     This class can be extended to support different database backends
     and configuration options in the future.
     """
-    
+
     def __init__(
         self,
         database_type: str = "supabase",
@@ -237,7 +205,7 @@ class DatabaseConfig:
     ):
         """
         Initialize database configuration.
-        
+
         Args:
             database_type: Type of database backend ('supabase', 'mock', etc.)
             connection_pool_size: Maximum number of database connections
@@ -250,7 +218,7 @@ class DatabaseConfig:
         self.connection_timeout = connection_timeout
         self.retry_attempts = retry_attempts
         self.enable_logging = enable_logging
-    
+
     def __repr__(self) -> str:
         """String representation of the configuration."""
         return f"DatabaseConfig(type={self.database_type}, pool_size={self.connection_pool_size})"
@@ -263,7 +231,7 @@ _database_config = DatabaseConfig()
 def get_database_config() -> DatabaseConfig:
     """
     Get the current database configuration.
-    
+
     Returns:
         The current DatabaseConfig instance
     """
@@ -273,50 +241,47 @@ def get_database_config() -> DatabaseConfig:
 def set_database_config(config: DatabaseConfig):
     """
     Set the database configuration.
-    
+
     Args:
         config: The new DatabaseConfig instance
-        
+
     Note:
         This function should be called during application startup
         before any database operations are performed.
     """
     global _database_config
     _database_config = config
-    
+
     logger = logging.getLogger(__name__)
     logger.info(f"Database configuration updated: {config}")
 
 
 # Factory function for creating database instances based on configuration
-def create_database_instance(config: Optional[DatabaseConfig] = None) -> IUnitOfWork:
+def create_database_instance(config: DatabaseConfig | None = None) -> IUnitOfWork:
     """
     Create a database instance based on the provided configuration.
-    
+
     Args:
         config: Optional database configuration. If not provided, uses global config.
-        
+
     Returns:
         An IUnitOfWork instance configured according to the provided settings
-        
+
     Raises:
         ValueError: If the database type is not supported
     """
     if config is None:
         config = get_database_config()
-    
+
     if config.database_type == "supabase":
+        # Return IUnitOfWork implementation
         return SupabaseDatabase()
     elif config.database_type == "mock":
         # Import here to avoid circular imports
-        from ..repositories.implementations.mock_repositories import (
-            MockSourceRepository,
-            MockDocumentRepository,
-            MockProjectRepository,
-            MockSettingsRepository,
-        )
         # For mock, we'd need to create a mock database class
         # This is a simplified approach - in practice you'd have a MockDatabase class
+        # Return IUnitOfWork implementation
         return SupabaseDatabase()  # Fallback to Supabase for now
     else:
         raise ValueError(f"Unsupported database type: {config.database_type}")
+

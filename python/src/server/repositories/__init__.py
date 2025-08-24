@@ -18,28 +18,27 @@ The repository pattern provides:
 
 Example Usage:
     ```python
-    from src.server.repositories.interfaces import IBaseRepository
-    from src.server.repositories.implementations import SupabaseDatabase
-    
-    # Dependency injection
-    database = SupabaseDatabase()
-    user_repository = database.users
-    
-    # Repository operations
-    user = await user_repository.create(user_data)
-    users = await user_repository.list(filters={"active": True})
+    from fastapi import Depends
+    from src.server.repositories.interfaces import IUnitOfWork
+    from src.server.core.dependencies import get_database
+
+    # Dependency injection in FastAPI route
+    async def get_users(db: IUnitOfWork = Depends(get_database)):
+        user_repository = db.users
+        users = await user_repository.list(filters={"active": True})
+        return users
     ```
 """
 
 # Import interfaces for easy access
 from .interfaces import (
     IBaseRepository,
-    IUnitOfWork,
     ITransactionContext,
-    TransactionError,
-    SavepointError,
+    IUnitOfWork,
     NestedTransactionError,
-    T
+    SavepointError,
+    T,
+    TransactionError,
 )
 
 __all__ = [
@@ -47,10 +46,10 @@ __all__ = [
     "IBaseRepository",
     "IUnitOfWork",
     "ITransactionContext",
-    
+
     # Type variables
     "T",
-    
+
     # Exceptions
     "TransactionError",
     "SavepointError",
@@ -61,3 +60,4 @@ __all__ = [
 __version__ = "1.0.0"
 __author__ = "Archon Development Team"
 __description__ = "Repository pattern implementation for database abstraction"
+
