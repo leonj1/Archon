@@ -49,7 +49,7 @@ class SupabaseSourceRepository(ISourceRepository):
             else:
                 raise Exception("No data returned from insert operation")
         except Exception as e:
-            self._logger.error(f"Failed to create source: {e}")
+            self._logger.exception(f"Failed to create source: {e}")
             raise
     
     async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[Dict[str, Any]]:
@@ -142,7 +142,7 @@ class SupabaseSourceRepository(ISourceRepository):
             response = query.execute()
             return response.data or []
         except Exception as e:
-            self._logger.error(f"Failed to list sources: {e}")
+            self._logger.exception(f"Failed to list sources: {e}")
             return []
     
     # Implement remaining base repository methods with minimal functionality
@@ -253,7 +253,7 @@ class SupabaseSourceRepository(ISourceRepository):
             
             return stats
         except Exception as e:
-            self._logger.error(f"Failed to get crawl statistics: {e}")
+            self._logger.exception(f"Failed to get crawl statistics: {e}")
             return {'total_sources': 0, 'by_status': {}, 'by_type': {}, 'total_pages': 0}
 
 
@@ -336,7 +336,7 @@ class SupabaseDocumentRepository(IDocumentRepository):
             response = query.execute()
             return response.data or []
         except Exception as e:
-            self._logger.error(f"Failed to list documents: {e}")
+            self._logger.exception(f"Failed to list documents: {e}")
             return []
     
     # Implement remaining base repository methods
@@ -570,7 +570,7 @@ class SupabaseProjectRepository(IProjectRepository):
             else:
                 raise Exception("No data returned from insert operation")
         except Exception as e:
-            self._logger.error(f"Failed to create project: {e}")
+            self._logger.exception(f"Failed to create project: {e}")
             raise
     
     async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[Dict[str, Any]]:
@@ -631,7 +631,7 @@ class SupabaseProjectRepository(IProjectRepository):
             response = query.execute()
             return response.data or []
         except Exception as e:
-            self._logger.error(f"Failed to list projects: {e}")
+            self._logger.exception(f"Failed to list projects: {e}")
             return []
     
     # Implement remaining base repository methods
@@ -756,7 +756,7 @@ class SupabaseProjectRepository(IProjectRepository):
             
             return stats
         except Exception as e:
-            self._logger.error(f"Failed to get project statistics: {e}")
+            self._logger.exception(f"Failed to get project statistics: {e}")
             return {'total_projects': 0, 'pinned_projects': 0, 'with_github_repo': 0, 'avg_docs_per_project': 0}
     
     async def query_jsonb_field(self, field_name: str, query_path: str, query_value: Any, limit: int = 10) -> List[Dict[str, Any]]:
@@ -855,7 +855,7 @@ class SupabaseSettingsRepository(ISettingsRepository):
             response = query.execute()
             return response.data or []
         except Exception as e:
-            self._logger.error(f"Failed to list settings: {e}")
+            self._logger.exception(f"Failed to list settings: {e}")
             return []
     
     # Implement remaining base repository methods
