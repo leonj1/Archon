@@ -1422,7 +1422,12 @@ class SupabaseCodeExampleRepository(ICodeExampleRepository):
         return 0  # Simplified
     
     # Code example specific methods with minimal implementation
-    async def search_by_summary(self, query, limit=5, source_filter=None) -> List[Dict[str, Any]]:
+    async def search_by_summary(
+        self, 
+        query: str, 
+        limit: int = 5, 
+        source_filter: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         try:
             search_query = self._client.table(self._table).select('*')
             search_query = search_query.text_search('summary', query)
@@ -1435,13 +1440,27 @@ class SupabaseCodeExampleRepository(ICodeExampleRepository):
         except Exception:
             return []
     
-    async def get_by_language(self, language, limit=None, offset=None) -> List[Dict[str, Any]]:
+    async def get_by_language(
+        self, 
+        language: str, 
+        limit: Optional[int] = None, 
+        offset: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
         return await self.list(filters={'language': language}, limit=limit, offset=offset)
     
-    async def get_by_source(self, source_id, limit=None, offset=None) -> List[Dict[str, Any]]:
+    async def get_by_source(
+        self, 
+        source_id: str, 
+        limit: Optional[int] = None, 
+        offset: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
         return await self.list(filters={'source_id': source_id}, limit=limit, offset=offset)
     
-    async def search_by_metadata(self, metadata_query, limit=10) -> List[Dict[str, Any]]:
+    async def search_by_metadata(
+        self, 
+        metadata_query: Dict[str, Any], 
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
         # Simplified implementation - would need complex JSONB querying
         return []
     
@@ -1465,7 +1484,12 @@ class SupabaseCodeExampleRepository(ICodeExampleRepository):
             'avg_code_length': 0
         }
     
-    async def search_code_content(self, query, language_filter=None, limit=10) -> List[Dict[str, Any]]:
+    async def search_code_content(
+        self, 
+        query: str, 
+        language_filter: Optional[str] = None, 
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
         try:
             search_query = self._client.table(self._table).select('*')
             search_query = search_query.text_search('code_block', query)
@@ -1477,6 +1501,115 @@ class SupabaseCodeExampleRepository(ICodeExampleRepository):
             return response.data or []
         except Exception:
             return []
+    
+    async def vector_search(
+        self,
+        embedding: List[float],
+        limit: int = 10,
+        source_filter: Optional[str] = None,
+        metadata_filter: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """Perform vector similarity search on code examples using match_archon_code_examples RPC."""
+        try:
+            # Validate input parameters
+            if not embedding:
+                raise ValueError("embedding cannot be empty")
+            if len(embedding) != 1536:
+                raise ValueError("embedding must have 1536 dimensions")
+            if limit <= 0 or limit > 1000:
+                raise ValueError("limit must be between 1 and 1000")
+            
+            # Prepare RPC function parameters
+            params = {
+                'query_embedding': embedding,
+                'match_count': limit,
+                'filter': metadata_filter or {},
+                'source_filter': source_filter
+            }
+            
+            # Call the Supabase RPC function for code examples
+            response = self._client.rpc('match_archon_code_examples', params).execute()
+            
+            if not response.data:
+                self._logger.info(f"Vector search returned no code examples for limit={limit}")
+                return []
+            
+            # Process results and add similarity scores
+            results = []
+            for row in response.data:
+                code_example_data = {
+                    'id': row['id'],
+                    'url': row['url'],
+                    'chunk_number': row['chunk_number'],
+                    'content': row['content'],  # This is the code block
+                    'summary': row.get('summary', ''),
+                    'metadata': row.get('metadata', {}),
+                    'source_id': row['source_id'],
+                    'similarity_score': row.get('similarity', 0.0)
+                }
+                # Add similarity score to metadata for backward compatibility
+                code_example_data['metadata']['similarity_score'] = code_example_data['similarity_score']
+                code_example_data['metadata']['search_type'] = 'vector_search'
+                results.append(code_example_data)
+            
+            self._logger.info(f"Vector search returned {len(results)} code examples")
+            return results
+            
+        except Exception as e:
+            self._logger.error(f"Code example vector search failed: {e}", exc_info=True)
+            return []
+    
+    def _calculate_text_relevance(self, query: str, text: str) -> float:
+        """Calculate text relevance score for code summaries and descriptions."""
+        if not query or not text:
+            return 0.0
+        
+        query_lower = query.lower()
+        text_lower = text.lower()
+        
+        # Simple keyword matching
+        query_words = query_lower.split()
+        if not query_words:
+            return 0.0
+        
+        matches = sum(1 for word in query_words if word in text_lower)
+        word_freq_score = matches / len(query_words)
+        
+        # Bonus for phrase matches
+        phrase_bonus = 0.3 if query_lower in text_lower else 0.0
+        
+        return min(1.0, word_freq_score + phrase_bonus)
+    
+    def _calculate_code_relevance(self, query: str, code: str) -> float:
+        """Calculate relevance score specifically for code content."""
+        if not query or not code:
+            return 0.0
+        
+        query_lower = query.lower()
+        code_lower = code.lower()
+        
+        # Check for exact matches (higher weight for code)
+        if query_lower in code_lower:
+            return 1.0
+        
+        # Check for word matches
+        query_words = query_lower.split()
+        if not query_words:
+            return 0.0
+        
+        matches = sum(1 for word in query_words if word in code_lower)
+        word_score = matches / len(query_words)
+        
+        # Bonus for function/class name matches (common code patterns)
+        code_patterns = ['def ', 'class ', 'function ', 'const ', 'var ', 'let ']
+        pattern_bonus = 0.0
+        for word in query_words:
+            for pattern in code_patterns:
+                if f'{pattern}{word}' in code_lower:
+                    pattern_bonus += 0.2
+                    break
+        
+        return min(1.0, word_score + pattern_bonus)
 
 
 class SupabasePromptRepository(IPromptRepository):
@@ -1647,132 +1780,3 @@ class SupabasePromptRepository(IPromptRepository):
             return await self.delete(prompt['id'])
         return False
 
-
-# Enhanced Code Example Repository Methods
-# These methods extend the SupabaseCodeExampleRepository with vector search capabilities
-
-def _add_vector_search_to_code_repository():
-    """Add vector search capabilities to SupabaseCodeExampleRepository."""
-    
-    async def vector_search(
-        self,
-        embedding: List[float],
-        limit: int = 10,
-        source_filter: Optional[str] = None,
-        language_filter: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
-        """Perform vector similarity search on code examples using match_archon_code_examples RPC."""
-        try:
-            # Validate input parameters
-            if not embedding:
-                raise ValueError("embedding cannot be empty")
-            if len(embedding) != 1536:
-                raise ValueError("embedding must have 1536 dimensions")
-            if limit <= 0 or limit > 1000:
-                raise ValueError("limit must be between 1 and 1000")
-            
-            # Prepare metadata filter for language if specified
-            metadata_filter = {}
-            if language_filter:
-                metadata_filter['language'] = language_filter.lower()
-            
-            # Prepare RPC function parameters
-            params = {
-                'query_embedding': embedding,
-                'match_count': limit,
-                'filter': metadata_filter,
-                'source_filter': source_filter
-            }
-            
-            # Call the Supabase RPC function for code examples
-            response = self._client.rpc('match_archon_code_examples', params).execute()
-            
-            if not response.data:
-                self._logger.info(f"Vector search returned no code examples for limit={limit}")
-                return []
-            
-            # Process results and add similarity scores
-            results = []
-            for row in response.data:
-                code_example_data = {
-                    'id': row['id'],
-                    'url': row['url'],
-                    'chunk_number': row['chunk_number'],
-                    'content': row['content'],  # This is the code block
-                    'summary': row.get('summary', ''),
-                    'metadata': row.get('metadata', {}),
-                    'source_id': row['source_id'],
-                    'similarity_score': row.get('similarity', 0.0)
-                }
-                # Add similarity score to metadata for backward compatibility
-                code_example_data['metadata']['similarity_score'] = code_example_data['similarity_score']
-                code_example_data['metadata']['search_type'] = 'vector_search'
-                results.append(code_example_data)
-            
-            self._logger.info(f"Vector search returned {len(results)} code examples")
-            return results
-            
-        except Exception as e:
-            self._logger.error(f"Code example vector search failed: {e}", exc_info=True)
-            return []
-    
-    def _calculate_text_relevance(self, query: str, text: str) -> float:
-        """Calculate text relevance score for code summaries and descriptions."""
-        if not query or not text:
-            return 0.0
-        
-        query_lower = query.lower()
-        text_lower = text.lower()
-        
-        # Simple keyword matching
-        query_words = query_lower.split()
-        if not query_words:
-            return 0.0
-        
-        matches = sum(1 for word in query_words if word in text_lower)
-        word_freq_score = matches / len(query_words)
-        
-        # Bonus for phrase matches
-        phrase_bonus = 0.3 if query_lower in text_lower else 0.0
-        
-        return min(1.0, word_freq_score + phrase_bonus)
-    
-    def _calculate_code_relevance(self, query: str, code: str) -> float:
-        """Calculate relevance score specifically for code content."""
-        if not query or not code:
-            return 0.0
-        
-        query_lower = query.lower()
-        code_lower = code.lower()
-        
-        # Check for exact matches (higher weight for code)
-        if query_lower in code_lower:
-            return 1.0
-        
-        # Check for word matches
-        query_words = query_lower.split()
-        if not query_words:
-            return 0.0
-        
-        matches = sum(1 for word in query_words if word in code_lower)
-        word_score = matches / len(query_words)
-        
-        # Bonus for function/class name matches (common code patterns)
-        code_patterns = ['def ', 'class ', 'function ', 'const ', 'var ', 'let ']
-        pattern_bonus = 0.0
-        for word in query_words:
-            for pattern in code_patterns:
-                if f'{pattern}{word}' in code_lower:
-                    pattern_bonus += 0.2
-                    break
-        
-        return min(1.0, word_score + pattern_bonus)
-    
-    # Add methods to the class
-    SupabaseCodeExampleRepository.vector_search = vector_search
-    SupabaseCodeExampleRepository._calculate_text_relevance = _calculate_text_relevance  
-    SupabaseCodeExampleRepository._calculate_code_relevance = _calculate_code_relevance
-
-
-# Apply enhancements when module is imported
-_add_vector_search_to_code_repository()
