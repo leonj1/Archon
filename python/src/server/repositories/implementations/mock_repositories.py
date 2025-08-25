@@ -953,7 +953,22 @@ class MockTaskRepository(ITaskRepository):
         if filters:
             for key, value in filters.items():
                 results = [r for r in results if r.get(key) == value]
-        return results[:limit] if limit else results
+        
+        # Apply sorting if order_by is provided
+        if order_by:
+            results = sorted(
+                results,
+                key=lambda r: (r.get(order_by) or ''),
+                reverse=(order_direction == 'desc')
+            )
+        
+        # Apply offset and limit after sorting
+        if offset:
+            results = results[offset:]
+        if limit:
+            results = results[:limit]
+        
+        return results
     
     async def count(self, filters=None) -> int:
         return len(await self.list(filters=filters))
@@ -1040,7 +1055,22 @@ class MockVersionRepository(IVersionRepository):
         if filters:
             for key, value in filters.items():
                 results = [r for r in results if r.get(key) == value]
-        return results[:limit] if limit else results
+        
+        # Apply sorting if order_by is provided
+        if order_by:
+            results = sorted(
+                results,
+                key=lambda r: (r.get(order_by) or ''),
+                reverse=(order_direction == 'desc')
+            )
+        
+        # Apply offset and limit after sorting
+        if offset:
+            results = results[offset:]
+        if limit:
+            results = results[:limit]
+        
+        return results
     
     async def count(self, filters=None) -> int:
         return len(await self.list(filters=filters))
@@ -1125,7 +1155,22 @@ class MockCodeExampleRepository(ICodeExampleRepository):
         if filters:
             for key, value in filters.items():
                 results = [r for r in results if r.get(key) == value]
-        return results[:limit] if limit else results
+        
+        # Apply sorting if order_by is provided
+        if order_by:
+            results = sorted(
+                results,
+                key=lambda r: (r.get(order_by) or ''),
+                reverse=(order_direction == 'desc')
+            )
+        
+        # Apply offset and limit after sorting
+        if offset:
+            results = results[offset:]
+        if limit:
+            results = results[:limit]
+        
+        return results
     
     async def count(self, filters=None) -> int:
         return len(await self.list(filters=filters))
@@ -1200,7 +1245,22 @@ class MockPromptRepository(IPromptRepository):
         if filters:
             for key, value in filters.items():
                 results = [r for r in results if r.get(key) == value]
-        return results[:limit] if limit else results
+        
+        # Apply sorting if order_by is provided
+        if order_by:
+            results = sorted(
+                results,
+                key=lambda r: (r.get(order_by) or ''),
+                reverse=(order_direction == 'desc')
+            )
+        
+        # Apply offset and limit after sorting
+        if offset:
+            results = results[offset:]
+        if limit:
+            results = results[:limit]
+        
+        return results
     
     async def count(self, filters=None) -> int:
         return len(await self.list(filters=filters))
