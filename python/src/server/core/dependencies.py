@@ -112,7 +112,7 @@ class DatabaseProvider:
             return False
 
 
-async def get_database():
+async def get_database() -> IUnitOfWork:
     """
     FastAPI dependency function for database injection.
 
