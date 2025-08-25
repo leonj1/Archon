@@ -8,7 +8,7 @@ injection setup for managing database instances throughout the application.
 import logging
 import threading
 
-from ..repositories.implementations import SupabaseDatabase
+from ..repositories.implementations.supabase_database import SupabaseDatabase
 from ..repositories.interfaces.unit_of_work import IUnitOfWork
 
 
