@@ -1121,13 +1121,16 @@ class SupabaseSettingsRepository(ISettingsRepository):
     async def create(self, entity: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new setting."""
         try:
-            response = self._client.table(self._table).insert(entity).execute()
+            # Offload blocking Supabase call to thread pool
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).insert(entity).execute()
+            )
             if response.data:
                 return response.data[0]
             else:
                 raise Exception("No data returned from insert operation")
         except Exception as e:
-            self._logger.error(f"Failed to create setting: {e}")
+            self._logger.exception(f"Failed to create setting: {e}")
             raise
     
     async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[Dict[str, Any]]:
