@@ -36,7 +36,7 @@ This specification defines the implementation of the Repository Pattern to abstr
 
 ### Architecture Layers
 
-```
+```text
 ┌─────────────────────────────────────┐
 │         API Routes Layer            │
 ├─────────────────────────────────────┤
@@ -626,7 +626,7 @@ async def test_vector_search():
 - **Pytest**: For testing framework
 
 ### Code Organization
-```
+```text
 python/src/server/
 ├── repositories/
 │   ├── interfaces/
