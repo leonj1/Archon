@@ -27,8 +27,13 @@ RUN npm ci --include=dev && npm cache clean --force
 # Stage 2: Secure test runner
 FROM node:20-alpine AS test-runner
 
+# Add build argument for test failure handling
+# Default: false (builds will fail if tests fail)
+# Set to true to allow builds to continue even with test failures
+ARG ALLOW_TEST_FAILURE=false
+
 # Install runtime dependencies and security updates
-RUN apk add --no-cache git dumb-init && \
+RUN apk add --no-cache git dumb-init bash && \
     apk upgrade --no-cache
 
 # Create non-root user for test execution
@@ -56,11 +61,37 @@ RUN mkdir -p /test-results /coverage
 # Set test environment
 ENV NODE_ENV=test
 
-# Run tests and save results (with better error handling)
-RUN set -e && \
-    npm run test:coverage:run || echo "Tests completed with issues" && \
-    cp -r public/test-results/* /test-results/ 2>/dev/null || echo "No test results to copy" && \
-    cp -r coverage/* /coverage/ 2>/dev/null || echo "No coverage reports to copy"
+# Run tests with proper failure handling and artifact preservation
+# 1. Run tests and capture exit code
+# 2. Always preserve test artifacts regardless of test outcome
+# 3. Conditionally fail the build based on ALLOW_TEST_FAILURE
+RUN bash -c 'set -euo pipefail; \
+    TEST_EXIT_CODE=0; \
+    npm run test:coverage:run || TEST_EXIT_CODE=$?; \
+    echo "Test execution completed with exit code: $TEST_EXIT_CODE"; \
+    \
+    # Always preserve test artifacts \
+    if [ -d "public/test-results" ]; then \
+        cp -r public/test-results/* /test-results/ 2>/dev/null || echo "Warning: Could not copy some test results"; \
+    else \
+        echo "Warning: No test results directory found"; \
+    fi; \
+    \
+    if [ -d "coverage" ]; then \
+        cp -r coverage/* /coverage/ 2>/dev/null || echo "Warning: Could not copy some coverage reports"; \
+    else \
+        echo "Warning: No coverage directory found"; \
+    fi; \
+    \
+    # Conditionally fail the build \
+    if [ "'$ALLOW_TEST_FAILURE'" = "false" ] && [ $TEST_EXIT_CODE -ne 0 ]; then \
+        echo "Tests failed and ALLOW_TEST_FAILURE=false, failing build"; \
+        exit $TEST_EXIT_CODE; \
+    elif [ $TEST_EXIT_CODE -ne 0 ]; then \
+        echo "Tests failed but ALLOW_TEST_FAILURE=true, continuing build"; \
+    else \
+        echo "All tests passed successfully"; \
+    fi'
 
 # Stage 3: Secure results extractor (minimal image with just results)
 FROM alpine:latest AS results
