@@ -105,8 +105,10 @@ class SupabaseSourceRepository(ISourceRepository):
                 'updated_at': now.isoformat()
             })
             
-            # Execute database operation
-            response = self._client.table(self._table).insert(validated_entity).execute()
+            # Execute database operation - offload blocking call to thread
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).insert(validated_entity).execute()
+            )
             
             if not response.data:
                 raise DatabaseOperationError(
@@ -123,7 +125,8 @@ class SupabaseSourceRepository(ISourceRepository):
             # Re-raise validation errors as-is
             raise
         except Exception as e:
-            self._logger.exception(f"Failed to create source: {e}")
+            # Log with full stack trace
+            self._logger.error(f"Failed to create source: {e}", exc_info=True)
             
             # Check for duplicate key violations
             if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
@@ -143,13 +146,8 @@ class SupabaseSourceRepository(ISourceRepository):
                     original_error=e
                 )
             
-            # Generic database error
-            raise DatabaseOperationError(
-                f"Database operation failed: {e}",
-                operation=operation,
-                entity_type="Source",
-                original_error=e
-            )
+            # Re-raise original exception to preserve stack trace
+            raise
     
     @overload
     async def get_by_id(self, id: UUID) -> Optional[Dict[str, Any]]: ...
