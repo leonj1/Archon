@@ -41,10 +41,7 @@ desktop.ini
 .github/
 
 # Docker and container files
-Dockerfile*
-docker-compose*.yml
-.dockerignore
-*.dockerfile
+# Note: Docker files are NOT ignored to support standard build workflows
 
 # Tests and coverage
 coverage
