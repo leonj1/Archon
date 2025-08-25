@@ -19,8 +19,8 @@ USER appuser
 # Copy package files with proper ownership
 COPY --chown=appuser:appuser package*.json ./
 
-# Install dependencies including dev dependencies for testing
-RUN npm ci --only=production && npm cache clean --force
+# Install all dependencies (including dev) for development server
+RUN npm ci && npm cache clean --force
 
 # Create coverage directory with proper permissions
 RUN mkdir -p /app/coverage
