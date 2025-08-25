@@ -98,19 +98,23 @@ class SupabaseSourceRepository(ISourceRepository):
     async def update(self, id: Union[str, UUID, int], data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update source record."""
         try:
-            response = self._client.table(self._table).update(data).eq('id', str(id)).execute()
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).update(data).eq('id', str(id)).execute()
+            )
             return response.data[0] if response.data else None
         except Exception as e:
-            self._logger.error(f"Failed to update source {id}: {e}")
+            self._logger.error(f"Failed to update source {id}: {e}", exc_info=True)
             return None
     
     async def delete(self, id: Union[str, UUID, int]) -> bool:
         """Delete source record."""
         try:
-            response = self._client.table(self._table).delete().eq('id', str(id)).execute()
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).delete().eq('id', str(id)).execute()
+            )
             return len(response.data) > 0
         except Exception as e:
-            self._logger.error(f"Failed to delete source {id}: {e}")
+            self._logger.error(f"Failed to delete source {id}: {e}", exc_info=True)
             return False
     
     async def list(
@@ -271,13 +275,15 @@ class SupabaseDocumentRepository(IDocumentRepository):
     async def create(self, entity: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new document chunk."""
         try:
-            response = self._client.table(self._table).insert(entity).execute()
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).insert(entity).execute()
+            )
             if response.data:
                 return response.data[0]
             else:
                 raise Exception("No data returned from insert operation")
         except Exception as e:
-            self._logger.error(f"Failed to create document: {e}")
+            self._logger.exception("Failed to create document")
             raise
     
     async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[Dict[str, Any]]:
@@ -754,10 +760,12 @@ class SupabaseProjectRepository(IProjectRepository):
     async def search_by_title(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Search projects by title."""
         try:
-            response = self._client.table(self._table).select('*').ilike('title', f'%{query}%').limit(limit).execute()
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).select('*').ilike('title', f'%{query}%').limit(limit).execute()
+            )
             return response.data or []
         except Exception as e:
-            self._logger.error(f"Failed to search projects by title: {e}")
+            self._logger.error(f"Failed to search projects by title: {e}", exc_info=True)
             return []
     
     async def get_project_statistics(self) -> Dict[str, Any]:
@@ -1097,7 +1105,7 @@ class SupabaseTaskRepository(ITaskRepository):
             response = self._client.table(self._table).insert(entity).execute()
             return response.data[0] if response.data else {}
         except Exception as e:
-            self._logger.error(f"Failed to create task: {e}")
+            self._logger.error(f"Failed to create task: {e}", exc_info=True)
             raise
     
     async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[Dict[str, Any]]:
@@ -1497,9 +1505,10 @@ class SupabaseCodeExampleRepository(ICodeExampleRepository):
                 search_query = search_query.eq('language', language_filter)
             if limit:
                 search_query = search_query.limit(limit)
-            response = search_query.execute()
+            response = await asyncio.to_thread(search_query.execute)
             return response.data or []
         except Exception:
+            self._logger.exception("Failed to search code content")
             return []
     
     async def vector_search(

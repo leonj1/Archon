@@ -12,6 +12,20 @@ encoding: UTF-8
 
 Import AI-generated code improvement prompts from GitHub pull request comments (specifically CodeRabbit reviews) and convert them into executable Agent OS tasks, with automatic comment resolution upon completion.
 
+### Safety Features
+
+This command includes several safety checks to prevent applying fixes to the wrong project or branch:
+
+1. **Repository Verification**: Ensures the PR belongs to the current repository
+2. **Branch Verification**: Confirms you're on the correct branch or offers to switch
+3. **PR State Check**: Warns if the PR is closed or merged
+4. **User Confirmation**: Requires explicit confirmation for any mismatches
+
+These checks prevent accidentally applying fixes meant for:
+- Different repositories
+- Different branches
+- Already merged or closed PRs
+
 <pre_flight_check>
   EXECUTE: @.agent-os/instructions/meta/pre-flight.md
 </pre_flight_check>
@@ -22,7 +36,7 @@ Import AI-generated code improvement prompts from GitHub pull request comments (
 
 ### Step 1: PR Input Validation
 
-Validate and parse the GitHub PR URL or reference provided by the user.
+Validate and parse the GitHub PR URL or reference provided by the user, ensuring it matches the current repository and branch.
 
 <input_formats>
   <full_url>https://github.com/{owner}/{repo}/pull/{number}</full_url>
@@ -34,11 +48,67 @@ Validate and parse the GitHub PR URL or reference provided by the user.
   - Extract owner, repo, and PR number
   - Verify PR exists and is accessible
   - Store PR metadata for later use
+  - Verify branch compatibility (see branch_verification below)
 </validation>
+
+<repository_verification>
+  # Get current repository info
+  CURRENT_REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+  PR_REPO="{owner}/{repo}"
+  
+  # Verify we're in the correct repository
+  IF current_repo != PR_REPO:
+    ERROR "Repository mismatch!"
+    ERROR "PR is for repository: $PR_REPO"
+    ERROR "Current repository: $CURRENT_REPO"
+    EXIT "Cannot apply PR from different repository"
+</repository_verification>
+
+<branch_verification>
+  # Get current local branch
+  CURRENT_BRANCH=$(git branch --show-current)
+  
+  # Get PR details including base branch
+  PR_INFO=$(gh api repos/{owner}/{repo}/pulls/{number} --jq '.base.ref,.head.ref,.state')
+  PR_BASE_BRANCH=$(echo "$PR_INFO" | sed -n '1p')
+  PR_HEAD_BRANCH=$(echo "$PR_INFO" | sed -n '2p')
+  PR_STATE=$(echo "$PR_INFO" | sed -n '3p')
+  
+  # Check if PR is still open
+  IF PR_STATE != "open":
+    WARN "PR #{number} is $PR_STATE (not open)"
+    CONFIRM "Continue importing prompts from $PR_STATE PR?"
+    IF no:
+      EXIT "Cancelled: PR is not open"
+  
+  # Verify we're on the correct branch
+  IF current_branch != PR_HEAD_BRANCH:
+    WARN "Branch mismatch detected!"
+    INFO "PR branch: $PR_HEAD_BRANCH (targeting $PR_BASE_BRANCH)"
+    INFO "Current branch: $CURRENT_BRANCH"
+    
+    # Check if PR branch exists locally or remotely
+    IF git show-ref --verify --quiet refs/heads/$PR_HEAD_BRANCH:
+      ASK "Switch to PR branch '$PR_HEAD_BRANCH'? (recommended)"
+      IF yes:
+        git checkout $PR_HEAD_BRANCH
+        git pull origin $PR_HEAD_BRANCH
+    ELIF git ls-remote --heads origin $PR_HEAD_BRANCH:
+      ASK "Create and checkout PR branch '$PR_HEAD_BRANCH' from remote? (recommended)"
+      IF yes:
+        git checkout -b $PR_HEAD_BRANCH origin/$PR_HEAD_BRANCH
+    ELSE:
+      WARN "PR branch '$PR_HEAD_BRANCH' not found locally or remotely"
+      CONFIRM "Apply PR #{number} fixes to current branch '$CURRENT_BRANCH'?"
+      IF no:
+        EXIT "Cancelled: Branch mismatch"
+</branch_verification>
 
 <decision_tree>
   IF input_invalid:
     ASK user for correct PR URL
+  ELIF branch_mismatch AND user_cancelled:
+    EXIT with message about branch mismatch
   ELSE:
     PROCEED to fetch comments
 </decision_tree>
@@ -212,14 +282,21 @@ Use the file-creator subagent to create the tasks file with each AI prompt as an
           Original AI Prompt:
           {full_prompt_text}
           ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/{owner}/{repo}/issues/comments/{comment_id}/reactions -f content='+1'
+          gh api repos/{owner}/{repo}/issues/comments -f body="✅ Implemented: {brief_description} in commit \$(git rev-parse HEAD)"
+          ```
     {END FOR}
     - [ ] {task_number}.{last_subtask} Verify all changes in {file_path} work correctly
   {END FOR}
 
   - [ ] {final_task_number}. Post-implementation tasks
     - [ ] {final_task_number}.1 Run full test suite
-    - [ ] {final_task_number}.2 Mark all resolved comments on GitHub
-    - [ ] {final_task_number}.3 Post summary comment on PR
+    - [ ] {final_task_number}.2 Verify all comments marked as resolved
+    - [ ] {final_task_number}.3 Post summary comment on PR with stats
 </file_template>
 
 </step>
@@ -253,27 +330,100 @@ Use the file-creator subagent to create a JSON file mapping tasks to GitHub comm
 
 </step>
 
-<step number="10" name="prepare_execution">
+<step number="10" subagent="file-creator" name="create_resolution_script">
 
-### Step 10: Prepare for Execution
+### Step 10: Create Resolution Script
 
-Present summary to user and provide guidance for task execution.
+Use the file-creator subagent to create a helper script for comment resolution.
+
+<file_location>.agent-os/specs/YYYY-MM-DD-ai-prompts-pr-{number}/resolve-comment.sh</file_location>
+
+<file_template>
+  #!/bin/bash
+  # GitHub Comment Resolution Helper
+  # Usage: ./resolve-comment.sh TASK_NUMBER COMMENT_ID
+  
+  TASK_NUMBER=$1
+  COMMENT_ID=$2
+  OWNER="{owner}"
+  REPO="{repo}"
+  PR_NUMBER={number}
+  
+  if [ -z "$COMMENT_ID" ]; then
+    echo "Usage: $0 TASK_NUMBER COMMENT_ID"
+    exit 1
+  fi
+  
+  # Get current commit SHA
+  COMMIT_SHA=$(git rev-parse HEAD)
+  
+  # Add reaction to comment
+  echo "Adding ✅ reaction to comment #$COMMENT_ID..."
+  gh api repos/$OWNER/$REPO/issues/comments/$COMMENT_ID/reactions -f content='+1'
+  
+  # Post resolution comment
+  echo "Posting resolution confirmation..."
+  gh api repos/$OWNER/$REPO/issues/comments -f body="✅ **Implemented** (Task $TASK_NUMBER)
+  
+  This suggestion has been applied in commit \`$COMMIT_SHA\`
+  
+  ---
+  *Resolved by Agent OS import-ai-prompts*"
+  
+  # Update tracking file
+  echo "[$TASK_NUMBER] Comment #$COMMENT_ID resolved at $(date)" >> resolution.log
+  
+  echo "✅ Comment #$COMMENT_ID marked as resolved!"
+</file_template>
+
+<make_executable>
+  chmod +x .agent-os/specs/YYYY-MM-DD-ai-prompts-pr-{number}/resolve-comment.sh
+</make_executable>
+
+</step>
+
+<step number="11" name="prepare_execution">
+
+### Step 11: Prepare for Execution
+
+Present summary to user and provide guidance for task execution with real-time resolution.
 
 <summary_presentation>
   I've successfully imported {prompt_count} AI prompts from PR #{number} and created:
 
-  - Spec Requirements: @.agent-os/specs/{folder_name}/spec.md
-  - Task List: @.agent-os/specs/{folder_name}/tasks.md
-  - Comment Mapping: @.agent-os/specs/{folder_name}/comment-map.json
+  📁 **Spec Files Created:**
+  - Spec Requirements: `@.agent-os/specs/{folder_name}/spec.md`
+  - Task List: `@.agent-os/specs/{folder_name}/tasks.md`
+  - Comment Mapping: `@.agent-os/specs/{folder_name}/comment-map.json`
+  - Resolution Script: `@.agent-os/specs/{folder_name}/resolve-comment.sh`
 
-  The tasks are organized by affected files with {file_count} major tasks.
+  📊 **Task Summary:**
+  - Total AI suggestions: {prompt_count}
+  - Files to modify: {file_count}
+  - GitHub comments to resolve: {prompt_count}
 
-  To execute these tasks, run: `/execute-tasks`
+  🚀 **To execute these tasks:**
+  ```
+  /execute-tasks
+  ```
 
+  ✅ **Automatic Resolution:**
   Each completed task will automatically:
   1. Implement the suggested code change
-  2. Mark the corresponding GitHub comment as resolved
-  3. Post a completion reply to the comment
+  2. Mark the GitHub comment as resolved with a ✅ reaction
+  3. Post a confirmation comment with the commit SHA
+  4. Update the resolution log
+
+  📈 **Progress Tracking:**
+  - Real-time updates will be posted to PR #{number}
+  - Resolution status tracked in `resolution.log`
+  - Final summary posted after all tasks complete
+
+  💡 **Manual Resolution (if needed):**
+  ```bash
+  # To manually resolve a comment:
+  ./.agent-os/specs/{folder_name}/resolve-comment.sh TASK_NUMBER COMMENT_ID
+  ```
 </summary_presentation>
 
 </step>
@@ -282,21 +432,111 @@ Present summary to user and provide guidance for task execution.
 
 ## Post-Execution Integration
 
+<task_execution_hook>
+  INTEGRATE with /execute-tasks command:
+    - Each task includes comment ID in its metadata
+    - After EACH individual task completion, trigger resolution
+    - Track resolution status in real-time
+</task_execution_hook>
+
 <comment_resolution_workflow>
-  AFTER each task completion:
+  IMMEDIATELY AFTER each task completion (not batched):
     1. READ comment-map.json for task-to-comment mapping
-    2. EXECUTE GitHub CLI to add reaction:
-       gh api repos/{owner}/{repo}/issues/comments/{comment_id}/reactions -f content='+1'
-    3. OPTIONALLY post completion reply:
-       gh api repos/{owner}/{repo}/issues/comments -f body='✅ Implemented in [commit]'
-    4. UPDATE comment-map.json with resolution status
+    2. GET comment_id for completed task (e.g., task "1.1" -> comment_id)
+    3. CAPTURE git commit SHA if changes were made:
+       COMMIT_SHA=$(git rev-parse HEAD)
+    
+    4. RESOLVE the GitHub conversation thread:
+       # Mark the conversation as resolved
+       gh api graphql -f query='
+         mutation {
+           resolveReviewThread(input: {
+             threadId: "{thread_id}",
+             clientMutationId: "agent-os-resolution"
+           }) {
+             thread {
+               isResolved
+             }
+           }
+         }'
+    
+    5. POST implementation confirmation:
+       gh api repos/{owner}/{repo}/issues/comments \
+         -f body="✅ **Implemented**: This suggestion has been applied in commit \`$COMMIT_SHA\`
+         
+         The code has been updated as requested:
+         - Task {task_number}.{subtask_number} completed
+         - Changes verified and tested
+         
+         cc @coderabbitai - suggestion implemented successfully"
+    
+    6. ADD reaction to original comment:
+       gh api repos/{owner}/{repo}/issues/comments/{comment_id}/reactions \
+         -f content='+1'
+    
+    7. UPDATE comment-map.json with resolution status:
+       {
+         "task_to_comment": {
+           "1.1": {
+             "comment_id": {comment_id_1},
+             "status": "resolved",
+             "resolved_at": "{timestamp}",
+             "commit_sha": "{commit_sha}"
+           }
+         }
+       }
+    
+    8. LOG resolution:
+       echo "✅ Resolved GitHub comment #{comment_id} for task {task_number}.{subtask_number}"
 </comment_resolution_workflow>
+
+<resolution_error_handling>
+  IF resolution fails:
+    - LOG warning but continue with next task
+    - Track failed resolutions for manual review
+    - Include in final summary report
+  
+  Common resolution issues:
+    - Comment already deleted
+    - Insufficient permissions
+    - Network/API errors
+    - Thread already resolved
+</resolution_error_handling>
 
 <completion_summary>
   AFTER all tasks complete:
     1. Generate summary of all resolved prompts
-    2. Post summary comment on PR
-    3. Report completion statistics
+    2. Count successful vs failed resolutions
+    3. Post comprehensive summary comment on PR:
+       
+       gh api repos/{owner}/{repo}/issues/{pr_number}/comments \
+         -f body="## 🤖 Agent OS: CodeRabbit Suggestions Implementation Summary
+         
+         Successfully implemented **{resolved_count}/{total_count}** AI suggestions from this PR review.
+         
+         ### ✅ Resolved Comments
+         {FOR each resolved comment:}
+         - Comment #{comment_id}: {brief_description} (commit: \`{commit_sha}\`)
+         {END FOR}
+         
+         ### ⚠️ Pending Items (if any)
+         {FOR each unresolved:}
+         - Comment #{comment_id}: {reason}
+         {END FOR}
+         
+         ### 📊 Statistics
+         - Total suggestions processed: {total_count}
+         - Successfully implemented: {resolved_count}
+         - Execution time: {duration}
+         - Files modified: {file_count}
+         
+         All resolved conversations have been marked as resolved in the PR review thread.
+         
+         ---
+         *Automated by Agent OS import-ai-prompts*"
+    
+    4. Report completion statistics to console
+    5. Suggest next steps (commit, push, etc.)
 </completion_summary>
 
 <post_flight_check>

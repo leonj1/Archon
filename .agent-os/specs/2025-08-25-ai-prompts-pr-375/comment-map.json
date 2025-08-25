@@ -51,7 +51,7 @@
     "15.2": 2296441082
   },
   "resolution_commands": {
-    "mark_resolved": "gh api repos/coleam00/Archon/issues/comments/{comment_id}/reactions -f content='+1'",
-    "post_reply": "gh api repos/coleam00/Archon/issues/comments -f body='\u2705 This suggestion has been implemented in commit {commit_sha}'"
+    "mark_resolved": "gh api repos/coleam00/Archon/pulls/375/comments/{comment_id}/reactions -f content='+1'",
+    "post_reply": "gh api repos/coleam00/Archon/pulls/comments -f body='\u2705 This suggestion has been implemented in commit {commit_sha}'"
   }
 }

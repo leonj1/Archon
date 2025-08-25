@@ -3,595 +3,903 @@
 ## Tasks
 
 - [ ] 1. Fix issues in archon-ui-main/Makefile (2 items)
-    - [ ] 1.1 [Comment #2296441042] In archon-ui-main/Makefile around lines 152 to 171, update the test-results...
+    - [x] 1.1 [Comment #2296441042] Fix test results path and incorrect "suites passed" math
           ```
           Original AI Prompt:
-          In archon-ui-main/Makefile around lines 152 to 171, update the test-results
-target to read from test-results/test-results.json (matching the docker bind
-mount) instead of public/test-results/test-results.json, and stop computing
-"suites passed" by subtracting failed tests from total suites; instead read
-suite-specific counters (e.g. data.numPassedTestSuites and
-data.numFailedTestSuites, defaulting to 0) and use those to print
-passed/failed/total suites so the suite summary uses the correct suite counts.
+          File: archon-ui-main/Makefile, Line: None
+          
+Apply the following diff:
+```diff
+-test-results: ## Show test results summary
+-	@if [ -f public/test-results/test-results.json ]; then \
++test-results: ## Show test results summary
++	@if [ -f test-results/test-results.json ]; then \
+ 		echo "$(YELLOW)Test Results Summary:$(NC)"; \
+-		node -e "try { \
+-			const data = JSON.parse(require('fs').readFileSync('public/test-results/test-results.json', 'utf8')); \
+-			const passed = data.numPassedTests || 0; \
+-			const failed = data.numFailedTests || 0...
           ```
-    - [ ] 1.2 [Comment #2296441043] In archon-ui-main/Makefile around lines 172 to 181, the coverage-report target...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441042/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Fix test results path and incorrect “suites passed” math in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 1.2 [Comment #2296441043] Fix coverage report path to match bind mount
           ```
           Original AI Prompt:
-          In archon-ui-main/Makefile around lines 172 to 181, the coverage-report target
-is pointing to public/test-results/coverage but coverage is written to
-test-results/coverage; update all paths in this target to use
-test-results/coverage (including the open/xdg-open fallback and the echo that
-prints the path) so the commands and messages reference
-test-results/coverage/index.html and the "No coverage report" check looks for
-test-results/coverage instead of public/test-results/coverage.
+          File: archon-ui-main/Makefile, Line: None
+          
+Apply the following diff:
+```diff
+-coverage-report: ## Open coverage report in browser
+-	@if [ -d public/test-results/coverage ]; then \
++coverage-report: ## Open coverage report in browser
++	@if [ -d test-results/coverage ]; then \
+ 		echo "$(YELLOW)Opening coverage report...$(NC)"; \
+-		open public/test-results/coverage/index.html 2>/dev/null || \
+-		xdg-open public/test-results/coverage/index.html 2>/dev/null || \
+-		echo "$(YELLOW)Coverage report available at: public/test-results/coverage/in...
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441043/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Fix coverage report path to match bind mount in commit $(git rev-parse HEAD)"
           ```
     - [ ] 1.3 Verify all changes in archon-ui-main/Makefile work correctly
 - [ ] 2. Fix issues in archon-ui-main/run-tests.sh (1 items)
-    - [ ] 2.1 [Comment #2296693931] In archon-ui-main/run-tests.sh around lines 100 to 105, clean_up attempts to...
+    - [x] 2.1 [Comment #2296693931] Cleanup doesn't remove anything because containers aren't named
           ```
           Original AI Prompt:
-          In archon-ui-main/run-tests.sh around lines 100 to 105, clean_up attempts to
-remove containers by fixed names that are never created; either ensure the test
-containers are created with --name flags or change the cleanup to target
-containers by image/ancestor or label. Fix by (a) adding --name archon-ui-tests,
---name archon-ui-test-ui, --name archon-ui-lint to the docker run commands that
-start the tests so those names exist, or (b) modify clean_up to docker ps -a
---filter "ancestor=archon-ui-test:latest" --format '{{.ID}}' | xargs -r docker
-rm -f and similarly filter by image/tag or a consistent label used when running
-containers; pick one approach and make the start and cleanup logic consistent.
+          File: archon-ui-main/run-tests.sh, Line: None
+          
+Apply the following diff:
+```diff
+ clean_up() {
+     print_color "$YELLOW" "Cleaning up test containers and images..."
+-    docker rm -f archon-ui-tests archon-ui-test-ui archon-ui-lint 2>/dev/null || true
+-    docker rmi archon-ui-test:latest 2>/dev/null || true
++    docker rm -f $(docker ps -aq --filter "ancestor=archon-ui-test:latest") 2>/dev/null || true
++    docker rmi $(docker images -q archon-ui-test:latest) 2>/dev/null || true
+     print_color "$GREEN" "✓ Cleanup completed"
+ }
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296693931/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Cleanup doesn’t remove anything because containers aren’t named in commit $(git rev-parse HEAD)"
           ```
     - [ ] 2.2 Verify all changes in archon-ui-main/run-tests.sh work correctly
 - [ ] 3. Fix issues in archon-ui-main/test-docker-patch.js (1 items)
-    - [ ] 3.1 [Comment #2296441045] In archon-ui-main/test-docker-patch.js around line 17, the file currently uses...
+    - [x] 3.1 [Comment #2296441045] <details>
           ```
           Original AI Prompt:
-          In archon-ui-main/test-docker-patch.js around line 17, the file currently uses
-CommonJS export `module.exports = { isDocker };` which fails under the repo's
-ESM `"type": "module"`; replace that line with an ESM export such as `export {
-isDocker };` (or `export default isDocker;` if you prefer a default export) and
-remove the CommonJS assignment so the module loads correctly under ESM.
+          File: archon-ui-main/test-docker-patch.js, Line: None
+          
+Apply the following diff:
+```diff
+-module.exports = { isDocker };
++export { isDocker };
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441045/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: <details> in commit $(git rev-parse HEAD)"
           ```
     - [ ] 3.2 Verify all changes in archon-ui-main/test-docker-patch.js work correctly
 - [ ] 4. Fix issues in docs/specs/repository-pattern-spec.md (1 items)
-    - [ ] 4.1 [Comment #2296441047] `...
+    - [x] 4.1 [Comment #2296441047] Add languages to fenced code blocks (markdownlint MD040) to satisfy doc lints
           ```
           Original AI Prompt:
-          `
-In docs/specs/repository-pattern-spec.md around lines 39 to 55 (and also apply
-same change at lines ~629-649), the fenced code blocks containing the ASCII
-diagram and directory tree lack a language tag which triggers markdownlint
-MD040; update those backticks to include a language (e.g.,
+          File: docs/specs/repository-pattern-spec.md, Line: 55
+          
+Apply the following diff:
+```diff
+-```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441047/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Add languages to fenced code blocks (markdownlint MD040) to satisfy doc lints in commit $(git rev-parse HEAD)"
           ```
     - [ ] 4.2 Verify all changes in docs/specs/repository-pattern-spec.md work correctly
 - [ ] 5. Fix issues in python/Makefile (1 items)
-    - [ ] 5.1 [Comment #2296441048] In python/Makefile around lines 36 to 40, the test-fast and test-watch targets...
+    - [x] 5.1 [Comment #2296441048] <details>
           ```
           Original AI Prompt:
-          In python/Makefile around lines 36 to 40, the test-fast and test-watch targets
-rely on external pytest plugins (pytest-xdist for -n auto and pytest-watch for
-ptw) that are not declared as dev dependencies; add pytest-xdist and
-pytest-watch to your project's dev dependency manifest (either under
-[tool.poetry.dev-dependencies] in python/pyproject.toml or the appropriate
-python/requirements.*.txt used for dev/test extras) so CI and developer
-environments install them automatically, then update lockfiles/requirements
-(poetry lock or pip-compile) and rerun install to ensure make test-fast and make
-test-watch work reliably.
+          File: python/Makefile, Line: 40
+          
+Apply the following diff:
+```diff
+ [tool.poetry.dev-dependencies]
++pytest-xdist = "^3.2.1"
++pytest-watch = "^4.2.0"
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441048/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: <details> in commit $(git rev-parse HEAD)"
           ```
     - [ ] 5.2 Verify all changes in python/Makefile work correctly
-- [ ] 6. Fix issues in python/src/server/core/dependencies.py (6 items)
-    - [ ] 6.1 [Comment #2296441049] In python/src/server/core/dependencies.py around lines 98-101, 160-163 and...
-          ```
-          Original AI Prompt:
-          In python/src/server/core/dependencies.py around lines 98-101, 160-163 and
-176-179 the logger.error calls only log the exception message; update each error
-logging call to pass exc_info=True so the full stack trace is preserved in logs
-(i.e., keep the existing message but add exc_info=True as an argument to each
-cls._logger.error call).
-          ```
-    - [ ] 6.2 [Comment #2296707382] In python/src/server/core/dependencies.py around lines 8 to 13, the file...
-          ```
-          Original AI Prompt:
-          In python/src/server/core/dependencies.py around lines 8 to 13, the file
-currently imports a concrete SupabaseDatabase and lacks types needed for a
-backend-agnostic, per-request, thread-safe dependency provider; replace the
-concrete import with the repository interface IUnitOfWork and add imports for
-AsyncGenerator (for yield-based async deps) and threading (for thread-safe lazy
-init), then update any provider typing to use IUnitOfWork rather than
-SupabaseDatabase and ensure the module is prepared to implement a thread-safe
-lru_cache-backed initializer and async generator-based dependency.
-          ```
-    - [ ] 6.3 [Comment #2296707384] In python/src/server/core/dependencies.py around lines 23 to 44, replace the...
-          ```
-          Original AI Prompt:
-          In python/src/server/core/dependencies.py around lines 23 to 44, replace the
-hard-coded SupabaseDatabase initialization with a call to the project factory
-using DatabaseConfig/create_database_instance, make the lazy init thread-safe by
-adding a class-level threading.Lock and using double-checked locking around
-instance creation, and change the method signature and stored type to return the
-interface IUnitOfWork (not the concrete SupabaseDatabase). Ensure you import
-DatabaseConfig, create_database_instance (or equivalent factory) and IUnitOfWork
-at top, acquire the lock only when instance is None, create the instance via the
-factory with config, assign it to cls._instance, and release the lock before
-returning the IUnitOfWork.
-          ```
-    - [ ] 6.4 [Comment #2296707385] python/src/server/core/dependencies.py lines 104-126: remove the @lru_cache()...
-          ```
-          Original AI Prompt:
-          python/src/server/core/dependencies.py lines 104-126: remove the @lru_cache()
-decorator from get_database() so the function returns whatever DatabaseProvider
-currently provides (allowing reset/set/overrides to work), drop the now-unused
-lru_cache import, and update the function signature to the generalized database
-type discussed in the earlier comment (e.g., return type -> DatabaseProtocol or
-the agreed-upon abstract DB type) so the dependency reflects the generalized
-interface; also apply the same removal/update to the corresponding occurrence at
-line 9.
-          ```
-    - [ ] 6.5 [Comment #2296707387] In python/src/server/core/dependencies.py around lines 234 to 250,...
-          ```
-          Original AI Prompt:
-          In python/src/server/core/dependencies.py around lines 234 to 250,
-set_database_config currently updates _database_config but does not reset the
-existing singleton provider so it keeps using old settings; modify the function
-to also reset the provider (e.g., assign the module-level _database_provider
-variable to None or call the provider reset function) immediately after updating
-_database_config and before logging so that the next access will recreate the
-provider with the new configuration.
-          ```
-    - [ ] 6.6 [Comment #2296735143] python/src/server/core/dependencies.py lines 11-13: the file currently imports...
-          ```
-          Original AI Prompt:
-          python/src/server/core/dependencies.py lines 11-13: the file currently imports
-SupabaseDatabase from the package-level implementations module which will break
-unless that module re-exports the class; change the import to reference the
-concrete module where SupabaseDatabase is defined (i.e., update the import path
-to the specific implementations submodule that declares SupabaseDatabase) so the
-symbol is imported directly from its defining module.
-          ```
+- [x] 6. Fix issues in python/src/server/core/dependencies.py (6 items)
+    - [x] 6.1 [Comment #2296441049] Preserve stack traces in error logs
+    - [x] 6.2 [Comment #2296707382] Generalize to the repository interface and prep for per-request deps  
+    - [x] 6.3 [Comment #2296707384] Use factory + config and make initialization thread-safe
+    - [x] 6.4 [Comment #2296707385] Remove lru_cache on get_database() — it breaks overrides/resets
+    - [x] 6.5 [Comment #2296707387] Reset provider on config change so new settings take effect
+    - [x] 6.6 [Comment #2296735143] Import SupabaseDatabase from its module to avoid relying on package re-exports
     - [ ] 6.7 Verify all changes in python/src/server/core/dependencies.py work correctly
-- [ ] 7. Fix issues in python/src/server/repositories/implementations/mock_repositories.py (2 items)
-    - [ ] 7.1 [Comment #2296441052] In python/src/server/repositories/implementations/mock_repositories.py around...
-          ```
-          Original AI Prompt:
-          In python/src/server/repositories/implementations/mock_repositories.py around
-lines 325 to 332, the code assigns result['similarity'] directly which mutates
-the canonical in-memory entity; avoid side effects by creating a shallow copy
-for each result before adding the similarity score (e.g., copy each dict, set
-the 'similarity' on the copy, collect copies into a new list), then sort and
-return the copied list limited to `limit`.
-          ```
-    - [ ] 7.2 [Comment #2296441053] In python/src/server/repositories/implementations/mock_repositories.py around...
-          ```
-          Original AI Prompt:
-          In python/src/server/repositories/implementations/mock_repositories.py around
-lines 841 to 848, the validation currently uses re.match which allows prefix
-matches; change it to use re.fullmatch so the entire value must match the regex.
-Replace the re.match(pattern, value) call with re.fullmatch(pattern, value) (you
-can keep the inline import), so the function returns bool(re.fullmatch(pattern,
-value)) when a validation_regex exists.
-          ```
+- [x] 7. Fix issues in python/src/server/repositories/implementations/mock_repositories.py (2 items)
+    - [x] 7.1 [Comment #2296441052] Avoid mutating stored entities during vector_search
+    - [x] 7.2 [Comment #2296441053] Use re.fullmatch for validation
     - [ ] 7.3 Verify all changes in python/src/server/repositories/implementations/mock_repositories.py work correctly
-- [ ] 8. Fix issues in python/src/server/repositories/implementations/supabase_database.py (4 items)
-    - [ ] 8.1 [Comment #2296441054] In python/src/server/repositories/implementations/supabase_database.py around...
+- [x] 8. Fix issues in python/src/server/repositories/implementations/supabase_database.py (4 items)
+    - [x] 8.1 [Comment #2296441054] Class inherits IUnitOfWork but omits required abstract methods
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_database.py around
-lines 28 to 36, the SupabaseDatabase class declares it implements IUnitOfWork
-but does not provide the required methods (begin, is_active, savepoint,
-rollback_to_savepoint, release_savepoint), causing instantiation to fail; add
-these methods with interface-compatible signatures and minimal no-op semantics:
-add an internal boolean (e.g., self._active) set in __init__, implement begin()
-to set _active True, is_active() to return _active, implement savepoint(name) to
-record a savepoint id/name in an internal stack or dict and return an
-identifier, rollback_to_savepoint(name_or_id) to validate and restore internal
-state minimally (no DB interaction) and release_savepoint(name_or_id) to remove
-it; ensure methods match the abstract base method names and return types so the
-class can be instantiated.
+          File: python/src/server/repositories/implementations/supabase_database.py, Line: 36
+          
+Apply the following diff:
+```diff
+ class SupabaseDatabase(IUnitOfWork):
+@@
+-        self._logger.info("SupabaseDatabase initialized with repository implementations")
++        self._logger.info("SupabaseDatabase initialized with repository implementations")
++        # Track a logical transaction state for interface compatibility
++        self._transaction_active: bool = False
++        self._savepoints: dict[str, str] = {}
++
++    async def begin(self) -> None:
++        if self._transaction_active:...
           ```
-    - [ ] 8.2 [Comment #2296441056] In python/src/server/repositories/implementations/supabase_database.py around...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441054/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Class inherits IUnitOfWork but omits required abstract methods in commit $(git rev-parse HEAD)"
           ```
-          Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_database.py around
-lines 160-181, the commit() and rollback() methods currently silently no-op;
-update them to first validate the repository's active-transaction state (raise a
-clear exception such as RuntimeError if no active transaction exists using the
-class's existing active flag or method), then keep the Supabase-specific
-behavior as no-ops: commit should do nothing after validation and rollback
-should log a warning and do nothing after validation; also update the docstrings
-to state that these methods will raise when no active transaction and otherwise
-are no-ops for Supabase.
-          ```
-    - [ ] 8.3 [Comment #2296441058] In python/src/server/repositories/implementations/supabase_database.py around...
+    - [x] 8.2 [Comment #2296441056] Commit/Rollback should respect active state and document no-op behavior
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_database.py around
-lines 183 to 205, the health_check method logs exceptions without stack traces;
-update the exception logging to include exc_info=True (or pass the exception via
-logger.exception) so the full stack trace is preserved for diagnostics, ensuring
-the logger.error/logger.exception call includes exc_info=True and then return
-False as before.
+          File: python/src/server/repositories/implementations/supabase_database.py, Line: None
+          
+Apply the following diff:
+```diff
+-    async def commit(self):
++    async def commit(self):
+@@
+-        # Supabase auto-commits individual operations
+-        # This method is a no-op but maintained for interface compatibility
+-        pass
++        if not self._transaction_active:
++            from ..interfaces.unit_of_work import TransactionError
++            raise TransactionError("No active transaction to commit")
++        # Supabase auto-commits; mark inactive for logical tracking
++        ...
           ```
-    - [ ] 8.4 [Comment #2296735145] In python/src/server/repositories/implementations/supabase_database.py around...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441056/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Commit/Rollback should respect active state and document no-op behavior in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 8.3 [Comment #2296441058] Log full stack traces on health check failures
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_database.py around
-lines 288 to 310, the health_check method calls the synchronous Supabase client
-directly which blocks the event loop; refactor to run the blocking client call
-inside asyncio.to_thread and add a simple retry loop with exponential backoff
-(e.g., 3 attempts, increasing sleep between attempts) so the method remains
-async and resilient; ensure each attempt logs warnings on failure, returns True
-on success, and logs the error and returns False after retries are exhausted,
-and keep exception handling to capture and log details (use asyncio.sleep for
-backoff).
+          File: python/src/server/repositories/implementations/supabase_database.py, Line: None
+          
+Apply the following diff:
+```diff
+-        except Exception as e:
+-            self._logger.error(f"Database health check failed: {e}")
++        except Exception as e:
++            self._logger.error(f"Database health check failed: {e}", exc_info=True)
+             return False
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441058/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Log full stack traces on health check failures in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 8.4 [Comment #2296735145] Health check performs blocking I/O in async context; offload and add simple retries
+          ```
+          Original AI Prompt:
+          File: python/src/server/repositories/implementations/supabase_database.py, Line: 310
+          
+Apply the following diff:
+```diff
+ async def health_check(self) -> bool:
+@@
+-        try:
+-            # Test basic connectivity by querying the settings table
+-            response = self._client.table('archon_settings').select('key').limit(1).execute()
++        try:
++            # Test basic connectivity by querying the settings table (offload blocking client)
++            max_retries = 3
++            base_delay = 0.25
++            last_exc = None
++            for attempt in range(max_retries)...
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296735145/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Health check performs blocking I/O in async context; offload and add simple retries in commit $(git rev-parse HEAD)"
           ```
     - [ ] 8.5 Verify all changes in python/src/server/repositories/implementations/supabase_database.py work correctly
-- [ ] 9. Fix issues in python/src/server/repositories/implementations/supabase_repositories.py (14 items)
-    - [ ] 9.1 [Comment #2296441059] In python/src/server/repositories/implementations/supabase_repositories.py...
+- [x] 9. Fix issues in python/src/server/repositories/implementations/supabase_repositories.py (14 items)
+    - [x] 9.1 [Comment #2296441059] Blocking I/O inside async method; add thread offload and retries
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 53 to 61, the method performs blocking synchronous Supabase client
-calls inside an async function and lacks retries and proper stack-trace logging;
-change the synchronous client call to run in a thread using asyncio.to_thread
-(await asyncio.to_thread(...)) and wrap the call in a retry loop with
-exponential backoff (use tenacity or a shared backoff helper) that re-raises the
-final exception, and when catching log the error with full context using
-logger.exception or logger.error(..., exc_info=True) so the stack trace is
-preserved; apply this pattern so the function returns the fetched row or None
-after exhausted retries.
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: None
+          
+Apply the following diff:
+```diff
++import asyncio
+@@
+-            response = self._client.table(self._table).select('*').eq('id', str(id)).execute()
++            response = await asyncio.to_thread(
++                lambda: self._client.table(self._table).select('*').eq('id', str(id)).execute()
++            )
+             return response.data[0] if response.data else None
+         except Exception as e:
+-            self._logger.error(f"Failed to get source by ID {id}: {e}")
++            self._lo...
           ```
-    - [ ] 9.2 [Comment #2296441060] In python/src/server/repositories/implementations/supabase_repositories.py...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441059/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Blocking I/O inside async method; add thread offload and retries in commit $(git rev-parse HEAD)"
           ```
-          Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 59-60, 120-121, 253-254, 314-315, 548-549, 609-610, 763-765, and
-833-834, the code calls self._logger.error(..., f"...{e}") which discards the
-exception stack; replace those logger.error calls with
-self._logger.exception(...) (keeping the same message string) so the full stack
-trace is preserved in logs, and ensure any return/raise logic remains unchanged
-after the logging call.
-          ```
-    - [ ] 9.3 [Comment #2296441061] In python/src/server/repositories/implementations/supabase_repositories.py...
-          ```
-          Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 360 to 381, the metadata_filter argument is accepted by
-vector_search but never forwarded to the Supabase RPC call; update the params
-sent to self._client.rpc to include metadata_filter (e.g.,
-params['metadata_filter'] = metadata_filter) or transform/serialize it to the
-shape the RPC expects (JSON/dict), and ensure you only add it when not None; if
-the RPC truly doesn't support metadata filtering, add a clear comment or log
-warning stating metadata_filter is currently ignored.
-          ```
-    - [ ] 9.4 [Comment #2296441064] In python/src/server/repositories/implementations/supabase_repositories.py...
+    - [x] 9.2 [Comment #2296441060] Preserve stack traces in error logs
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 878-921, upsert currently persists the value before any regex
-validation; update it to validate the provided value against validation_regex
-(when validation_regex is not None) before calling insert/update, using
-re.fullmatch (or the project's regex utility) and raising the
-repository/validation-specific ValidationError if it fails; place the check
-after constructing setting_data and before calling
-self._client.table(...).insert/update, and ensure the error is raised (not
-swallowed) so the DB call never runs on invalid input.
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: None
+          
+Apply the following diff:
+```diff
+-            self._logger.error(f"Failed to create document: {e}")
++            self._logger.exception("Failed to create document")
+```
           ```
-    - [ ] 9.5 [Comment #2296441065] In python/src/server/repositories/implementations/supabase_repositories.py...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441060/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Preserve stack traces in error logs in commit $(git rev-parse HEAD)"
           ```
-          Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 922-939, the methods claim to handle encrypted values but only log
-warnings and still mark values as encrypted, creating a false sense of security;
-change behavior so you do not store plaintext as encrypted: either integrate the
-app's encryption service/KMS (e.g., obtain encryption key from config/secret
-manager and perform encryption in set_encrypted and decryption in get_decrypted)
-and then call upsert/upsert result with encrypted=True, or if encryption is not
-available yet, raise NotImplementedError from both set_encrypted and
-get_decrypted when is_encrypted=True (and do not call upsert with
-encrypted=True) so callers cannot store or retrieve values marked encrypted
-until real encryption is implemented.
-          ```
-    - [ ] 9.6 [Comment #2296441066] In python/src/server/repositories/implementations/supabase_repositories.py...
+    - [x] 9.3 [Comment #2296441061] metadata_filter parameter ignored in document vector_search
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 993-997, the exported_at value incorrectly uses str(UUID().hex);
-replace this with a proper ISO timestamp by using datetime.now().isoformat()
-(and add the required import: from datetime import datetime) so exported_at is a
-valid timestamp consistent with the mock implementation; also remove any unused
-UUID import if it becomes unused.
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: None
+          
+Apply the following diff:
+```diff
+             params = {
+                 'query_embedding': embedding,
+                 'match_count': limit
+             }
+             if source_filter:
+                 params['source_filter'] = source_filter
++            if metadata_filter:
++                params['filter'] = metadata_filter
+```
           ```
-    - [ ] 9.7 [Comment #2296441067] In python/src/server/repositories/implementations/supabase_repositories.py...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441061/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: metadata_filter parameter ignored in document vector_search in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 9.4 [Comment #2296441064] Upsert should validate input before persisting
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 1107 to 1113, the get_by_project implementation currently restricts
-non-closed tasks to only TaskStatus.TODO, which wrongly excludes DOING/REVIEW;
-change the filter so that when include_closed is False it excludes DONE tasks
-instead (e.g., set filters to express status != TaskStatus.DONE.value or include
-all non-DONE statuses) so the list call returns TODO/DOING/REVIEW rather than
-only TODO.
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: None
+          
+Apply the following diff:
+```diff
+     async def upsert(
+         self,
+         key: str,
+         value: str,
+@@
+-        try:
++        try:
++            # Optional: validate using stored regex for existing records or provided validation_regex
++            if validation_regex:
++                import re
++                if not re.fullmatch(validation_regex, value):
++                    raise ValidationError(f"Value for {key} does not match validation_regex")
+             # Check if setting exi...
           ```
-    - [ ] 9.8 [Comment #2296441068] python/src/server/repositories/implementations/supabase_repositories.py lines...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441064/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Upsert should validate input before persisting in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 9.5 [Comment #2296441065] Encryption not implemented but is_encrypted is set; risk of false security
           ```
           Original AI Prompt:
-          python/src/server/repositories/implementations/supabase_repositories.py lines
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: None
+          
+Apply the following diff:
+```diff
+-        self._logger.warning(f"Encryption not implemented for setting {key}")
+-        return await self.upsert(key, value, category, encrypted=True)
++        raise NotImplementedError("Encryption not implemented; refusing to store value as encrypted.")
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441065/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Encryption not implemented but is_encrypted is set; risk of false security in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 9.6 [Comment #2296441066] <details>
+          ```
+          Original AI Prompt:
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: None
+          
+Apply the following diff:
+```diff
+-        return {
+-            'settings': settings,
+-            'exported_at': str(UUID().hex),  # Simple timestamp replacement
+-            'count': len(settings)
+-        }
++        from datetime import datetime
++        return {
++            'settings': settings,
++            'exported_at': datetime.now().isoformat(),
++            'count': len(settings)
++        }
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441066/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: <details> in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 9.7 [Comment #2296441067] get_by_project filters only TODO when include_closed=False
+          ```
+          Original AI Prompt:
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: None
+          
+Apply the following diff:
+```diff
+-        filters = {'project_id': str(project_id)}
+-        if not include_closed:
+-            filters['status'] = TaskStatus.TODO.value  # Or any non-done status
+-        return await self.list(filters=filters, limit=limit, offset=offset)
++        if include_closed:
++            return await self.list(filters={'project_id': str(project_id)}, limit=limit, offset=offset)
++        # Supabase Python client supports `in_`
++        try:
++            query = self._cl...
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441067/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: get_by_project filters only TODO when include_closed=False in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 9.8 [Comment #2296441068] Avoid dynamic monkey-patching; define methods on the class
+          ```
+          Original AI Prompt:
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: None
+          
+Apply the suggested code change:
+```
+python/src/server/repositories/implementations/supabase_repositories.py lines
 1588-1712: the vector_search and helper methods are added via module-level
 monkey-patching which breaks readability, static analysis and typing; move
 vector_search, _calculate_text_relevance and _calculate_code_relevance into the
 SupabaseCodeExampleRepository class as normal methods (preserve async for
 vector_search and its signature), remove the
-_add_vector_search_to_code_repository wrapper and its invocation, add
-appropriate type hints and self usages, update the ICodeExampleRepository
-interface if vector_search belongs to the contract, and adjust/extend tests to
-import the class directly (no dynamic assignment) and ensure logging/error
-handling behavior and return types remain identical.
+_add_vector_search_to_code_repositor...
           ```
-    - [ ] 9.9 [Comment #2296735146] In python/src/server/repositories/implementations/supabase_repositories.py...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441068/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Avoid dynamic monkey-patching; define methods on the class in commit $(git rev-parse HEAD)"
           ```
-          Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 98 to 106, the update() method is performing a blocking call to the
-Supabase client and logging exceptions without exception info; change the call
-to run in the event loop (either await an async client.execute() if available or
-wrap the blocking call with asyncio.to_thread / run_in_executor) so the
-coroutine does not block, and update the logger.error call to include
-exc_info=True (or pass the exception) so stack trace/details are captured in
-logs.
-          ```
-    - [ ] 9.10 [Comment #2296735148] In python/src/server/repositories/implementations/supabase_repositories.py...
+    - [x] 9.9 [Comment #2296735146] update(): offload blocking call and include exc_info
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 107 to 115, the delete method performs a potentially blocking
-.execute() synchronously and logs exceptions without traceback; change the call
-to run in the event loop's default executor (e.g. use
-asyncio.get_running_loop().run_in_executor(None, lambda:
-self._client.table(self._table).delete().eq('id', str(id)).execute())) and await
-its result, then return based on response.data, and when catching exceptions
-call self._logger.error(f"Failed to delete source {id}", exc_info=True) to
-include exception details.
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: 106
+          
+Apply the following diff:
+```diff
+     async def update(self, id: Union[str, UUID, int], data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+         """Update source record."""
+         try:
+-            response = self._client.table(self._table).update(data).eq('id', str(id)).execute()
++            response = await asyncio.to_thread(
++                lambda: self._client.table(self._table).update(data).eq('id', str(id)).execute()
++            )
+             return response.data[0] if response.d...
           ```
-    - [ ] 9.11 [Comment #2296735151] In python/src/server/repositories/implementations/supabase_repositories.py...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296735146/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: update(): offload blocking call and include exc_info in commit $(git rev-parse HEAD)"
           ```
-          Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 271 to 282, the synchronous .execute() call blocks the event loop
-and the current except logging does not include the full stack trace; change the
-method to offload the blocking insert to a thread using asyncio.to_thread (or
-loop.run_in_executor), await the result, and keep the same return behavior if
-response.data exists; on error log the exception with the traceback (use
-logger.exception or logger.error(..., exc_info=True)) and re-raise the original
-exception (use plain raise) so the stack trace is preserved; add the necessary
-asyncio import if not present.
-          ```
-    - [ ] 9.12 [Comment #2296735154] In python/src/server/repositories/implementations/supabase_repositories.py...
+    - [x] 9.10 [Comment #2296735148] delete(): offload blocking call and include exc_info
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 754 to 762, the async function calls the blocking .execute()
-directly which can block the event loop and the except block loses stack
-context; wrap the blocking call in asyncio.to_thread (or loop.run_in_executor)
-and await it so execution is offloaded from the event loop, and replace the
-.error log with self._logger.exception("Failed to search projects by title") (or
-include exc_info=True) to preserve the full stack trace; also add the required
-asyncio import if missing and keep returning an empty list on failure.
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: 115
+          
+Apply the following diff:
+```diff
+     async def delete(self, id: Union[str, UUID, int]) -> bool:
+         """Delete source record."""
+         try:
+-            response = self._client.table(self._table).delete().eq('id', str(id)).execute()
++            response = await asyncio.to_thread(
++                lambda: self._client.table(self._table).delete().eq('id', str(id)).execute()
++            )
+             return len(response.data) > 0
+         except Exception as e:
+-            self._logger...
           ```
-    - [ ] 9.13 [Comment #2296735155] In python/src/server/repositories/implementations/supabase_repositories.py...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296735148/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: delete(): offload blocking call and include exc_info in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 9.11 [Comment #2296735151] create(document): offload blocking insert and keep stack traces
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 1094 to 1101, the create method currently logs exceptions without
-stack traces and runs the blocking insert synchronously; change it to offload
-the blocking self._client.table(...).insert(...).execute() call to a thread
-(e.g., asyncio.to_thread or loop.run_in_executor) and await the result, and when
-catching exceptions use self._logger.exception(...) (or logger.error with
-exc_info=True) to preserve the traceback before re-raising; finally ensure you
-return response.data[0] or {} as before after the awaited call.
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: 282
+          
+Apply the following diff:
+```diff
+-            response = self._client.table(self._table).insert(entity).execute()
++            response = await asyncio.to_thread(
++                lambda: self._client.table(self._table).insert(entity).execute()
++            )
+@@
+-        except Exception as e:
+-            self._logger.error(f"Failed to create document: {e}")
++        except Exception as e:
++            self._logger.exception("Failed to create document")
+             raise
+```
           ```
-    - [ ] 9.14 [Comment #2296735156] In python/src/server/repositories/implementations/supabase_repositories.py...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296735151/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: create(document): offload blocking insert and keep stack traces in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 9.12 [Comment #2296735154] search_by_title(): offload blocking execute and preserve stack
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/supabase_repositories.py
-around lines 1493 to 1504, the current try/except swallows all exceptions
-(losing stack traces) while building and executing the Supabase text_search
-query; refactor so that query construction remains inside the function but the
-call to response = search_query.execute() is not inside a broad try/except —
-either remove the blanket try/except entirely or replace it with narrow,
-specific exception handling for known recoverable errors, and let unexpected
-exceptions propagate (or re-raise them) so stack traces are preserved instead of
-returning an empty list.
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: 762
+          
+Apply the following diff:
+```diff
+-            response = self._client.table(self._table).select('*').ilike('title', f'%{query}%').limit(limit).execute()
++            response = await asyncio.to_thread(
++                lambda: self._client.table(self._table).select('*').ilike('title', f'%{query}%').limit(limit).execute()
++            )
+             return response.data or []
+         except Exception as e:
+-            self._logger.error(f"Failed to search projects by title: {e}")
++            ...
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296735154/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: search_by_title(): offload blocking execute and preserve stack in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 9.13 [Comment #2296735155] create(task): preserve stack traces and consider offloading
+          ```
+          Original AI Prompt:
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: 1101
+          
+Apply the following diff:
+```diff
+-        except Exception as e:
+-            self._logger.error(f"Failed to create task: {e}")
++        except Exception as e:
++            self._logger.error(f"Failed to create task: {e}", exc_info=True)
+             raise
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296735155/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: create(task): preserve stack traces and consider offloading in commit $(git rev-parse HEAD)"
+          ```
+    - [x] 9.14 [Comment #2296735156] search_code_content(): offload execute and preserve stack traces
+          ```
+          Original AI Prompt:
+          File: python/src/server/repositories/implementations/supabase_repositories.py, Line: 1504
+          
+Apply the following diff:
+```diff
+-            response = search_query.execute()
++            response = await asyncio.to_thread(search_query.execute)
+             return response.data or []
+         except Exception:
+-            return []
++            self._logger.exception("Failed to search code content")
++            return []
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296735156/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: search_code_content(): offload execute and preserve stack traces in commit $(git rev-parse HEAD)"
           ```
     - [ ] 9.15 Verify all changes in python/src/server/repositories/implementations/supabase_repositories.py work correctly
-- [ ] 10. Fix issues in python/src/server/repositories/interfaces/__init__.py (1 items)
-    - [ ] 10.1 [Comment #2296441070] In python/src/server/repositories/interfaces/__init__.py around lines 63 to 96...
+- [x] 10. Fix issues in python/src/server/repositories/interfaces/__init__.py (1 items)
+    - [x] 10.1 [Comment #2296441070] <details>
           ```
           Original AI Prompt:
-          In python/src/server/repositories/interfaces/__init__.py around lines 63 to 96
-the export and typing for the unit-of-work transaction context is inconsistent
-with implementations: update the IUnitOfWork.transaction return type to
-AsyncContextManager["IUnitOfWork"] (or AsyncContextManager[TUnitOfWork] with a
-typevar) so the async with yields the unit-of-work instance rather than None;
-ensure you keep from __future__ import annotations at top of unit_of_work.py,
-import AsyncContextManager from typing, add or adjust any forward refs and
-typevars as needed, then run mypy across tests and implementations to confirm no
-new type errors.
+          File: python/src/server/repositories/interfaces/__init__.py, Line: 96
+          
+Apply the following diff:
+```diff
+ from __future__ import annotations
+ from typing import AsyncContextManager
+ 
+ class IUnitOfWork(ABC):
+     ...
+-    @abstractmethod
+-    def transaction(self) -> AsyncContextManager[None]:
++    @abstractmethod
++    def transaction(self) -> AsyncContextManager[IUnitOfWork]:
+         """
+         Context manager for database transactions.
+-        Yields: None
++        Yields: IUnitOfWork
+         """
+         pass
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441070/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: <details> in commit $(git rev-parse HEAD)"
           ```
     - [ ] 10.2 Verify all changes in python/src/server/repositories/interfaces/__init__.py work correctly
 - [ ] 11. Fix issues in python/src/server/repositories/interfaces/knowledge_repository.py (3 items)
-    - [ ] 11.1 [Comment #2296441071] In python/src/server/repositories/interfaces/knowledge_repository.py around...
+    - [ ] 11.1 [Comment #2296441071] Docstring says “merge” metadata, but current implementations overwrite it
           ```
           Original AI Prompt:
-          In python/src/server/repositories/interfaces/knowledge_repository.py around
+          File: python/src/server/repositories/interfaces/knowledge_repository.py, Line: 100
+          
+Apply the suggested code change:
+```
+In python/src/server/repositories/interfaces/knowledge_repository.py around
 lines 81-100, the abstract method update_metadata claims to "merge" metadata but
 implementations currently overwrite it; update the contract and implementations
 to match by implementing a true merge: change the interface docstring to specify
 a recursive/deep-merge policy (or explicitly state shallow merge if you prefer),
-then in the Supabase implementation perform a safe DB-side JSONB merge (use
-Postgres jsonb || or jsonb_build_object with a client-side computed merged dict
-and an UPDATE returning the merged JSON) and in the mock implementation perform
-the same merge logic in-memory (recursive dict merge that preserves existing
-keys unless overwritten by provided metadata), and ensure error handling and
-return values remain unchanged; alternatively, if you decide to keep replace
-semantics, update the docstring here to say "replace metadata" and adjust
-implementations' docstrings to match.
+then in the Supabase implementation perform a safe DB-side JSONB...
           ```
-    - [ ] 11.2 [Comment #2296441072] In python/src/server/repositories/interfaces/knowledge_repository.py around...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441071/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Docstring says “merge” metadata, but current implementations overwrite it in commit $(git rev-parse HEAD)"
+          ```
+    - [ ] 11.2 [Comment #2296441072] Vector search result shape is underspecified vs. implementations
           ```
           Original AI Prompt:
-          In python/src/server/repositories/interfaces/knowledge_repository.py around
+          File: python/src/server/repositories/interfaces/knowledge_repository.py, Line: 211
+          
+Apply the suggested code change:
+```
+In python/src/server/repositories/interfaces/knowledge_repository.py around
 lines 188-211, the vector_search docstring is ambiguous about where similarity
 scores should live; update the docstring to define a canonical result shape
 (e.g., each result is a Dict with keys "id", "content", "metadata" where
 metadata is a Dict that MUST include "similarity_score": float) and adjust the
 declared return type comment to reflect that metadata.similarity_score is
-required; then update all implementations (mock, Supabase repo, etc.) to
-normalize their outputs to this canonical shape by moving any top-level
-similarity fields or raw RPC score columns into
-result["metadata"]["similarity_score"] and ensure ordering by that score before
-returning, and add a short test or assertion in each implementation that
-verifies metadata contains similarity_score as a float.
+requir...
           ```
-    - [ ] 11.3 [Comment #2296441073] In python/src/server/repositories/interfaces/knowledge_repository.py around...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441072/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Vector search result shape is underspecified vs. implementations in commit $(git rev-parse HEAD)"
+          ```
+    - [ ] 11.3 [Comment #2296441073] <details>
           ```
           Original AI Prompt:
-          In python/src/server/repositories/interfaces/knowledge_repository.py around
-lines 213-241, the hybrid_search docstring promises a ValidationError if
-keyword_weight + vector_weight != 1.0 but implementations don't enforce it;
-update mock_repositories.py (around line 334) and supabase_repositories.py
-(around line 383) to validate the two weights at the start of hybrid_search and
-raise ValidationError when their sum differs from 1.0 within a small epsilon
-(e.g., 1e-6); alternatively, if you prefer auto-normalization, replace the
-validation with code that divides each weight by their sum and document that
-behavior in the docstring—implement one consistent approach across both files
-and add/update unit tests accordingly.
+          File: python/src/server/repositories/interfaces/knowledge_repository.py, Line: 241
+          
+Apply the following diff:
+```diff
+     async def hybrid_search(
+         self,
+         query: str,
+         embedding: List[float],
+         limit: int = 10,
+         source_filter: Optional[str] = None,
+-        keyword_weight: float = 0.5,
+-        vector_weight: float = 0.5
++        keyword_weight: float = 0.5,
++        vector_weight: float = 0.5
+     ) -> List[Dict[str, Any]]:
+-    # Simplified implementation – just use vector search for mock
++    # Validate weights sum to 1.0
++    if abs((...
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441073/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: <details> in commit $(git rev-parse HEAD)"
           ```
     - [ ] 11.4 Verify all changes in python/src/server/repositories/interfaces/knowledge_repository.py work correctly
 - [ ] 12. Fix issues in python/src/server/repositories/interfaces/project_repository.py (3 items)
-    - [ ] 12.1 [Comment #2296441074] In python/src/server/repositories/interfaces/project_repository.py around lines...
+    - [ ] 12.1 [Comment #2296441074] get_with_tasks promises tasks eagerly; Supabase impl returns project only
           ```
           Original AI Prompt:
-          In python/src/server/repositories/interfaces/project_repository.py around lines
+          File: python/src/server/repositories/interfaces/project_repository.py, Line: 63
+          
+Apply the suggested code change:
+```
+In python/src/server/repositories/interfaces/project_repository.py around lines
 49 to 63, the get_with_tasks interface promises to "Retrieve a project with all
 associated tasks included" but the SupabaseProjectRepository implementation only
 returns the project; fix by ensuring the implementation returns the project dict
 with a "tasks" key containing the list of associated task dicts (query tasks
-table filtering by project_id and attach them to the project before returning),
-or if you prefer the lighter change, update this interface docstring to say
-"returns the project; tasks fetched separately" and adjust the return
-typing/docs accordingly so interface and implementation match. Ensure the chosen
-fix keeps the return type Optional[Dict[str, Any]] and clearly documents the
-"tasks" field when present.
+table filtering by project_id and attach them to the project bef...
           ```
-    - [ ] 12.2 [Comment #2296441075] In python/src/server/repositories/interfaces/project_repository.py around lines...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441074/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: get_with_tasks promises tasks eagerly; Supabase impl returns project only in commit $(git rev-parse HEAD)"
           ```
-          Original AI Prompt:
-          In python/src/server/repositories/interfaces/project_repository.py around lines
-65 to 87, the abstract method update_jsonb_field documents raising
-ValidationError for invalid field_name but does not enforce validation; add
-explicit validation against an allowed set {'prd','docs','features','data'} at
-the start of the method and raise ValidationError if field_name is not in the
-set, documenting the behavior; ensure implementations of this interface either
-call super validation or duplicate the same check so invalid names are rejected
-before any DB operation.
-          ```
-    - [ ] 12.3 [Comment #2296441076] python/src/server/repositories/interfaces/project_repository.py lines 89-110:...
+    - [ ] 12.2 [Comment #2296441075] Validate JSONB field names on update_jsonb_field
           ```
           Original AI Prompt:
-          python/src/server/repositories/interfaces/project_repository.py lines 89-110:
+          File: python/src/server/repositories/interfaces/project_repository.py, Line: 87
+          
+Apply the following diff:
+```diff
+-async def update_jsonb_field(..., field_name: str, value: Dict[str, Any]) -> Optional[Dict[str, Any]]:
++async def update_jsonb_field(..., field_name: str, value: Dict[str, Any]) -> Optional[Dict[str, Any]]:
++    # Validate field_name against allowed JSONB fields
++    if field_name not in {"prd", "docs", "features", "data"}:
++        raise ValidationError(f"Invalid JSONB field: {field_name}")
+     ...
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441075/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Validate JSONB field names on update_jsonb_field in commit $(git rev-parse HEAD)"
+          ```
+    - [ ] 12.3 [Comment #2296441076] merge_jsonb_field contract vs. implementation
+          ```
+          Original AI Prompt:
+          File: python/src/server/repositories/interfaces/project_repository.py, Line: 110
+          
+Apply the suggested code change:
+```
+python/src/server/repositories/interfaces/project_repository.py lines 89-110:
 the abstract method promises a merge that preserves existing JSONB content but
 implementations replace or simplify; implement true read-modify-write merging in
 the Supabase and Mock repository implementations: first read the existing JSONB
 field for project_id, perform a deterministic merge that recursively deep-merges
-dicts (keys from value overwrite or merge into nested dicts), merges arrays by
-appending non-duplicates (or by a specified merge policy), handle None/missing
-fields by treating them as empty structures, write the merged JSONB back inside
-a transaction, return the updated record, and propagate database errors as
-RepositoryError; alternatively, if you cannot implement full recursive
-semantics, update this interface docstring to precisely describe the concrete
-merge semantics implemented (shallow vs recursive, array policy) and ensure
-implementations match that documented contract.
+dicts (keys from value overwrite or merge into nested dicts), me...
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441076/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: merge_jsonb_field contract vs. implementation in commit $(git rev-parse HEAD)"
           ```
     - [ ] 12.4 Verify all changes in python/src/server/repositories/interfaces/project_repository.py work correctly
 - [ ] 13. Fix issues in python/src/server/repositories/interfaces/unit_of_work.py (3 items)
-    - [ ] 13.1 [Comment #2296441079] In python/src/server/repositories/interfaces/unit_of_work.py around lines 34 to...
+    - [ ] 13.1 [Comment #2296441079] Align transaction return type with actual usage (yielding self) and strengthen typing
           ```
           Original AI Prompt:
-          In python/src/server/repositories/interfaces/unit_of_work.py around lines 34 to
-58, the transaction() signature and docstring state AsyncContextManager[None]
-but implementations (e.g., SupabaseDatabase.transaction) yield the unit-of-work
-instance; change the type to AsyncContextManager[Self] and update the docstring
-to state the context yields the unit-of-work (or a transaction-scoped UoW) so
-type checkers and callers can use the yielded self; import Self (or
-typing_extensions.Self for older Pythons) and update any concrete
-implementations/tests to match the new return type.
+          File: python/src/server/repositories/interfaces/unit_of_work.py, Line: None
+          
+Apply the following diff:
+```diff
+-from typing import AsyncContextManager, Optional, Any
++from typing import AsyncContextManager, Optional, Any, Self, TypeVar, Type
+
+@@
+-    def transaction(self) -> AsyncContextManager[None]:
++    def transaction(self) -> AsyncContextManager[Self]:
+@@
+-        Yields:
+-            None - Context for executing transactional operations
++        Yields:
++            The transaction context (typically the unit of work instance itself) for executing transactional ope...
           ```
-    - [ ] 13.2 [Comment #2296441080] In python/src/server/repositories/interfaces/unit_of_work.py around lines...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441079/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Align transaction return type with actual usage (yielding self) and strengthen typing in commit $(git rev-parse HEAD)"
+          ```
+    - [ ] 13.2 [Comment #2296441080] Fix logging of original exceptions in TransactionError
           ```
           Original AI Prompt:
-          In python/src/server/repositories/interfaces/unit_of_work.py around lines
-195-207, the TransactionError constructor currently calls logger.error(...,
-exc_info=original_error) which is incorrect (exc_info expects a bool or
-exception tuple) and causes duplicate logging when exceptions are later handled;
-remove logging from the exception constructor, simply store original_error on
-self (and message via super()), and if you need traceback-aware logging do it at
-the call site where the exception is caught using logger.exception(...) or
-logger.error(..., exc_info=True) so the full traceback is logged exactly once.
+          File: python/src/server/repositories/interfaces/unit_of_work.py, Line: None
+          
+Apply the following diff:
+```diff
+ class TransactionError(Exception):
+@@
+-        if original_error:
+-            self.logger.error(f"Transaction error: {message}", exc_info=original_error)
+-        else:
+-            self.logger.error(f"Transaction error: {message}")
++        if original_error:
++            self.logger.error(
++                "Transaction error: %s",
++                message,
++                exc_info=(type(original_error), original_error, original_error.__traceback__),
++      ...
           ```
-    - [ ] 13.3 [Comment #2296735157] In python/src/server/repositories/interfaces/unit_of_work.py around lines 52–54...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441080/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Fix logging of original exceptions in TransactionError in commit $(git rev-parse HEAD)"
+          ```
+    - [ ] 13.3 [Comment #2296735157] <details>
           ```
           Original AI Prompt:
-          In python/src/server/repositories/interfaces/unit_of_work.py around lines 52–54
-(and also at 169–171 and 183–184) the docstrings reference undefined exceptions
-like DatabaseError and RepositoryError; update these docstrings to either
-import/define and reference centralized exception classes (e.g., add/import
-DatabaseError and RepositoryError from a common exceptions module) or replace
-the named types with a generic description such as "backend-specific database
-error" or "repository operation error" (or point to the actual concrete
-exception types implementations will raise), and make the same docstring updates
-across all repository interface modules where RepositoryError appears.
+          File: python/src/server/repositories/interfaces/unit_of_work.py, Line: 54
+          
+Apply the suggested code change:
+```
+#!/bin/bash
+# Confirm whether DatabaseError / RepositoryError exist in the codebase
+rg -n --type=py 'class\s+DatabaseError\b|class\s+RepositoryError\b' python/src
+```
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296735157/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: <details> in commit $(git rev-parse HEAD)"
           ```
     - [ ] 13.4 Verify all changes in python/src/server/repositories/interfaces/unit_of_work.py work correctly
 - [ ] 14. Fix issues in python/tests/test_repository_interfaces.py (1 items)
-    - [ ] 14.1 [Comment #2296735158] In python/src/server/repositories/implementations/mock_repositories.py around...
+    - [ ] 14.1 [Comment #2296735158] <details>
           ```
           Original AI Prompt:
-          In python/src/server/repositories/implementations/mock_repositories.py around
-lines 951 and 1038, the MockSourceRepository.list() and
-MockVersionRepository.list() functions currently ignore
-order_by/order_direction; update both to apply explicit sorting before
-limit/offset by: when order_by is provided, call sorted(results, key=lambda r:
-(r.get(order_by) or ''), reverse=(order_direction=='desc')) so missing or None
-values are treated as empty strings and Python’s stable sort preserves insertion
-order for ties; ensure sorting occurs prior to applying offset/limit and keep
-behavior unchanged when order_by is falsy.
+          File: python/tests/test_repository_interfaces.py, Line: 222
+          
+Apply the following diff:
+```diff
+     async def list(self, filters=None, limit=None, offset=None, order_by=None, order_direction="asc") -> List[Dict[str, Any]]:
+         results = list(self._storage.values())
+         if filters:
+             for key, value in filters.items():
+                 results = [r for r in results if r.get(key) == value]
++        # Apply deterministic ordering
++        if order_by:
++            results = sorted(
++                results,
++                key=lambda r: ...
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296735158/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: <details> in commit $(git rev-parse HEAD)"
           ```
     - [ ] 14.2 Verify all changes in python/tests/test_repository_interfaces.py work correctly
 - [ ] 15. Fix issues in python/tests/test_supabase_repositories.py (2 items)
-    - [ ] 15.1 [Comment #2296441081] In python/tests/test_supabase_repositories.py around lines 442 to 447, the test...
+    - [ ] 15.1 [Comment #2296441081] Health-check error path isn’t exercised; exception is raised on limit().execute(), not select().execute()
           ```
           Original AI Prompt:
-          In python/tests/test_supabase_repositories.py around lines 442 to 447, the test
-sets mock_table.select.return_value.execute.side_effect but health_check() calls
-select(...).limit(1).execute(), so the exception is never raised; update the
-mock to set the side effect on the limit() call instead
-(mock_table.select.return_value.limit.return_value.execute.side_effect =
-Exception("Database error")) so the error is raised at the actual execute()
-invoked by health_check(), leaving the insert/update/delete side-effects as-is.
+          File: python/tests/test_supabase_repositories.py, Line: None
+          
+Apply the following diff:
+```diff
+-        # Make execute methods raise exceptions
+-        mock_table.select.return_value.execute.side_effect = Exception("Database error")
++        # Make the chained call select(...).limit(1).execute() raise exception
++        mock_table.select.return_value.limit.return_value.execute.side_effect = Exception("Database error")
+         mock_table.insert.return_value.execute.side_effect = Exception("Insert error")
+         mock_table.update.return_value.eq.return_...
           ```
-    - [ ] 15.2 [Comment #2296441082] In python/tests/test_supabase_repositories.py around lines 450-460, the test...
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441081/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Health-check error path isn’t exercised; exception is raised on limit().execute(), not select().execute() in commit $(git rev-parse HEAD)"
+          ```
+    - [ ] 15.2 [Comment #2296441082] Make the assertion deterministic and verify logging
           ```
           Original AI Prompt:
-          In python/tests/test_supabase_repositories.py around lines 450-460, the test
-currently asserts result in [True, False] which is non-deterministic and masks
-regressions; change the test to expect False unambiguously and verify that an
-error was logged: update the mock to raise on limit().execute(), call
-database.health_check() inside a caplog context (or use the caplog fixture),
-assert result is False, and assert caplog contains an error-level record with a
-message indicating the health check/query failure.
+          File: python/tests/test_supabase_repositories.py, Line: None
+          
+Apply the following diff:
+```diff
+-        # Health check should handle errors and return False
+-        # But the actual health check might still return True in our mock
+-        result = await database.health_check()
+-        # We'll just verify the method can be called without crashing
+-        assert result in [True, False]
++        # Health check should handle errors and return False
++        with patch.object(database._logger, 'error') as mock_error:
++            result = await database.he...
+          ```
+          
+          **Post-Completion Action:**
+          ```bash
+          # Auto-resolve GitHub comment after implementing this fix
+          gh api repos/coleam00/Archon/pulls/375/comments/2296441082/reactions -f content='+1'
+          gh api repos/coleam00/Archon/pulls/comments -f body="✅ Implemented: Make the assertion deterministic and verify logging in commit $(git rev-parse HEAD)"
           ```
     - [ ] 15.3 Verify all changes in python/tests/test_supabase_repositories.py work correctly
 
 - [ ] 16. Post-implementation tasks
     - [ ] 16.1 Run full test suite
-    - [ ] 16.2 Mark all resolved comments on GitHub
-    - [ ] 16.3 Post summary comment on PR
+    - [ ] 16.2 Verify all comments marked as resolved
+    - [ ] 16.3 Post summary comment on PR with stats

@@ -10,13 +10,20 @@ encoding: UTF-8
 
 ## Overview
 
-Initiate execution of one or more tasks for a given spec.
+Execute tasks for a given spec following three distinct phases:
+1. Pre-execution setup (Steps 1-3)
+2. Task execution loop (Step 4)
+3. Post-execution tasks (Step 5)
+
+**IMPORTANT**: All three phases MUST be completed. Do not stop after phase 2.
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
 </pre_flight_check>
 
 <process_flow>
+
+## Phase 1: Pre-Execution Setup
 
 <step number="1" name="task_assignment">
 
@@ -65,38 +72,9 @@ Use the context-fetcher subagent to gather minimal context for task understandin
 
 </step>
 
-<step number="3" name="development_server_check">
+<step number="3" subagent="git-workflow" name="git_branch_management">
 
-### Step 3: Check for Development Server
-
-Check for any running development server and ask user permission to shut it down if found to prevent port conflicts.
-
-<server_check_flow>
-  <if_running>
-    ASK user to shut down
-    WAIT for response
-  </if_running>
-  <if_not_running>
-    PROCEED immediately
-  </if_not_running>
-</server_check_flow>
-
-<user_prompt>
-  A development server is currently running.
-  Should I shut it down before proceeding? (yes/no)
-</user_prompt>
-
-<instructions>
-  ACTION: Check for running local development server
-  CONDITIONAL: Ask permission only if server is running
-  PROCEED: Immediately if no server detected
-</instructions>
-
-</step>
-
-<step number="4" subagent="git-workflow" name="git_branch_management">
-
-### Step 4: Git Branch Management
+### Step 3: Git Branch Management
 
 Use the git-workflow subagent to manage git branches to ensure proper isolation by creating or switching to the appropriate branch for the spec.
 
@@ -120,14 +98,18 @@ Use the git-workflow subagent to manage git branches to ensure proper isolation 
 
 </step>
 
-<step number="5" name="task_execution_loop">
+## Phase 2: Task Execution Loop
 
-### Step 5: Task Execution Loop
+<step number="4" name="task_execution_loop">
 
-Execute all assigned parent tasks and their subtasks using @~/.agent-os/instructions/core/execute-task.md instructions, continuing until all tasks are complete.
+### Step 4: Task Execution Loop
+
+**IMPORTANT**: This is a loop. Execute ALL assigned tasks before proceeding to Phase 3.
+
+Execute all assigned parent tasks and their subtasks using @.agent-os/instructions/core/execute-task.md instructions, continuing until all tasks are complete.
 
 <execution_flow>
-  LOAD @~/.agent-os/instructions/core/execute-task.md ONCE
+  LOAD @.agent-os/instructions/core/execute-task.md ONCE
 
   FOR each parent_task assigned in Step 1:
     EXECUTE instructions from execute-task.md with:
@@ -136,6 +118,8 @@ Execute all assigned parent tasks and their subtasks using @~/.agent-os/instruct
     WAIT for task completion
     UPDATE tasks.md status
   END FOR
+
+  **IMPORTANT**: After loop completes, CONTINUE to Phase 3 (Step 5). Do not stop here.
 </execution_flow>
 
 <loop_logic>
@@ -166,212 +150,38 @@ Execute all assigned parent tasks and their subtasks using @~/.agent-os/instruct
   UPDATE: Task status after each completion
   VERIFY: All tasks complete before proceeding
   HANDLE: Blocking issues appropriately
+  **IMPORTANT**: When all tasks complete, proceed to Step 5
 </instructions>
 
 </step>
 
-<step number="6" subagent="test-runner" name="test_suite_verification">
+## Phase 3: Post-Execution Tasks
 
-### Step 6: Run All Tests
+<step number="5" name="post_execution_tasks">
 
-Use the test-runner subagent to run the entire test suite to ensure no regressions and fix any failures until all tests pass.
+### Step 5: Run the task completion steps
 
-<instructions>
-  ACTION: Use test-runner subagent
-  REQUEST: "Run the full test suite"
-  WAIT: For test-runner analysis
-  PROCESS: Fix any reported failures
-  REPEAT: Until all tests pass
-</instructions>
+**CRITICAL**: This step MUST be executed after all tasks are implemented. Do not end the process without completing this phase.
 
-<test_execution>
-  <order>
-    1. Run entire test suite
-    2. Fix any failures
-  </order>
-  <requirement>100% pass rate</requirement>
-</test_execution>
-
-<failure_handling>
-  <action>troubleshoot and fix</action>
-  <priority>before proceeding</priority>
-</failure_handling>
-
-</step>
-
-<step number="7" subagent="git-workflow" name="git_workflow">
-
-### Step 7: Git Workflow
-
-Use the git-workflow subagent to create git commit, push to GitHub, and create pull request for the implemented features.
+After all tasks in tasks.md have been implemented, use @.agent-os/instructions/core/post-execution-tasks.md to run our series of steps we always run when finishing and delivering a new feature.
 
 <instructions>
-  ACTION: Use git-workflow subagent
-  REQUEST: "Complete git workflow for [SPEC_NAME] feature:
-            - Spec: [SPEC_FOLDER_PATH]
-            - Changes: All modified files
-            - Target: main branch
-            - Description: [SUMMARY_OF_IMPLEMENTED_FEATURES]"
-  WAIT: For workflow completion
-  PROCESS: Save PR URL for summary
-</instructions>
-
-<commit_process>
-  <commit>
-    <message>descriptive summary of changes</message>
-    <format>conventional commits if applicable</format>
-  </commit>
-  <push>
-    <target>spec branch</target>
-    <remote>origin</remote>
-  </push>
-  <pull_request>
-    <title>descriptive PR title</title>
-    <description>functionality recap</description>
-  </pull_request>
-</commit_process>
-
-</step>
-
-<step number="8" name="roadmap_progress_check">
-
-### Step 8: Roadmap Progress Check (Conditional)
-
-Check @.agent-os/product/roadmap.md (if not in context) and update roadmap progress only if the executed tasks may have completed a roadmap item and the spec completes that item.
-
-<conditional_execution>
-  <preliminary_check>
-    EVALUATE: Did executed tasks potentially complete a roadmap item?
-    IF NO:
-      SKIP this entire step
-      PROCEED to step 9
-    IF YES:
-      CONTINUE with roadmap check
-  </preliminary_check>
-</conditional_execution>
-
-<conditional_loading>
-  IF roadmap.md NOT already in context:
-    LOAD @.agent-os/product/roadmap.md
-  ELSE:
-    SKIP loading (use existing context)
-</conditional_loading>
-
-<roadmap_criteria>
-  <update_when>
-    - spec fully implements roadmap feature
-    - all related tasks completed
-    - tests passing
-  </update_when>
-  <caution>only mark complete if absolutely certain</caution>
-</roadmap_criteria>
-
-<instructions>
-  ACTION: First evaluate if roadmap check is needed
-  SKIP: If tasks clearly don't complete roadmap items
-  CHECK: If roadmap.md already in context
-  LOAD: Only if needed and not in context
-  EVALUATE: If current spec completes roadmap goals
-  UPDATE: Mark roadmap items complete if applicable
-  VERIFY: Certainty before marking complete
-</instructions>
-
-</step>
-
-<step number="9" name="completion_notification">
-
-### Step 9: Task Completion Notification
-
-Play a system sound to alert the user that tasks are complete.
-
-<notification_command>
-  afplay /System/Library/Sounds/Glass.aiff
-</notification_command>
-
-<instructions>
-  ACTION: Play completion sound
-  PURPOSE: Alert user that task is complete
-</instructions>
-
-</step>
-
-<step number="10" name="completion_summary">
-
-### Step 10: Completion Summary
-
-Create a structured summary message with emojis showing what was done, any issues, testing instructions, and PR link.
-
-<summary_template>
-  ## ✅ What's been done
-
-  1. **[FEATURE_1]** - [ONE_SENTENCE_DESCRIPTION]
-  2. **[FEATURE_2]** - [ONE_SENTENCE_DESCRIPTION]
-
-  ## ⚠️ Issues encountered
-
-  [ONLY_IF_APPLICABLE]
-  - **[ISSUE_1]** - [DESCRIPTION_AND_REASON]
-
-  ## 👀 Ready to test in browser
-
-  [ONLY_IF_APPLICABLE]
-  1. [STEP_1_TO_TEST]
-  2. [STEP_2_TO_TEST]
-
-  ## 📦 Pull Request
-
-  View PR: [GITHUB_PR_URL]
-</summary_template>
-
-<summary_sections>
-  <required>
-    - functionality recap
-    - pull request info
-  </required>
-  <conditional>
-    - issues encountered (if any)
-    - testing instructions (if testable in browser)
-  </conditional>
-</summary_sections>
-
-<instructions>
-  ACTION: Create comprehensive summary
-  INCLUDE: All required sections
-  ADD: Conditional sections if applicable
-  FORMAT: Use emoji headers for scannability
+  LOAD: @.agent-os/instructions/core/post-execution-tasks.md once
+  ACTION: execute all steps in the post-execution-tasks.md process_flow.
+  **IMPORTANT**: This includes:
+    - Running full test suite
+    - Git workflow (commit, push, PR)
+    - Verifying task completion
+    - Updating roadmap (if applicable)
+    - Creating recap document
+    - Generating completion summary
+    - Playing notification sound
 </instructions>
 
 </step>
 
 </process_flow>
 
-## Error Handling
-
-<error_protocols>
-  <blocking_issues>
-    - document in tasks.md
-    - mark with ⚠️ emoji
-    - include in summary
-  </blocking_issues>
-  <test_failures>
-    - fix before proceeding
-    - never commit broken tests
-  </test_failures>
-  <technical_roadblocks>
-    - attempt 3 approaches
-    - document if unresolved
-    - seek user input
-  </technical_roadblocks>
-</error_protocols>
-
-<final_checklist>
-  <verify>
-    - [ ] Task implementation complete
-    - [ ] All tests passing
-    - [ ] tasks.md updated
-    - [ ] Code committed and pushed
-    - [ ] Pull request created
-    - [ ] Roadmap checked/updated
-    - [ ] Summary provided to user
-  </verify>
-</final_checklist>
+<post_flight_check>
+  EXECUTE: @.agent-os/instructions/meta/post-flight.md
+</post_flight_check>

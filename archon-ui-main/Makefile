@@ -155,15 +155,15 @@ test-results: ## Show test results summary
 		echo "$(YELLOW)Test Results Summary:$(NC)"; \
 		node -e "try { \
 			const data = JSON.parse(require('fs').readFileSync('test-results/test-results.json', 'utf8')); \
-			const passedTests = data.numPassedTests || 0; \
-			const failedTests = data.numFailedTests || 0; \
-			const totalTests = data.numTotalTests || 0; \
+			const passed = data.numPassedTests || 0; \
+			const failed = data.numFailedTests || 0; \
+			const total = data.numTotalTests || 0; \
 			const passedSuites = data.numPassedTestSuites || 0; \
 			const failedSuites = data.numFailedTestSuites || 0; \
 			const totalSuites = data.numTotalTestSuites || 0; \
 			console.log(''); \
 			console.log('Test Suites: ' + (failedSuites > 0 ? '\x1b[31m' + failedSuites + ' failed\x1b[0m, ' : '') + '\x1b[32m' + passedSuites + ' passed\x1b[0m, ' + totalSuites + ' total'); \
-			console.log('Tests:       ' + (failedTests > 0 ? '\x1b[31m' + failedTests + ' failed\x1b[0m, ' : '') + '\x1b[32m' + passedTests + ' passed\x1b[0m, ' + totalTests + ' total'); \
+			console.log('Tests:       ' + (failed > 0 ? '\x1b[31m' + failed + ' failed\x1b[0m, ' : '') + '\x1b[32m' + passed + ' passed\x1b[0m, ' + total + ' total'); \
 		} catch(e) { \
 			console.log('Error reading test results:', e.message); \
 		}"; \

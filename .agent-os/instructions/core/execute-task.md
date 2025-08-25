@@ -13,7 +13,7 @@ encoding: UTF-8
 Execute a specific task along with its sub-tasks systematically following a TDD development workflow.
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
 </pre_flight_check>
 
 
@@ -72,7 +72,7 @@ Search and extract relevant sections from technical-spec.md to understand the te
 
 ### Step 3: Best Practices Review
 
-Use the context-fetcher subagent to retrieve relevant sections from @~/.agent-os/standards/best-practices.md that apply to the current task's technology stack and feature type.
+Use the context-fetcher subagent to retrieve relevant sections from @.agent-os/standards/best-practices.md that apply to the current task's technology stack and feature type.
 
 <selective_reading>
   <search_best_practices>
@@ -101,7 +101,7 @@ Use the context-fetcher subagent to retrieve relevant sections from @~/.agent-os
 
 ### Step 4: Code Style Review
 
-Use the context-fetcher subagent to retrieve relevant code style rules from @~/.agent-os/standards/code-style.md for the languages and file types being used in this task.
+Use the context-fetcher subagent to retrieve relevant code style rules from @.agent-os/standards/code-style.md for the languages and file types being used in this task.
 
 <selective_reading>
   <search_code_style>
@@ -228,9 +228,9 @@ Use the test-runner subagent to run and verify only the tests specific to this p
 
 <step number="7" name="task_status_updates">
 
-### Step 7: Task Status Updates
+### Step 7: Mark this task and sub-tasks complete
 
-Update the tasks.md file immediately after completing each task to track progress.
+IMPORTANT: In the tasks.md file, mark this task and its sub-tasks complete by updating each task checkbox to [x].
 
 <update_format>
   <completed>- [x] Task description</completed>
@@ -257,3 +257,7 @@ Update the tasks.md file immediately after completing each task to track progres
 </step>
 
 </process_flow>
+
+<post_flight_check>
+  EXECUTE: @.agent-os/instructions/meta/post-flight.md
+</post_flight_check>

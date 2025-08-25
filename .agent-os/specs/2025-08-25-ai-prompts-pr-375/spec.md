@@ -18,21 +18,21 @@ This spec addresses 45 code improvement suggestions from the automated review.
 
 ## Spec Scope
 
-1. **archon-ui-main/Makefile** - Address 10 improvement suggestions
-2. **archon-ui-main/test-docker-patch.js** - Address 1 improvement suggestions
-3. **docs/specs/repository-pattern-spec.md** - Address 1 improvement suggestions
-4. **python/Makefile** - Address 3 improvement suggestions
-5. **python/pyproject.toml** - Address 3 improvement suggestions
-6. **python/src/repository/interfaces/__init__.py** - Address 1 improvement suggestions
-7. **python/src/repository/tasks/task_repository.py** - Address 5 improvement suggestions
-8. **python/src/server/api_dependencies/dependency_injector.py** - Address 4 improvement suggestions
-9. **python/src/server/api_routes/tasks.py** - Address 6 improvement suggestions
-10. **python/src/server/models/features.py** - Address 2 improvement suggestions
-11. **python/src/server/services/mcp_bridge.py** - Address 2 improvement suggestions
-12. **python/src/server/services/task_service.py** - Address 4 improvement suggestions
-13. **python/tests/repository/test_task_repository.py** - Address 2 improvement suggestions
-14. **python/tests/test_api_essentials.py** - Address 1 improvement suggestions
-15. **python/tests/test_repository_pattern.py** - Address 0 improvement suggestions
+1. **archon-ui-main/Makefile** - Address 2 improvement suggestions
+2. **archon-ui-main/run-tests.sh** - Address 1 improvement suggestions
+3. **archon-ui-main/test-docker-patch.js** - Address 1 improvement suggestions
+4. **docs/specs/repository-pattern-spec.md** - Address 1 improvement suggestions
+5. **python/Makefile** - Address 1 improvement suggestions
+6. **python/src/server/core/dependencies.py** - Address 6 improvement suggestions
+7. **python/src/server/repositories/implementations/mock_repositories.py** - Address 2 improvement suggestions
+8. **python/src/server/repositories/implementations/supabase_database.py** - Address 4 improvement suggestions
+9. **python/src/server/repositories/implementations/supabase_repositories.py** - Address 14 improvement suggestions
+10. **python/src/server/repositories/interfaces/__init__.py** - Address 1 improvement suggestions
+11. **python/src/server/repositories/interfaces/knowledge_repository.py** - Address 3 improvement suggestions
+12. **python/src/server/repositories/interfaces/project_repository.py** - Address 3 improvement suggestions
+13. **python/src/server/repositories/interfaces/unit_of_work.py** - Address 3 improvement suggestions
+14. **python/tests/test_repository_interfaces.py** - Address 1 improvement suggestions
+15. **python/tests/test_supabase_repositories.py** - Address 2 improvement suggestions
 
 ## Out of Scope
 

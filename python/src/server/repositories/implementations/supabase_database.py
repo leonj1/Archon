@@ -6,6 +6,7 @@ of contact for all database operations. It initializes all repository implementa
 and provides transaction support through the Unit of Work pattern.
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -293,16 +294,35 @@ class SupabaseDatabase(IUnitOfWork):
             True if database is healthy and accessible, False otherwise
         """
         try:
-            # Test basic connectivity by querying the settings table
-            response = self._client.table('archon_settings').select('key').limit(1).execute()
+            # Test basic connectivity by querying the settings table (offload blocking client)
+            max_retries = 3
+            base_delay = 0.25
+            last_exc = None
             
-            # Check if the query executed successfully
-            if hasattr(response, 'data') and response.data is not None:
-                self._logger.info("Database health check passed")
-                return True
-            else:
-                self._logger.warning("Database health check failed: No data returned")
-                return False
+            for attempt in range(max_retries):
+                try:
+                    response = await asyncio.to_thread(
+                        lambda: self._client.table('archon_settings').select('key').limit(1).execute()
+                    )
+                    
+                    # Check if the query executed successfully
+                    if hasattr(response, 'data') and response.data is not None:
+                        self._logger.info("Database health check passed")
+                        return True
+                    else:
+                        self._logger.warning("Database health check failed: No data returned")
+                        return False
+                        
+                except Exception as e:
+                    last_exc = e
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)
+                        self._logger.warning(f"Health check attempt {attempt + 1} failed: {e}, retrying in {delay}s")
+                        await asyncio.sleep(delay)
+                    else:
+                        self._logger.error(f"Database health check failed after {max_retries} attempts: {e}", exc_info=True)
+                        
+            return False
                 
         except Exception as e:
             self._logger.error(f"Database health check failed: {e}", exc_info=True)

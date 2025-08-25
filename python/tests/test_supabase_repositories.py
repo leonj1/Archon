@@ -33,22 +33,13 @@ class MockSupabaseDatabase(SupabaseDatabase):
     """Mock Supabase Database that implements missing abstract methods for testing."""
     
     def __init__(self, client=None):
-        self._transaction_active = False
         self._savepoints = {}
         super().__init__(client)
     
-    async def begin(self):
-        """Begin transaction."""
-        await super().begin()
-        self._transaction_active = self._active
-    
-    async def is_active(self) -> bool:
-        """Check if transaction is active."""
-        return await super().is_active()
     
     async def savepoint(self, name: str) -> str:
         """Create savepoint."""
-        if not self._transaction_active:
+        if not await self.is_active():
             raise TransactionError("No active transaction for savepoint")
         savepoint_id = f"sp_{name}_{len(self._savepoints)}"
         self._savepoints[savepoint_id] = name
@@ -345,9 +336,9 @@ class TestSupabaseDatabase:
             
             assert result is False
             
-            # Should log error
+            # Should log error with retry count
             mock_error.assert_called_once_with(
-                "Database health check failed: Database connection failed",
+                "Database health check failed after 3 attempts: Database connection failed",
                 exc_info=True
             )
     
