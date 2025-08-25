@@ -11,9 +11,9 @@ for project lifecycle management, task workflows, and document versioning.
 """
 
 from abc import abstractmethod
-from typing import List, Optional, Dict, Any, Union
-from uuid import UUID
 from enum import Enum
+from typing import Any
+from uuid import UUID
 
 from .base_repository import IBaseRepository
 
@@ -26,7 +26,7 @@ class TaskStatus(str, Enum):
     DONE = "done"
 
 
-class IProjectRepository(IBaseRepository[Dict[str, Any]]):
+class IProjectRepository(IBaseRepository[dict[str, Any]]):
     """
     Repository interface for archon_projects table.
     
@@ -45,9 +45,9 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
     - created_at (timestamp): Creation timestamp
     - updated_at (timestamp): Last update timestamp
     """
-    
+
     @abstractmethod
-    async def get_with_tasks(self, project_id: UUID) -> Optional[Dict[str, Any]]:
+    async def get_with_tasks(self, project_id: UUID) -> dict[str, Any] | None:
         """
         Retrieve a project with all associated tasks included.
         
@@ -61,14 +61,14 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def update_jsonb_field(
         self,
         project_id: UUID,
         field_name: str,
-        value: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        value: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Update a specific JSONB field with new data.
         
@@ -85,14 +85,14 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
             ValidationError: If field_name is not a valid JSONB field
         """
         pass
-    
+
     @abstractmethod
     async def merge_jsonb_field(
         self,
         project_id: UUID,
         field_name: str,
-        value: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        value: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Merge data into a JSONB field preserving existing content.
         
@@ -108,14 +108,14 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If merge fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def append_to_jsonb_array(
         self,
         project_id: UUID,
         field_name: str,
-        item: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        item: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Append an item to a JSONB array field.
         
@@ -131,14 +131,14 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If append fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def remove_from_jsonb_array(
         self,
         project_id: UUID,
         field_name: str,
         item_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Remove an item from a JSONB array field by item ID.
         
@@ -154,9 +154,9 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If removal fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_pinned(self) -> List[Dict[str, Any]]:
+    async def get_pinned(self) -> list[dict[str, Any]]:
         """
         Retrieve all pinned projects.
         
@@ -167,9 +167,9 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def set_pinned(self, project_id: UUID, is_pinned: bool) -> Optional[Dict[str, Any]]:
+    async def set_pinned(self, project_id: UUID, is_pinned: bool) -> dict[str, Any] | None:
         """
         Set the pinned status of a project.
         
@@ -184,9 +184,9 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If update fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def search_by_title(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    async def search_by_title(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
         """
         Search projects by title using case-insensitive pattern matching.
         
@@ -201,9 +201,9 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If search fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_project_statistics(self) -> Dict[str, Any]:
+    async def get_project_statistics(self) -> dict[str, Any]:
         """
         Get aggregated project statistics.
         
@@ -218,7 +218,7 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If aggregation fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def query_jsonb_field(
         self,
@@ -226,7 +226,7 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
         query_path: str,
         query_value: Any,
         limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Query projects by JSONB field content using JSON path expressions.
         
@@ -245,7 +245,7 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
         pass
 
 
-class ITaskRepository(IBaseRepository[Dict[str, Any]]):
+class ITaskRepository(IBaseRepository[dict[str, Any]]):
     """
     Repository interface for archon_tasks table.
     
@@ -266,15 +266,15 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
     - created_at (timestamp): Creation timestamp
     - updated_at (timestamp): Last update timestamp
     """
-    
+
     @abstractmethod
     async def get_by_project(
         self,
         project_id: UUID,
         include_closed: bool = False,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        limit: int | None = None,
+        offset: int | None = None
+    ) -> list[dict[str, Any]]:
         """
         Retrieve all tasks for a specific project.
         
@@ -291,14 +291,14 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def get_by_status(
         self,
         project_id: UUID,
         status: TaskStatus,
-        limit: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        limit: int | None = None
+    ) -> list[dict[str, Any]]:
         """
         Retrieve tasks by status within a project.
         
@@ -314,14 +314,14 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def update_status(
         self,
         task_id: UUID,
         status: TaskStatus,
-        assignee: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        assignee: str | None = None
+    ) -> dict[str, Any] | None:
         """
         Update task status and optionally reassign.
         
@@ -337,7 +337,7 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If update fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def archive(self, task_id: UUID) -> bool:
         """
@@ -353,14 +353,14 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If archive operation fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def get_by_assignee(
         self,
         assignee: str,
-        status_filter: Optional[TaskStatus] = None,
-        limit: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        status_filter: TaskStatus | None = None,
+        limit: int | None = None
+    ) -> list[dict[str, Any]]:
         """
         Retrieve tasks assigned to a specific agent or user.
         
@@ -376,14 +376,14 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def get_by_feature(
         self,
         project_id: UUID,
         feature: str,
         include_closed: bool = False
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Retrieve tasks grouped by feature within a project.
         
@@ -399,13 +399,13 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def update_task_order(
         self,
         task_id: UUID,
         new_order: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Update the task_order field for priority management.
         
@@ -420,13 +420,13 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If update fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def add_source_reference(
         self,
         task_id: UUID,
-        source: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        source: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Add a source reference to task's sources JSONB array.
         
@@ -441,13 +441,13 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If update fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def add_code_example(
         self,
         task_id: UUID,
-        code_example: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        code_example: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Add a code example to task's code_examples JSONB array.
         
@@ -462,9 +462,9 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If update fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_task_statistics(self, project_id: Optional[UUID] = None) -> Dict[str, Any]:
+    async def get_task_statistics(self, project_id: UUID | None = None) -> dict[str, Any]:
         """
         Get aggregated task statistics.
         
@@ -482,14 +482,14 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If aggregation fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def bulk_update_status(
         self,
-        task_ids: List[UUID],
+        task_ids: list[UUID],
         status: TaskStatus,
-        assignee: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        assignee: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         Update status for multiple tasks in a single operation.
         
@@ -507,7 +507,7 @@ class ITaskRepository(IBaseRepository[Dict[str, Any]]):
         pass
 
 
-class IVersionRepository(IBaseRepository[Dict[str, Any]]):
+class IVersionRepository(IBaseRepository[dict[str, Any]]):
     """
     Repository interface for archon_document_versions table.
     
@@ -526,18 +526,18 @@ class IVersionRepository(IBaseRepository[Dict[str, Any]]):
     - document_id (UUID): Optional specific document ID within docs array
     - created_at (timestamp): Version creation timestamp
     """
-    
+
     @abstractmethod
     async def create_snapshot(
         self,
         project_id: UUID,
         field_name: str,
-        content: Dict[str, Any],
+        content: dict[str, Any],
         change_summary: str,
         created_by: str = "system",
         change_type: str = "automatic",
-        document_id: Optional[UUID] = None
-    ) -> Dict[str, Any]:
+        document_id: UUID | None = None
+    ) -> dict[str, Any]:
         """
         Create a version snapshot of project data.
         
@@ -557,15 +557,15 @@ class IVersionRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If snapshot creation fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def get_version_history(
         self,
         project_id: UUID,
         field_name: str,
-        limit: Optional[int] = None,
-        document_id: Optional[UUID] = None
-    ) -> List[Dict[str, Any]]:
+        limit: int | None = None,
+        document_id: UUID | None = None
+    ) -> list[dict[str, Any]]:
         """
         Get version history for a specific field.
         
@@ -582,14 +582,14 @@ class IVersionRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def get_version(
         self,
         project_id: UUID,
         field_name: str,
         version_number: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Get a specific version by number.
         
@@ -605,7 +605,7 @@ class IVersionRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def restore_version(
         self,
@@ -613,7 +613,7 @@ class IVersionRepository(IBaseRepository[Dict[str, Any]]):
         field_name: str,
         version_number: int,
         created_by: str = "system"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Restore a project field to a previous version.
         
@@ -633,7 +633,7 @@ class IVersionRepository(IBaseRepository[Dict[str, Any]]):
             EntityNotFoundError: If specified version doesn't exist
         """
         pass
-    
+
     @abstractmethod
     async def get_latest_version_number(
         self,
@@ -654,7 +654,7 @@ class IVersionRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def delete_old_versions(
         self,
@@ -677,7 +677,7 @@ class IVersionRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If cleanup fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def compare_versions(
         self,
@@ -685,7 +685,7 @@ class IVersionRepository(IBaseRepository[Dict[str, Any]]):
         field_name: str,
         version_a: int,
         version_b: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Compare two versions and return difference summary.
         
@@ -703,9 +703,9 @@ class IVersionRepository(IBaseRepository[Dict[str, Any]]):
             EntityNotFoundError: If either version doesn't exist
         """
         pass
-    
+
     @abstractmethod
-    async def get_version_statistics(self, project_id: Optional[UUID] = None) -> Dict[str, Any]:
+    async def get_version_statistics(self, project_id: UUID | None = None) -> dict[str, Any]:
         """
         Get aggregated version statistics.
         

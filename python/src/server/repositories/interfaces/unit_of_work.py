@@ -10,9 +10,9 @@ operations that span multiple entities.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from contextlib import asynccontextmanager
-from typing import AsyncContextManager, Optional, Any, TypeVar, Self
+from typing import Any, AsyncContextManager, Self, TypeVar
 
+# Import repository exceptions
 
 # Type variable for Unit of Work implementations
 TUnitOfWork = TypeVar('TUnitOfWork', bound='IUnitOfWork')
@@ -35,7 +35,7 @@ class IUnitOfWork(ABC):
             # Both operations commit together or rollback if either fails
         ```
     """
-    
+
     @abstractmethod
     def transaction(self) -> AsyncContextManager[Self]:
         """
@@ -50,7 +50,7 @@ class IUnitOfWork(ABC):
             
         Raises:
             TransactionError: If transaction management fails
-            DatabaseError: If underlying database operations fail
+            DatabaseOperationError: If underlying database operations fail
             
         Example:
             ```python
@@ -61,7 +61,7 @@ class IUnitOfWork(ABC):
             ```
         """
         pass
-    
+
     @abstractmethod
     async def commit(self) -> None:
         """
@@ -73,10 +73,10 @@ class IUnitOfWork(ABC):
         
         Raises:
             TransactionError: If no active transaction or commit fails
-            DatabaseError: If database commit operation fails
+            DatabaseOperationError: If database commit operation fails
         """
         pass
-    
+
     @abstractmethod
     async def rollback(self) -> None:
         """
@@ -88,10 +88,10 @@ class IUnitOfWork(ABC):
         
         Raises:
             TransactionError: If no active transaction or rollback fails
-            DatabaseError: If database rollback operation fails
+            DatabaseOperationError: If database rollback operation fails
         """
         pass
-    
+
     @abstractmethod
     async def begin(self) -> None:
         """
@@ -103,10 +103,10 @@ class IUnitOfWork(ABC):
         
         Raises:
             TransactionError: If a transaction is already active or begin fails
-            DatabaseError: If database transaction start fails
+            DatabaseOperationError: If database transaction start fails
         """
         pass
-    
+
     @abstractmethod
     async def is_active(self) -> bool:
         """
@@ -116,7 +116,7 @@ class IUnitOfWork(ABC):
             True if a transaction is currently active, False otherwise
         """
         pass
-    
+
     @abstractmethod
     async def savepoint(self, name: str) -> str:
         """
@@ -133,10 +133,10 @@ class IUnitOfWork(ABC):
             
         Raises:
             TransactionError: If no active transaction or savepoint creation fails
-            DatabaseError: If database savepoint operation fails
+            DatabaseOperationError: If database savepoint operation fails
         """
         pass
-    
+
     @abstractmethod
     async def rollback_to_savepoint(self, savepoint_id: str) -> None:
         """
@@ -150,10 +150,10 @@ class IUnitOfWork(ABC):
             
         Raises:
             TransactionError: If savepoint doesn't exist or rollback fails
-            DatabaseError: If database rollback operation fails
+            DatabaseOperationError: If database rollback operation fails
         """
         pass
-    
+
     @abstractmethod
     async def release_savepoint(self, savepoint_id: str) -> None:
         """
@@ -167,10 +167,10 @@ class IUnitOfWork(ABC):
             
         Raises:
             TransactionError: If savepoint doesn't exist or release fails
-            DatabaseError: If database release operation fails
+            DatabaseOperationError: If database release operation fails
         """
         pass
-    
+
     @abstractmethod
     async def close(self) -> None:
         """
@@ -180,10 +180,10 @@ class IUnitOfWork(ABC):
         typically during application shutdown or cleanup phases.
         
         Raises:
-            DatabaseError: If cleanup operations fail
+            DatabaseOperationError: If cleanup operations fail
         """
         pass
-    
+
     @abstractmethod
     async def health_check(self) -> bool:
         """
@@ -202,7 +202,7 @@ class ITransactionContext(ABC):
     Provides access to all repositories within a transactional context,
     ensuring that all operations are part of the same database transaction.
     """
-    
+
     @abstractmethod
     def get_repository(self, repository_type: type) -> Any:
         """
@@ -222,8 +222,8 @@ class ITransactionContext(ABC):
 
 class TransactionError(Exception):
     """Exception raised for transaction management errors."""
-    
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(message)
         self.original_error = original_error
 

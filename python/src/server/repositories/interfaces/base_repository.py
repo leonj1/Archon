@@ -8,29 +8,30 @@ to provide type safety while maintaining flexibility for different entity types.
 
 from __future__ import annotations
 
+import builtins
 from abc import ABC, abstractmethod
-from typing import (
-    Generic, TypeVar, Optional, List, Dict, Any, Union, 
-    Literal, Protocol, runtime_checkable, Sequence,
-    overload, Type, TypedDict, NotRequired
-)
-from uuid import UUID
+from collections.abc import Sequence
 from datetime import datetime
 from enum import Enum
+from typing import (
+    Any,
+    Generic,
+    Literal,
+    NotRequired,
+    Protocol,
+    TypedDict,
+    TypeVar,
+    overload,
+    runtime_checkable,
+)
+from uuid import UUID
 
 # Import custom exceptions
-from ..exceptions import (
-    RepositoryError, ValidationError, EntityNotFoundError, 
-    DuplicateEntityError, ConcurrencyError, DatabaseConnectionError,
-    DatabaseOperationError, QueryError, ConstraintViolationError,
-    DataIntegrityError, BatchOperationError
-)
-
 
 # Generic type variables for enhanced type safety
 EntityType = TypeVar('EntityType')  # The entity type this repository manages
 IdType = TypeVar('IdType', str, UUID, int)  # Supported ID types
-FilterType = TypeVar('FilterType', bound=Dict[str, Any])  # Filter parameter type
+FilterType = TypeVar('FilterType', bound=dict[str, Any])  # Filter parameter type
 
 
 # Ordering and sorting type definitions
@@ -87,32 +88,32 @@ class OperationResult(TypedDict, Generic[EntityType]):
     """Type definition for operation results with metadata."""
     success: bool
     entity: NotRequired[EntityType]
-    entities: NotRequired[List[EntityType]]
+    entities: NotRequired[list[EntityType]]
     affected_count: NotRequired[int]
     error: NotRequired[str]
-    metadata: NotRequired[Dict[str, Any]]
+    metadata: NotRequired[dict[str, Any]]
 
 
 class PaginatedResult(TypedDict, Generic[EntityType]):
     """Type definition for paginated query results."""
-    entities: List[EntityType]
+    entities: list[EntityType]
     total_count: int
     page_size: int
     current_offset: int
     has_more: bool
-    metadata: NotRequired[Dict[str, Any]]
+    metadata: NotRequired[dict[str, Any]]
 
 
 # Protocol for validatable entities
 @runtime_checkable
 class ValidatableEntity(Protocol):
     """Protocol for entities that support validation."""
-    
+
     def validate(self) -> bool:
         """Validate entity data."""
         ...
-    
-    def get_validation_errors(self) -> List[str]:
+
+    def get_validation_errors(self) -> list[str]:
         """Get list of validation errors."""
         ...
 
@@ -121,18 +122,18 @@ class ValidatableEntity(Protocol):
 @runtime_checkable
 class TimestampedEntity(Protocol):
     """Protocol for entities with automatic timestamps."""
-    
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
+
+    created_at: datetime | None
+    updated_at: datetime | None
 
 
 # Protocol for versioned entities
 @runtime_checkable
 class VersionedEntity(Protocol):
     """Protocol for entities with version control."""
-    
-    version: Optional[str]
-    last_modified_by: Optional[str]
+
+    version: str | None
+    last_modified_by: str | None
 
 
 class IBaseRepository(ABC, Generic[EntityType]):
@@ -154,7 +155,7 @@ class IBaseRepository(ABC, Generic[EntityType]):
                 pass
         ```
     """
-    
+
     # Core CRUD operations with enhanced type safety
     @abstractmethod
     async def create(self, entity: EntityType) -> EntityType:
@@ -179,16 +180,16 @@ class IBaseRepository(ABC, Generic[EntityType]):
             - Validation performed if entity implements ValidatableEntity protocol
         """
         pass
-    
+
     @overload
-    async def get_by_id(self, id: UUID) -> Optional[EntityType]: ...
+    async def get_by_id(self, id: UUID) -> EntityType | None: ...
     @overload
-    async def get_by_id(self, id: str) -> Optional[EntityType]: ...
+    async def get_by_id(self, id: str) -> EntityType | None: ...
     @overload
-    async def get_by_id(self, id: int) -> Optional[EntityType]: ...
-    
+    async def get_by_id(self, id: int) -> EntityType | None: ...
+
     @abstractmethod
-    async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[EntityType]:
+    async def get_by_id(self, id: str | UUID | int) -> EntityType | None:
         """
         Retrieve an entity by its unique identifier with type safety.
         
@@ -209,16 +210,16 @@ class IBaseRepository(ABC, Generic[EntityType]):
             - None return indicates entity not found (not an error condition)
         """
         pass
-    
+
     @abstractmethod
     async def update(
-        self, 
-        id: Union[str, UUID, int], 
-        data: Dict[str, Any],
+        self,
+        id: str | UUID | int,
+        data: dict[str, Any],
         *,
         validate: bool = True,
         ignore_missing: bool = False
-    ) -> Optional[EntityType]:
+    ) -> EntityType | None:
         """
         Update an existing entity with validation and concurrency control.
         
@@ -244,9 +245,9 @@ class IBaseRepository(ABC, Generic[EntityType]):
             - Automatically updates updated_at timestamp if supported
         """
         pass
-    
+
     @abstractmethod
-    async def delete(self, id: Union[str, UUID, int], *, soft_delete: bool = False) -> bool:
+    async def delete(self, id: str | UUID | int, *, soft_delete: bool = False) -> bool:
         """
         Delete an entity with support for soft deletion.
         
@@ -267,37 +268,37 @@ class IBaseRepository(ABC, Generic[EntityType]):
             - Soft delete preserves referential integrity when supported
         """
         pass
-    
+
     # Enhanced list method with comprehensive filtering and ordering
     @overload
     async def list(
         self,
         *,
-        filters: Optional[Dict[str, Any]] = None,
-        pagination: Optional[PaginationParams] = None,
-        ordering: Optional[List[OrderingField]] = None,
+        filters: dict[str, Any] | None = None,
+        pagination: PaginationParams | None = None,
+        ordering: builtins.list[OrderingField] | None = None,
         return_total_count: Literal[False] = False
-    ) -> List[EntityType]: ...
-    
+    ) -> builtins.list[EntityType]: ...
+
     @overload
     async def list(
         self,
         *,
-        filters: Optional[Dict[str, Any]] = None,
-        pagination: Optional[PaginationParams] = None,
-        ordering: Optional[List[OrderingField]] = None,
+        filters: dict[str, Any] | None = None,
+        pagination: PaginationParams | None = None,
+        ordering: builtins.list[OrderingField] | None = None,
         return_total_count: Literal[True]
     ) -> PaginatedResult[EntityType]: ...
-    
+
     @abstractmethod
     async def list(
-        self, 
+        self,
         *,
-        filters: Optional[Dict[str, Any]] = None,
-        pagination: Optional[PaginationParams] = None,
-        ordering: Optional[List[OrderingField]] = None,
+        filters: dict[str, Any] | None = None,
+        pagination: PaginationParams | None = None,
+        ordering: builtins.list[OrderingField] | None = None,
         return_total_count: bool = False
-    ) -> Union[List[EntityType], PaginatedResult[EntityType]]:
+    ) -> builtins.list[EntityType] | PaginatedResult[EntityType]:
         """
         List entities with advanced filtering, pagination, and guaranteed ordering.
         
@@ -322,13 +323,13 @@ class IBaseRepository(ABC, Generic[EntityType]):
             - Deterministic ordering ensures consistent pagination
         """
         pass
-    
+
     @abstractmethod
     async def count(
-        self, 
-        filters: Optional[Dict[str, Any]] = None,
+        self,
+        filters: dict[str, Any] | None = None,
         *,
-        distinct_field: Optional[str] = None
+        distinct_field: str | None = None
     ) -> int:
         """
         Count entities with optional distinct counting.
@@ -351,13 +352,13 @@ class IBaseRepository(ABC, Generic[EntityType]):
             - Distinct counting validates field existence
         """
         pass
-    
+
     @abstractmethod
     async def exists(
-        self, 
-        id: Union[str, UUID, int],
+        self,
+        id: str | UUID | int,
         *,
-        additional_filters: Optional[Dict[str, Any]] = None
+        additional_filters: dict[str, Any] | None = None
     ) -> bool:
         """
         Check entity existence with optional additional conditions.
@@ -379,11 +380,11 @@ class IBaseRepository(ABC, Generic[EntityType]):
             - Additional filters follow same validation as list()
         """
         pass
-    
+
     # Batch operations with detailed error tracking
     @abstractmethod
     async def create_batch(
-        self, 
+        self,
         entities: Sequence[EntityType],
         *,
         batch_size: int = 100,
@@ -414,11 +415,11 @@ class IBaseRepository(ABC, Generic[EntityType]):
             - Successful entities guaranteed to have IDs populated
         """
         pass
-    
+
     @abstractmethod
     async def update_batch(
-        self, 
-        updates: Sequence[Dict[str, Any]],
+        self,
+        updates: Sequence[dict[str, Any]],
         *,
         batch_size: int = 100,
         validate_updates: bool = True
@@ -445,11 +446,11 @@ class IBaseRepository(ABC, Generic[EntityType]):
             - Returns typed entities with updated fields
         """
         pass
-    
+
     @abstractmethod
     async def delete_batch(
-        self, 
-        ids: Sequence[Union[str, UUID, int]],
+        self,
+        ids: Sequence[str | UUID | int],
         *,
         batch_size: int = 100,
         soft_delete: bool = False

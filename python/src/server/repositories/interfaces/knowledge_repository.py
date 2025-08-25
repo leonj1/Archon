@@ -11,13 +11,12 @@ for knowledge management, vector similarity search, and batch processing.
 """
 
 from abc import abstractmethod
-from typing import List, Optional, Dict, Any, Union
-from uuid import UUID
+from typing import Any
 
 from .base_repository import IBaseRepository
 
 
-class ISourceRepository(IBaseRepository[Dict[str, Any]]):
+class ISourceRepository(IBaseRepository[dict[str, Any]]):
     """
     Repository interface for archon_sources table.
     
@@ -36,9 +35,9 @@ class ISourceRepository(IBaseRepository[Dict[str, Any]]):
     - created_at (timestamp): Creation timestamp
     - updated_at (timestamp): Last update timestamp
     """
-    
+
     @abstractmethod
-    async def get_by_source_id(self, source_id: str) -> Optional[Dict[str, Any]]:
+    async def get_by_source_id(self, source_id: str) -> dict[str, Any] | None:
         """
         Retrieve a source by its unique source_id.
         
@@ -52,15 +51,15 @@ class ISourceRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def update_crawl_status(
-        self, 
-        source_id: str, 
+        self,
+        source_id: str,
         status: str,
-        pages_crawled: Optional[int] = None,
-        total_pages: Optional[int] = None
-    ) -> Optional[Dict[str, Any]]:
+        pages_crawled: int | None = None,
+        total_pages: int | None = None
+    ) -> dict[str, Any] | None:
         """
         Update crawling status and progress for a source.
         
@@ -77,13 +76,13 @@ class ISourceRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If update fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def update_metadata(
-        self, 
-        source_id: str, 
-        metadata: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        self,
+        source_id: str,
+        metadata: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Update or merge metadata for a source.
         
@@ -98,9 +97,9 @@ class ISourceRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If update fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_by_status(self, status: str) -> List[Dict[str, Any]]:
+    async def get_by_status(self, status: str) -> list[dict[str, Any]]:
         """
         Retrieve all sources with a specific crawling status.
         
@@ -114,9 +113,9 @@ class ISourceRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_by_type(self, source_type: str) -> List[Dict[str, Any]]:
+    async def get_by_type(self, source_type: str) -> list[dict[str, Any]]:
         """
         Retrieve all sources of a specific type.
         
@@ -130,9 +129,9 @@ class ISourceRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_crawl_statistics(self) -> Dict[str, Any]:
+    async def get_crawl_statistics(self) -> dict[str, Any]:
         """
         Get aggregated crawling statistics across all sources.
         
@@ -149,7 +148,7 @@ class ISourceRepository(IBaseRepository[Dict[str, Any]]):
         pass
 
 
-class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
+class IDocumentRepository(IBaseRepository[dict[str, Any]]):
     """
     Repository interface for archon_crawled_pages table.
     
@@ -166,9 +165,9 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
     - embedding (vector): Vector embedding for semantic search
     - created_at (timestamp): Creation timestamp
     """
-    
+
     @abstractmethod
-    async def create_batch(self, documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def create_batch(self, documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Create multiple document chunks in a single batch operation.
         
@@ -183,15 +182,15 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
             ValidationError: If any document in the batch is invalid
         """
         pass
-    
+
     @abstractmethod
     async def vector_search(
         self,
-        embedding: List[float],
+        embedding: list[float],
         limit: int = 10,
-        source_filter: Optional[str] = None,
-        metadata_filter: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+        source_filter: str | None = None,
+        metadata_filter: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Perform vector similarity search using cosine similarity.
         
@@ -209,17 +208,17 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If vector search fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def hybrid_search(
         self,
         query: str,
-        embedding: List[float],
+        embedding: list[float],
         limit: int = 10,
-        source_filter: Optional[str] = None,
+        source_filter: str | None = None,
         keyword_weight: float = 0.5,
         vector_weight: float = 0.5
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Perform hybrid search combining keyword and vector similarity.
         
@@ -239,14 +238,14 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
             ValidationError: If weights don't sum to 1.0
         """
         pass
-    
+
     @abstractmethod
     async def get_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        limit: int | None = None,
+        offset: int | None = None
+    ) -> list[dict[str, Any]]:
         """
         Retrieve all document chunks for a specific source.
         
@@ -262,9 +261,9 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_by_url(self, url: str) -> List[Dict[str, Any]]:
+    async def get_by_url(self, url: str) -> list[dict[str, Any]]:
         """
         Retrieve all document chunks for a specific URL.
         
@@ -278,7 +277,7 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def delete_by_source(self, source_id: str) -> int:
         """
@@ -294,7 +293,7 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If deletion fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def delete_by_url(self, url: str) -> int:
         """
@@ -310,9 +309,9 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If deletion fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_content_statistics(self) -> Dict[str, Any]:
+    async def get_content_statistics(self) -> dict[str, Any]:
         """
         Get aggregated content statistics.
         
@@ -327,14 +326,14 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If aggregation fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def search_content(
         self,
         query: str,
         limit: int = 10,
-        source_filter: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        source_filter: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         Perform full-text search on document content.
         
@@ -352,7 +351,7 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
         pass
 
 
-class ICodeExampleRepository(IBaseRepository[Dict[str, Any]]):
+class ICodeExampleRepository(IBaseRepository[dict[str, Any]]):
     """
     Repository interface for archon_code_examples table.
     
@@ -369,9 +368,9 @@ class ICodeExampleRepository(IBaseRepository[Dict[str, Any]]):
     - metadata (JSONB): Code-specific metadata (function names, classes, etc.)
     - created_at (timestamp): Creation timestamp
     """
-    
+
     @abstractmethod
-    async def create_batch(self, code_examples: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def create_batch(self, code_examples: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Create multiple code examples in a single batch operation.
         
@@ -386,14 +385,14 @@ class ICodeExampleRepository(IBaseRepository[Dict[str, Any]]):
             ValidationError: If any code example in the batch is invalid
         """
         pass
-    
+
     @abstractmethod
     async def search_by_summary(
         self,
         query: str,
         limit: int = 5,
-        source_filter: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        source_filter: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         Search code examples by summary using full-text search.
         
@@ -409,14 +408,14 @@ class ICodeExampleRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If search fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def get_by_language(
         self,
         language: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        limit: int | None = None,
+        offset: int | None = None
+    ) -> list[dict[str, Any]]:
         """
         Retrieve code examples by programming language.
         
@@ -432,14 +431,14 @@ class ICodeExampleRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def get_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        limit: int | None = None,
+        offset: int | None = None
+    ) -> list[dict[str, Any]]:
         """
         Retrieve all code examples for a specific source.
         
@@ -455,13 +454,13 @@ class ICodeExampleRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def search_by_metadata(
         self,
-        metadata_query: Dict[str, Any],
+        metadata_query: dict[str, Any],
         limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Search code examples by metadata criteria.
         
@@ -476,9 +475,9 @@ class ICodeExampleRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If metadata search fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_languages(self) -> List[str]:
+    async def get_languages(self) -> list[str]:
         """
         Get all distinct programming languages found in code examples.
         
@@ -489,7 +488,7 @@ class ICodeExampleRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def delete_by_source(self, source_id: str) -> int:
         """
@@ -505,9 +504,9 @@ class ICodeExampleRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If deletion fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_code_statistics(self) -> Dict[str, Any]:
+    async def get_code_statistics(self) -> dict[str, Any]:
         """
         Get aggregated code example statistics.
         
@@ -522,14 +521,14 @@ class ICodeExampleRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If aggregation fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def search_code_content(
         self,
         query: str,
-        language_filter: Optional[str] = None,
+        language_filter: str | None = None,
         limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Perform full-text search on code block content.
         

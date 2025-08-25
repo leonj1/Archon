@@ -27,66 +27,46 @@ Usage:
     ```
 """
 
-from .base_repository import IBaseRepository
-from .unit_of_work import (
-    IUnitOfWork,
-    ITransactionContext,
-    TransactionError,
-    SavepointError,
-    NestedTransactionError
-)
+# Type variable re-export for convenience
+from .base_repository import EntityType, IBaseRepository
 
 # Knowledge base repository interfaces
-from .knowledge_repository import (
-    ISourceRepository,
-    IDocumentRepository,
-    ICodeExampleRepository
-)
+from .knowledge_repository import ICodeExampleRepository, IDocumentRepository, ISourceRepository
 
 # Project management repository interfaces
-from .project_repository import (
-    IProjectRepository,
-    ITaskRepository,
-    IVersionRepository,
-    TaskStatus
-)
+from .project_repository import IProjectRepository, ITaskRepository, IVersionRepository, TaskStatus
 
 # Settings and configuration repository interfaces
-from .settings_repository import (
-    ISettingsRepository,
-    IPromptRepository
-)
-
-# Type variable re-export for convenience
-from .base_repository import EntityType
+from .settings_repository import IPromptRepository, ISettingsRepository
+from .unit_of_work import ITransactionContext, IUnitOfWork, NestedTransactionError, SavepointError, TransactionError
 
 __all__ = [
     # Base interfaces
     "IBaseRepository",
-    "IUnitOfWork", 
+    "IUnitOfWork",
     "ITransactionContext",
-    
+
     # Knowledge base interfaces
     "ISourceRepository",
-    "IDocumentRepository", 
+    "IDocumentRepository",
     "ICodeExampleRepository",
-    
+
     # Project management interfaces
     "IProjectRepository",
     "ITaskRepository",
     "IVersionRepository",
     "TaskStatus",
-    
+
     # Settings interfaces
     "ISettingsRepository",
     "IPromptRepository",
-    
+
     # Type variables
     "EntityType",
-    
+
     # Exceptions
     "TransactionError",
-    "SavepointError", 
+    "SavepointError",
     "NestedTransactionError"
 ]
 

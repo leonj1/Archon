@@ -10,13 +10,12 @@ for configuration management, encryption/decryption, and prompt versioning.
 """
 
 from abc import abstractmethod
-from typing import List, Optional, Dict, Any, Union
-from uuid import UUID
+from typing import Any
 
 from .base_repository import IBaseRepository
 
 
-class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
+class ISettingsRepository(IBaseRepository[dict[str, Any]]):
     """
     Repository interface for archon_settings table.
     
@@ -36,9 +35,9 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
     - created_at (timestamp): Creation timestamp
     - updated_at (timestamp): Last update timestamp
     """
-    
+
     @abstractmethod
-    async def get_by_key(self, key: str) -> Optional[Dict[str, Any]]:
+    async def get_by_key(self, key: str) -> dict[str, Any] | None:
         """
         Retrieve a setting by its unique key.
         
@@ -52,9 +51,9 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_by_category(self, category: str) -> List[Dict[str, Any]]:
+    async def get_by_category(self, category: str) -> list[dict[str, Any]]:
         """
         Retrieve all settings within a specific category.
         
@@ -68,19 +67,19 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def upsert(
         self,
         key: str,
         value: str,
         category: str = "general",
-        description: Optional[str] = None,
+        description: str | None = None,
         encrypted: bool = False,
         user_configurable: bool = True,
-        default_value: Optional[str] = None,
-        validation_regex: Optional[str] = None
-    ) -> Dict[str, Any]:
+        default_value: str | None = None,
+        validation_regex: str | None = None
+    ) -> dict[str, Any]:
         """
         Insert or update a setting with the given key.
         
@@ -103,9 +102,9 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             EncryptionError: If encryption fails for encrypted settings
         """
         pass
-    
+
     @abstractmethod
-    async def get_decrypted(self, key: str) -> Optional[str]:
+    async def get_decrypted(self, key: str) -> str | None:
         """
         Retrieve and decrypt a setting value by key.
         
@@ -120,14 +119,14 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             DecryptionError: If decryption fails for encrypted settings
         """
         pass
-    
+
     @abstractmethod
     async def set_encrypted(
         self,
         key: str,
         value: str,
         category: str = "credentials"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Store an encrypted setting value.
         
@@ -144,9 +143,9 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             EncryptionError: If encryption fails
         """
         pass
-    
+
     @abstractmethod
-    async def get_user_configurable(self) -> List[Dict[str, Any]]:
+    async def get_user_configurable(self) -> list[dict[str, Any]]:
         """
         Retrieve all settings that users can configure.
         
@@ -157,9 +156,9 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_defaults(self) -> Dict[str, str]:
+    async def get_defaults(self) -> dict[str, str]:
         """
         Get default values for all settings.
         
@@ -170,9 +169,9 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def reset_to_default(self, key: str) -> Optional[Dict[str, Any]]:
+    async def reset_to_default(self, key: str) -> dict[str, Any] | None:
         """
         Reset a setting to its default value.
         
@@ -186,7 +185,7 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If reset fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def validate_setting(self, key: str, value: str) -> bool:
         """
@@ -203,9 +202,9 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If validation check fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_categories(self) -> List[str]:
+    async def get_categories(self) -> list[str]:
         """
         Get all distinct setting categories.
         
@@ -216,13 +215,13 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def bulk_update_category(
         self,
         category: str,
-        updates: Dict[str, str]
-    ) -> List[Dict[str, Any]]:
+        updates: dict[str, str]
+    ) -> list[dict[str, Any]]:
         """
         Update multiple settings within a category.
         
@@ -238,13 +237,13 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             ValidationError: If any value fails validation
         """
         pass
-    
+
     @abstractmethod
     async def export_settings(
         self,
-        category_filter: Optional[str] = None,
+        category_filter: str | None = None,
         include_encrypted: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Export settings for backup or transfer.
         
@@ -259,13 +258,13 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If export fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def import_settings(
         self,
-        settings_data: Dict[str, Any],
+        settings_data: dict[str, Any],
         overwrite_existing: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Import settings from exported data.
         
@@ -283,7 +282,7 @@ class ISettingsRepository(IBaseRepository[Dict[str, Any]]):
         pass
 
 
-class IPromptRepository(IBaseRepository[Dict[str, Any]]):
+class IPromptRepository(IBaseRepository[dict[str, Any]]):
     """
     Repository interface for archon_prompts table.
     
@@ -305,9 +304,9 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
     - created_at (timestamp): Creation timestamp
     - updated_at (timestamp): Last update timestamp
     """
-    
+
     @abstractmethod
-    async def get_by_name(self, name: str, version: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    async def get_by_name(self, name: str, version: str | None = None) -> dict[str, Any] | None:
         """
         Retrieve a prompt by name and optional version.
         
@@ -322,9 +321,9 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_by_category(self, category: str) -> List[Dict[str, Any]]:
+    async def get_by_category(self, category: str) -> list[dict[str, Any]]:
         """
         Retrieve all active prompts within a specific category.
         
@@ -338,7 +337,7 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def create_version(
         self,
@@ -346,12 +345,12 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
         title: str,
         content: str,
         category: str = "general",
-        version: Optional[str] = None,
-        variables: Optional[List[Dict[str, Any]]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        version: str | None = None,
+        variables: list[dict[str, Any]] | None = None,
+        metadata: dict[str, Any] | None = None,
         created_by: str = "system",
         is_active: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create a new version of a prompt.
         
@@ -374,9 +373,9 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             ValidationError: If prompt content or variables are invalid
         """
         pass
-    
+
     @abstractmethod
-    async def set_active_version(self, name: str, version: str) -> Optional[Dict[str, Any]]:
+    async def set_active_version(self, name: str, version: str) -> dict[str, Any] | None:
         """
         Set the active version for a prompt name.
         
@@ -391,9 +390,9 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If update fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_versions(self, name: str) -> List[Dict[str, Any]]:
+    async def get_versions(self, name: str) -> list[dict[str, Any]]:
         """
         Get all versions of a prompt ordered by creation date.
         
@@ -407,13 +406,13 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def render_prompt(
         self,
         name: str,
-        variables: Dict[str, Any],
-        version: Optional[str] = None
+        variables: dict[str, Any],
+        version: str | None = None
     ) -> str:
         """
         Render a prompt template with provided variables.
@@ -431,14 +430,14 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             TemplateError: If template rendering fails due to missing variables
         """
         pass
-    
+
     @abstractmethod
     async def validate_variables(
         self,
         name: str,
-        variables: Dict[str, Any],
-        version: Optional[str] = None
-    ) -> Dict[str, Any]:
+        variables: dict[str, Any],
+        version: str | None = None
+    ) -> dict[str, Any]:
         """
         Validate provided variables against prompt requirements.
         
@@ -454,9 +453,9 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If prompt retrieval fails
         """
         pass
-    
+
     @abstractmethod
-    async def get_user_prompts(self) -> List[Dict[str, Any]]:
+    async def get_user_prompts(self) -> list[dict[str, Any]]:
         """
         Retrieve all user-created (non-system) prompts.
         
@@ -467,7 +466,7 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def clone_prompt(
         self,
@@ -475,7 +474,7 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
         new_name: str,
         new_title: str,
         created_by: str = "user"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Clone an existing prompt to create a new prompt.
         
@@ -493,14 +492,14 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             EntityNotFoundError: If source prompt doesn't exist
         """
         pass
-    
+
     @abstractmethod
     async def update_metadata(
         self,
         name: str,
         version: str,
-        metadata_updates: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        metadata_updates: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Update metadata for a specific prompt version.
         
@@ -516,9 +515,9 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If update fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_categories(self) -> List[str]:
+    async def get_categories(self) -> list[str]:
         """
         Get all distinct prompt categories.
         
@@ -529,14 +528,14 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If query fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def search_prompts(
         self,
         query: str,
-        category_filter: Optional[str] = None,
+        category_filter: str | None = None,
         limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Search prompts by title and content.
         
@@ -552,9 +551,9 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If search fails due to database errors
         """
         pass
-    
+
     @abstractmethod
-    async def get_prompt_usage_stats(self, name: str) -> Dict[str, Any]:
+    async def get_prompt_usage_stats(self, name: str) -> dict[str, Any]:
         """
         Get usage statistics for a prompt.
         
@@ -568,7 +567,7 @@ class IPromptRepository(IBaseRepository[Dict[str, Any]]):
             RepositoryError: If stats retrieval fails due to database errors
         """
         pass
-    
+
     @abstractmethod
     async def delete_version(self, name: str, version: str) -> bool:
         """
