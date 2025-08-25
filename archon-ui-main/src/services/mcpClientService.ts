@@ -321,6 +321,7 @@ export class MCPClientService {
 
   /**
    * Connect to multiple clients at once
+   * Uses Promise.allSettled to attempt all connections and return individual results
    */
   async connectMultipleClients(clientIds: string[]): Promise<Array<{ clientId: string; success: boolean; message: string }>> {
     const results = await Promise.allSettled(
@@ -346,34 +347,39 @@ export class MCPClientService {
   }
 
   /**
-   * Get status for all clients
+   * Get status for all clients with improved error handling
    */
   async getAllClientStatuses(): Promise<Array<{ client: MCPClient; status: ClientStatus }>> {
     const clients = await this.getClients();
     
-    const statuses = await Promise.allSettled(
-      clients.map(async (client) => {
-        try {
-          const status = await this.getClientStatus(client.id);
-          return { client, status };
-        } catch (error) {
-          return {
-            client,
-            status: {
-              client_id: client.id,
-              status: 'error',
-              last_seen: null,
-              last_error: error instanceof Error ? error.message : 'Unknown error',
-              is_active: false
-            }
-          };
-        }
-      })
-    );
-
-    return statuses.map((result) =>
-      result.status === 'fulfilled' ? result.value : result.reason
-    );
+    try {
+      const statuses = await Promise.all(
+        clients.map(async (client): Promise<{ client: MCPClient; status: ClientStatus }> => {
+          try {
+            const status = await this.getClientStatus(client.id);
+            return { client, status };
+          } catch (error) {
+            // Return error status instead of throwing
+            return {
+              client,
+              status: {
+                client_id: client.id,
+                status: 'error',
+                last_seen: null,
+                last_error: error instanceof Error ? error.message : 'Unknown error',
+                is_active: false
+              }
+            };
+          }
+        })
+      );
+      
+      return statuses;
+    } catch (error) {
+      throw new Error(
+        `Failed to get client statuses: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
   }
 
   /**

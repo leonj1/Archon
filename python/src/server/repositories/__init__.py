@@ -37,7 +37,7 @@ from .interfaces import (
     IUnitOfWork,
     NestedTransactionError,
     SavepointError,
-    T,
+    EntityType,
     TransactionError,
 )
 
@@ -48,7 +48,7 @@ __all__ = [
     "ITransactionContext",
 
     # Type variables
-    "T",
+    "EntityType",
 
     # Exceptions
     "TransactionError",

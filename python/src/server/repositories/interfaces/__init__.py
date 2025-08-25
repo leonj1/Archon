@@ -58,7 +58,7 @@ from .settings_repository import (
 )
 
 # Type variable re-export for convenience
-from .base_repository import T
+from .base_repository import EntityType
 
 __all__ = [
     # Base interfaces
@@ -82,7 +82,7 @@ __all__ = [
     "IPromptRepository",
     
     # Type variables
-    "T",
+    "EntityType",
     
     # Exceptions
     "TransactionError",

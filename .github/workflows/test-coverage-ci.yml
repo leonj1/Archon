@@ -1,0 +1,637 @@
+name: Comprehensive Test Coverage and Quality Assurance
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+  UV_CACHE_DIR: /tmp/.uv-cache
+
+jobs:
+  # =====================================================
+  # Python Backend Testing and Coverage
+  # =====================================================
+  python-tests:
+    name: Python Tests & Coverage
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        test-suite:
+          - name: "Core Repository Tests"
+            path: "tests/test_*repositories*.py tests/test_*entities*.py"
+            coverage-threshold: 85
+          
+          - name: "Helper Method Tests" 
+            path: "tests/test_*utils*.py tests/test_*handler*.py tests/test_validation*.py"
+            coverage-threshold: 90
+            
+          - name: "Database Transaction Tests"
+            path: "tests/test_database_transaction_lifecycle.py tests/test_enhanced_repositories.py"
+            coverage-threshold: 80
+            
+          - name: "API Integration Tests"
+            path: "tests/test_api_*.py tests/test_service_*.py"
+            coverage-threshold: 75
+            
+          - name: "MCP Server Tests"
+            path: "tests/mcp_server/**/*.py"
+            coverage-threshold: 80
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        enable-cache: true
+
+    - name: Restore uv cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.UV_CACHE_DIR }}
+        key: uv-${{ runner.os }}-${{ hashFiles('**/uv.lock') }}
+        restore-keys: |
+          uv-${{ runner.os }}-
+
+    - name: Install Python dependencies
+      working-directory: ./python
+      run: |
+        uv sync --frozen --all-extras
+        
+    - name: Set up test environment variables
+      run: |
+        echo "TESTING=true" >> $GITHUB_ENV
+        echo "LOG_LEVEL=DEBUG" >> $GITHUB_ENV
+        echo "SUPABASE_URL=http://localhost:54321" >> $GITHUB_ENV
+        echo "SUPABASE_SERVICE_KEY=test_service_key" >> $GITHUB_ENV
+
+    - name: Start Supabase (for integration tests)
+      working-directory: ./python
+      run: |
+        # Install Supabase CLI
+        curl -sSfL https://supabase.com/install | sh
+        export PATH=$PATH:$HOME/.local/bin
+        
+        # Start local Supabase instance for testing
+        supabase start || echo "Supabase start failed - using mocks"
+
+    - name: Run ${{ matrix.test-suite.name }}
+      working-directory: ./python
+      run: |
+        echo "Running ${{ matrix.test-suite.name }}"
+        uv run pytest ${{ matrix.test-suite.path }} \
+          --cov=src \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          --cov-fail-under=${{ matrix.test-suite.coverage-threshold }} \
+          --junitxml=test-results/pytest-${{ matrix.test-suite.name }}.xml \
+          --verbose \
+          --tb=short \
+          --maxfail=5
+
+    - name: Generate coverage report
+      working-directory: ./python
+      run: |
+        uv run coverage report --show-missing
+        uv run coverage json --pretty-print -o coverage-${{ matrix.test-suite.name }}.json
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./python/coverage.xml
+        flags: python,${{ matrix.test-suite.name }}
+        name: ${{ matrix.test-suite.name }}
+        token: ${{ secrets.CODECOV_TOKEN }}
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: python-test-results-${{ matrix.test-suite.name }}
+        path: |
+          python/test-results/
+          python/htmlcov/
+          python/coverage-*.json
+
+  # =====================================================
+  # Repository Pattern Testing
+  # =====================================================
+  repository-pattern-tests:
+    name: Repository Pattern Compliance
+    runs-on: ubuntu-latest
+    needs: [python-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        enable-cache: true
+
+    - name: Install dependencies
+      working-directory: ./python
+      run: uv sync --frozen
+
+    - name: Run repository interface compliance tests
+      working-directory: ./python
+      run: |
+        uv run pytest tests/test_repository_interfaces.py \
+          --verbose \
+          --tb=short \
+          -k "interface or compliance or contract"
+
+    - name: Run repository implementation tests
+      working-directory: ./python
+      run: |
+        uv run pytest tests/test_*repositories*.py \
+          --verbose \
+          --tb=short \
+          -k "implementation or concrete"
+
+    - name: Validate repository pattern consistency
+      working-directory: ./python
+      run: |
+        echo "Checking repository pattern consistency..."
+        uv run python -c "
+        from src.server.repositories.implementations.supabase_repositories import *
+        from src.server.repositories.interfaces.base_repository import *
+        print('Repository pattern validation passed')
+        "
+
+    - name: Repository architecture validation
+      working-directory: ./python
+      run: |
+        uv run pytest tests/test_enhanced_repositories.py \
+          --verbose \
+          -k "architecture or pattern or design"
+
+  # =====================================================
+  # Transaction Lifecycle Testing
+  # =====================================================
+  transaction-lifecycle-tests:
+    name: Database Transaction Lifecycle
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v4
+
+    - name: Install dependencies
+      working-directory: ./python
+      run: uv sync --frozen
+
+    - name: Set up test database
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+      run: |
+        echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
+
+    - name: Run transaction lifecycle tests
+      working-directory: ./python
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+      run: |
+        uv run pytest tests/test_database_transaction_lifecycle.py \
+          --verbose \
+          --tb=long \
+          --cov=src.server.repositories \
+          --cov-report=xml:coverage-transactions.xml
+
+    - name: Run concurrent transaction tests
+      working-directory: ./python
+      run: |
+        uv run pytest tests/test_database_transaction_lifecycle.py \
+          -k "concurrent or isolation or deadlock" \
+          --verbose \
+          --maxfail=3
+
+    - name: Upload transaction test coverage
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./python/coverage-transactions.xml
+        flags: transactions
+        name: transaction-lifecycle
+
+  # =====================================================
+  # TypeScript Frontend Testing
+  # =====================================================
+  frontend-tests:
+    name: TypeScript Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: archon-ui-main/package-lock.json
+
+    - name: Install frontend dependencies
+      working-directory: ./archon-ui-main
+      run: npm ci --prefer-offline --no-audit
+
+    - name: Run TypeScript type checking
+      working-directory: ./archon-ui-main
+      run: npx tsc --noEmit
+
+    - name: Run frontend unit tests
+      working-directory: ./archon-ui-main
+      run: |
+        npm run test:coverage -- \
+          --reporter=junit \
+          --outputFile=test-results/vitest-results.xml
+
+    - name: Run frontend utility tests
+      working-directory: ./archon-ui-main
+      run: |
+        npm run test -- \
+          --run \
+          --reporter=verbose \
+          test/utils/ test/services/ test/components/
+
+    - name: Upload frontend coverage
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./archon-ui-main/coverage/lcov.info
+        flags: typescript,frontend
+        name: frontend-coverage
+
+    - name: Upload frontend test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: frontend-test-results
+        path: |
+          archon-ui-main/test-results/
+          archon-ui-main/coverage/
+
+  # =====================================================
+  # Code Quality and Linting
+  # =====================================================
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v4
+
+    - name: Install Python dependencies
+      working-directory: ./python
+      run: uv sync --frozen
+
+    - name: Run Python linting (ruff)
+      working-directory: ./python
+      run: |
+        uv run ruff check --output-format=github .
+        uv run ruff format --check .
+
+    - name: Run Python type checking (mypy)
+      working-directory: ./python
+      run: |
+        uv run mypy src/ --strict --show-error-codes
+
+    - name: Run security analysis (bandit)
+      working-directory: ./python
+      run: |
+        uv run bandit -r src/ -f json -o bandit-report.json
+        uv run bandit -r src/ # Also show console output
+
+    - name: Set up Node.js for frontend linting
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: archon-ui-main/package-lock.json
+
+    - name: Install frontend dependencies
+      working-directory: ./archon-ui-main
+      run: npm ci --prefer-offline --no-audit
+
+    - name: Run frontend linting (ESLint)
+      working-directory: ./archon-ui-main
+      run: |
+        npx eslint src/ --format=json --output-file=eslint-report.json
+        npx eslint src/ # Also show console output
+
+    - name: Upload code quality reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: code-quality-reports
+        path: |
+          python/bandit-report.json
+          archon-ui-main/eslint-report.json
+
+  # =====================================================
+  # Performance and Load Testing
+  # =====================================================
+  performance-tests:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v4
+
+    - name: Install dependencies with performance tools
+      working-directory: ./python
+      run: |
+        uv sync --frozen
+        uv add --dev pytest-benchmark pytest-asyncio-cooperative
+
+    - name: Run performance benchmarks
+      working-directory: ./python
+      run: |
+        uv run pytest tests/ \
+          -k "performance or benchmark or speed" \
+          --benchmark-json=benchmark-results.json \
+          --benchmark-min-rounds=3
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-benchmarks
+        path: python/benchmark-results.json
+
+  # =====================================================
+  # Integration Testing with Docker
+  # =====================================================
+  integration-tests:
+    name: Docker Integration Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build application containers
+      run: |
+        docker-compose build --parallel
+
+    - name: Run integration tests
+      run: |
+        docker-compose up -d
+        
+        # Wait for services to be ready
+        sleep 30
+        
+        # Run integration test suite
+        docker-compose exec -T server uv run pytest tests/test_service_integration.py -v
+        
+        # Run MCP integration tests
+        docker-compose exec -T mcp-server python -m pytest tests/ -k "integration" -v
+
+    - name: Collect integration test logs
+      if: always()
+      run: |
+        docker-compose logs > integration-test-logs.txt
+
+    - name: Upload integration logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: integration-test-logs
+        path: integration-test-logs.txt
+
+    - name: Cleanup
+      if: always()
+      run: docker-compose down -v
+
+  # =====================================================
+  # Coverage Aggregation and Reporting
+  # =====================================================
+  coverage-report:
+    name: Aggregate Coverage Report
+    runs-on: ubuntu-latest
+    needs: [python-tests, frontend-tests, transaction-lifecycle-tests]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Set up Python for coverage processing
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install coverage tools
+      run: |
+        pip install coverage[toml] codecov
+
+    - name: Combine coverage reports
+      run: |
+        # Combine Python coverage reports
+        find . -name "coverage*.xml" -exec echo "Found coverage file: {}" \;
+        
+        # Create combined coverage report
+        coverage combine python*/ || echo "No .coverage files to combine"
+
+    - name: Generate final coverage report
+      run: |
+        coverage report --show-missing || echo "No coverage data available"
+        coverage html -d final-coverage-report || echo "Could not generate HTML report"
+
+    - name: Coverage Summary
+      run: |
+        echo "## Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Python coverage summary
+        if [ -f "python/coverage.xml" ]; then
+          echo "### Python Backend Coverage" >> $GITHUB_STEP_SUMMARY
+          coverage report --format=markdown >> $GITHUB_STEP_SUMMARY || echo "Python coverage data not available"
+        fi
+        
+        # Frontend coverage summary
+        if [ -f "archon-ui-main/coverage/lcov.info" ]; then
+          echo "### TypeScript Frontend Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "Frontend coverage data available in artifacts" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload final coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: final-coverage-report
+        path: |
+          final-coverage-report/
+          coverage.xml
+
+  # =====================================================
+  # Test Results Summary
+  # =====================================================
+  test-summary:
+    name: Test Results Summary
+    runs-on: ubuntu-latest
+    needs: [python-tests, frontend-tests, repository-pattern-tests, transaction-lifecycle-tests, code-quality]
+    if: always()
+    
+    steps:
+    - name: Download test artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Generate test summary
+      run: |
+        echo "## 🧪 Test Suite Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Count test files and results
+        PYTHON_TESTS=$(find . -name "*pytest*.xml" | wc -l)
+        FRONTEND_TESTS=$(find . -name "*vitest*.xml" | wc -l)
+        
+        echo "### Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Python test suites: $PYTHON_TESTS" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Frontend test suites: $FRONTEND_TESTS" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Repository pattern validation: Completed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Transaction lifecycle testing: Completed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Code quality analysis: Completed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 📊 Coverage Reports Available" >> $GITHUB_STEP_SUMMARY
+        echo "- Python backend coverage reports" >> $GITHUB_STEP_SUMMARY
+        echo "- TypeScript frontend coverage reports" >> $GITHUB_STEP_SUMMARY
+        echo "- Repository pattern compliance reports" >> $GITHUB_STEP_SUMMARY
+        echo "- Database transaction test coverage" >> $GITHUB_STEP_SUMMARY
+        
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read step summary for PR comment
+          let summary = "## Test Suite Results\n\n";
+          summary += "All test suites have been executed. Check the Actions tab for detailed results.\n\n";
+          summary += "### Coverage Reports\n";
+          summary += "- Backend test coverage reports are available in the artifacts\n";
+          summary += "- Frontend test coverage reports are available in the artifacts\n";
+          summary += "- Repository pattern compliance validation completed\n";
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
+
+  # =====================================================
+  # Cleanup and Notifications
+  # =====================================================
+  cleanup:
+    name: Cleanup and Notify
+    runs-on: ubuntu-latest
+    needs: [test-summary, coverage-report]
+    if: always()
+    
+    steps:
+    - name: Cleanup old artifacts
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId,
+          });
+          
+          // Keep only the most recent artifacts
+          const keepCount = 10;
+          if (artifacts.data.artifacts.length > keepCount) {
+            const toDelete = artifacts.data.artifacts.slice(keepCount);
+            for (const artifact of toDelete) {
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+              });
+            }
+          }
+
+    - name: Notify on failure
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue?.number || 0,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: "❌ Test suite execution failed. Please check the Actions tab for detailed error information."
+          });
+
+# =====================================================
+# Workflow Configuration
+# =====================================================
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true

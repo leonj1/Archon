@@ -1,9 +1,10 @@
 """
-Concrete Supabase repository implementations.
+Concrete Supabase repository implementations with enhanced type safety.
 
 This module contains all concrete repository implementations using Supabase
 for data persistence. Each repository class implements the corresponding
-interface and handles Supabase-specific operations.
+interface with comprehensive type checking, validation, error handling,
+and ordering guarantees.
 """
 
 import asyncio
@@ -11,11 +12,21 @@ import logging
 import re
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Sequence, Literal, overload
 from uuid import UUID
 
 from supabase import Client
 
+from ..exceptions import (
+    RepositoryError, ValidationError, EntityNotFoundError, 
+    DuplicateEntityError, DatabaseConnectionError, DatabaseOperationError,
+    QueryError, ConstraintViolationError, BatchOperationError
+)
+from ..validation import RepositoryValidator
+from ..interfaces.base_repository import (
+    SortDirection, OrderingField, PaginationParams, 
+    OperationResult, PaginatedResult
+)
 from ..interfaces.knowledge_repository import (
     ICodeExampleRepository, 
     IDocumentRepository, 
@@ -34,57 +45,215 @@ from ..interfaces.settings_repository import (
 
 
 class SupabaseSourceRepository(ISourceRepository):
-    """Supabase implementation of source repository for archon_sources table."""
+    """
+    Enhanced Supabase implementation of source repository with comprehensive type safety,
+    validation, error handling, and ordering guarantees.
+    """
+    
+    # Valid fields for filtering and ordering
+    VALID_FIELDS = [
+        'id', 'source_id', 'source_type', 'base_url', 'title', 'summary',
+        'crawl_status', 'total_pages', 'pages_crawled', 'total_word_count',
+        'metadata', 'created_at', 'updated_at'
+    ]
+    
+    # Required fields for creation
+    REQUIRED_FIELDS = ['source_id', 'source_type']
+    
+    # Default ordering for deterministic results
+    DEFAULT_ORDERING = [
+        {'field': 'updated_at', 'direction': SortDirection.DESC},
+        {'field': 'id', 'direction': SortDirection.ASC}
+    ]
     
     def __init__(self, client: Client):
-        """Initialize with Supabase client."""
+        """Initialize with Supabase client and validator."""
         self._client = client
         self._table = 'archon_sources'
         self._logger = logging.getLogger(__name__)
+        self._validator = RepositoryValidator()
     
     async def create(self, entity: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a new source record."""
+        """
+        Create a new source record with comprehensive validation and error handling.
+        
+        Args:
+            entity: Source data dictionary with required fields
+            
+        Returns:
+            Created source with populated ID and timestamps
+            
+        Raises:
+            ValidationError: If entity data is invalid
+            DuplicateEntityError: If source_id already exists
+            DatabaseOperationError: If database operation fails
+        """
+        operation = "create_source"
+        
         try:
-            response = self._client.table(self._table).insert(entity).execute()
-            if response.data:
-                return response.data[0]
-            else:
-                raise Exception("No data returned from insert operation")
+            # Validate entity data
+            validated_entity = self._validator.validate_entity_data(
+                entity, 
+                required_fields=self.REQUIRED_FIELDS,
+                operation="create"
+            )
+            
+            # Add timestamps
+            now = datetime.utcnow()
+            validated_entity.update({
+                'created_at': now.isoformat(),
+                'updated_at': now.isoformat()
+            })
+            
+            # Execute database operation
+            response = self._client.table(self._table).insert(validated_entity).execute()
+            
+            if not response.data:
+                raise DatabaseOperationError(
+                    "No data returned from insert operation",
+                    operation=operation,
+                    entity_type="Source"
+                )
+            
+            created_entity = response.data[0]
+            self._logger.info(f"Created source with ID: {created_entity.get('id')}")
+            return created_entity
+            
+        except ValidationError:
+            # Re-raise validation errors as-is
+            raise
         except Exception as e:
             self._logger.exception(f"Failed to create source: {e}")
-            raise
-    
-    async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[Dict[str, Any]]:
-        """Retrieve source by ID with retry logic and async execution."""
-        max_retries = 3
-        base_delay = 0.5  # Starting delay in seconds
-        
-        for attempt in range(max_retries):
-            try:
-                # Run blocking Supabase call in thread pool
-                response = await asyncio.to_thread(
-                    lambda: self._client.table(self._table).select('*').eq('id', str(id)).execute()
+            
+            # Check for duplicate key violations
+            if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
+                raise DuplicateEntityError(
+                    f"Source with source_id '{entity.get('source_id')}' already exists",
+                    conflicting_fields=['source_id'],
+                    operation=operation,
+                    entity_type="Source",
+                    original_error=e
                 )
-                return response.data[0] if response.data else None
-                
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    # Last attempt failed, log with full stack trace and re-raise
-                    self._logger.error(
-                        f"Failed to get source by ID {id} after {max_retries} attempts: {e}", 
-                        exc_info=True
-                    )
-                    raise
-                else:
-                    # Calculate exponential backoff delay
-                    delay = base_delay * (2 ** attempt)
-                    self._logger.warning(
-                        f"Attempt {attempt + 1}/{max_retries} failed for source ID {id}: {e}. "
-                        f"Retrying in {delay}s..."
-                    )
-                    await asyncio.sleep(delay)
+            
+            # Handle connection errors
+            if "connection" in str(e).lower() or "timeout" in str(e).lower():
+                raise DatabaseConnectionError(
+                    f"Database connection failed during source creation: {e}",
+                    operation=operation,
+                    original_error=e
+                )
+            
+            # Generic database error
+            raise DatabaseOperationError(
+                f"Database operation failed: {e}",
+                operation=operation,
+                entity_type="Source",
+                original_error=e
+            )
+    
+    @overload
+    async def get_by_id(self, id: UUID) -> Optional[Dict[str, Any]]: ...
+    @overload 
+    async def get_by_id(self, id: str) -> Optional[Dict[str, Any]]: ...
+    @overload
+    async def get_by_id(self, id: int) -> Optional[Dict[str, Any]]: ...
         
-        return None
+    async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve source by ID with comprehensive validation, retry logic, and error handling.
+        
+        Args:
+            id: Source ID (UUID, string, or integer)
+            
+        Returns:
+            Source record if found, None if not found
+            
+        Raises:
+            ValidationError: If ID format is invalid
+            DatabaseConnectionError: If database connection fails
+            DatabaseOperationError: If database query fails
+        """
+        operation = "get_source_by_id"
+        
+        try:
+            # Validate ID format
+            validated_id = self._validator.validate_id(id, "source_id")
+            
+            # Retry logic for resilient database access
+            max_retries = 3
+            base_delay = 0.5
+            
+            for attempt in range(max_retries):
+                try:
+                    # Execute database query
+                    response = await asyncio.to_thread(
+                        lambda: self._client.table(self._table)
+                        .select('*')
+                        .eq('id', str(validated_id))
+                        .execute()
+                    )
+                    
+                    result = response.data[0] if response.data else None
+                    
+                    if result:
+                        self._logger.debug(f"Retrieved source with ID: {validated_id}")
+                    else:
+                        self._logger.debug(f"Source not found with ID: {validated_id}")
+                    
+                    return result
+                    
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        # Last attempt failed
+                        self._logger.error(
+                            f"Failed to get source by ID {validated_id} after {max_retries} attempts: {e}",
+                            exc_info=True
+                        )
+                        
+                        # Classify error type
+                        if "connection" in str(e).lower() or "timeout" in str(e).lower():
+                            raise DatabaseConnectionError(
+                                f"Database connection failed after {max_retries} attempts: {e}",
+                                operation=operation,
+                                entity_id=validated_id,
+                                retry_count=max_retries,
+                                original_error=e
+                            )
+                        else:
+                            raise DatabaseOperationError(
+                                f"Database query failed: {e}",
+                                operation=operation,
+                                entity_type="Source",
+                                entity_id=validated_id,
+                                retry_count=max_retries,
+                                original_error=e
+                            )
+                    else:
+                        # Retry with exponential backoff
+                        delay = base_delay * (2 ** attempt)
+                        self._logger.warning(
+                            f"Attempt {attempt + 1}/{max_retries} failed for source ID {validated_id}: {e}. "
+                            f"Retrying in {delay}s..."
+                        )
+                        await asyncio.sleep(delay)
+            
+            return None
+            
+        except ValidationError:
+            # Re-raise validation errors
+            raise
+        except (DatabaseConnectionError, DatabaseOperationError):
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            self._logger.exception(f"Unexpected error retrieving source by ID {id}: {e}")
+            raise DatabaseOperationError(
+                f"Unexpected database error: {e}",
+                operation=operation,
+                entity_type="Source",
+                entity_id=id,
+                original_error=e
+            )
     
     async def get_by_source_id(self, source_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve source by source_id."""
@@ -113,39 +282,190 @@ class SupabaseSourceRepository(ISourceRepository):
             self._logger.error(f"Failed to delete source {id}: {e}")
             return False
     
+    @overload
+    async def list(
+        self,
+        *,
+        filters: Optional[Dict[str, Any]] = None,
+        pagination: Optional[PaginationParams] = None,
+        ordering: Optional[List[OrderingField]] = None,
+        return_total_count: Literal[False] = False
+    ) -> List[Dict[str, Any]]: ...
+    
+    @overload
+    async def list(
+        self,
+        *,
+        filters: Optional[Dict[str, Any]] = None,
+        pagination: Optional[PaginationParams] = None,
+        ordering: Optional[List[OrderingField]] = None,
+        return_total_count: Literal[True]
+    ) -> PaginatedResult[Dict[str, Any]]: ...
+    
     async def list(
         self, 
+        *,
         filters: Optional[Dict[str, Any]] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-        order_by: Optional[str] = None,
-        order_direction: Optional[str] = "asc"
-    ) -> List[Dict[str, Any]]:
-        """List sources with filtering and pagination."""
+        pagination: Optional[PaginationParams] = None,
+        ordering: Optional[List[OrderingField]] = None,
+        return_total_count: bool = False
+    ) -> Union[List[Dict[str, Any]], PaginatedResult[Dict[str, Any]]]:
+        """
+        List sources with comprehensive filtering, guaranteed ordering, and pagination.
+        
+        Args:
+            filters: Field-value filters for querying
+            pagination: Limit and offset parameters
+            ordering: List of ordering specifications
+            return_total_count: Whether to return paginated result with total count
+            
+        Returns:
+            List of sources or paginated result with metadata
+            
+        Raises:
+            ValidationError: If parameters are invalid
+            QueryError: If query construction fails
+            DatabaseOperationError: If database query fails
+        """
+        operation = "list_sources"
+        
         try:
+            # Validate parameters
+            validated_filters = self._validator.validate_filters(
+                filters, valid_fields=self.VALID_FIELDS
+            )
+            validated_pagination = self._validator.validate_pagination(pagination)
+            validated_ordering = self._validator.validate_ordering(
+                ordering, valid_fields=self.VALID_FIELDS
+            )
+            
+            # Ensure deterministic ordering
+            final_ordering = self._validator.ensure_deterministic_ordering(
+                validated_ordering, 
+                default_timestamp_field="updated_at",
+                default_id_field="id"
+            )
+            
+            # Build base query
             query = self._client.table(self._table).select('*')
             
             # Apply filters
-            if filters:
-                for key, value in filters.items():
-                    query = query.eq(key, value)
+            if validated_filters:
+                for field, value in validated_filters.items():
+                    if isinstance(value, dict) and 'operator' in value:
+                        # Handle complex filter conditions
+                        query = self._apply_complex_filter(query, field, value)
+                    else:
+                        # Simple equality filter
+                        query = query.eq(field, value)
             
-            # Apply ordering
-            if order_by:
-                ascending = order_direction.lower() == "asc"
-                query = query.order(order_by, desc=not ascending)
+            # Apply deterministic ordering
+            for order_field in final_ordering:
+                field_name = order_field['field']
+                direction = order_field['direction']
+                descending = direction in [SortDirection.DESC, SortDirection.DESCENDING]
+                
+                query = query.order(field_name, desc=descending)
+            
+            # Get total count if requested (before pagination)
+            total_count = 0
+            if return_total_count:
+                count_query = self._client.table(self._table).select('id', count='exact')
+                if validated_filters:
+                    for field, value in validated_filters.items():
+                        if not isinstance(value, dict):
+                            count_query = count_query.eq(field, value)
+                
+                count_response = count_query.execute()
+                total_count = count_response.count or 0
             
             # Apply pagination
-            if limit:
-                query = query.limit(limit)
-            if offset:
-                query = query.offset(offset)
+            if validated_pagination:
+                if 'limit' in validated_pagination:
+                    query = query.limit(validated_pagination['limit'])
+                if 'offset' in validated_pagination:
+                    query = query.offset(validated_pagination['offset'])
             
+            # Execute query
             response = query.execute()
-            return response.data or []
+            entities = response.data or []
+            
+            self._logger.debug(
+                f"Listed {len(entities)} sources with filters={validated_filters}, "
+                f"pagination={validated_pagination}, ordering={len(final_ordering)} fields"
+            )
+            
+            # Return appropriate result format
+            if return_total_count:
+                page_size = validated_pagination.get('limit') if validated_pagination else len(entities)
+                current_offset = validated_pagination.get('offset', 0) if validated_pagination else 0
+                
+                return PaginatedResult[Dict[str, Any]](
+                    entities=entities,
+                    total_count=total_count,
+                    page_size=page_size,
+                    current_offset=current_offset,
+                    has_more=current_offset + len(entities) < total_count,
+                    metadata={
+                        'ordering_fields': [f['field'] for f in final_ordering],
+                        'filter_count': len(validated_filters) if validated_filters else 0
+                    }
+                )
+            else:
+                return entities
+                
+        except ValidationError:
+            # Re-raise validation errors
+            raise
         except Exception as e:
             self._logger.exception(f"Failed to list sources: {e}")
-            return []
+            
+            # Classify error type
+            if "connection" in str(e).lower() or "timeout" in str(e).lower():
+                raise DatabaseConnectionError(
+                    f"Database connection failed during source listing: {e}",
+                    operation=operation,
+                    original_error=e
+                )
+            else:
+                raise DatabaseOperationError(
+                    f"Database query failed: {e}",
+                    operation=operation,
+                    entity_type="Source",
+                    query_info=f"filters={filters}, pagination={pagination}",
+                    original_error=e
+                )
+    
+    def _apply_complex_filter(self, query, field: str, condition: Dict[str, Any]):
+        """Apply complex filter condition to query."""
+        operator = condition.get('operator')
+        value = condition.get('value')
+        
+        if operator == 'eq':
+            return query.eq(field, value)
+        elif operator == 'ne':
+            return query.neq(field, value)
+        elif operator == 'gt':
+            return query.gt(field, value)
+        elif operator == 'gte':
+            return query.gte(field, value)
+        elif operator == 'lt':
+            return query.lt(field, value)
+        elif operator == 'lte':
+            return query.lte(field, value)
+        elif operator == 'in':
+            return query.in_(field, value)
+        elif operator == 'like':
+            return query.like(field, value)
+        elif operator == 'ilike':
+            return query.ilike(field, value)
+        elif operator == 'is_null':
+            return query.is_(field, None)
+        elif operator == 'not_null':
+            return query.not_.is_(field, None)
+        else:
+            self._logger.warning(f"Unsupported filter operator: {operator}")
+            return query
     
     # Implement remaining base repository methods with minimal functionality
     async def count(self, filters: Optional[Dict[str, Any]] = None) -> int:

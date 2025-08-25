@@ -6,16 +6,136 @@ domain-specific repositories should inherit from. It uses Python generics
 to provide type safety while maintaining flexibility for different entity types.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Optional, List, Dict, Any, Union
+from typing import (
+    Generic, TypeVar, Optional, List, Dict, Any, Union, 
+    Literal, Protocol, runtime_checkable, Sequence,
+    overload, Type, TypedDict, NotRequired
+)
 from uuid import UUID
+from datetime import datetime
+from enum import Enum
+
+# Import custom exceptions
+from ..exceptions import (
+    RepositoryError, ValidationError, EntityNotFoundError, 
+    DuplicateEntityError, ConcurrencyError, DatabaseConnectionError,
+    DatabaseOperationError, QueryError, ConstraintViolationError,
+    DataIntegrityError, BatchOperationError
+)
 
 
-# Generic type variable for entity types
-T = TypeVar('T')
+# Generic type variables for enhanced type safety
+EntityType = TypeVar('EntityType')  # The entity type this repository manages
+IdType = TypeVar('IdType', str, UUID, int)  # Supported ID types
+FilterType = TypeVar('FilterType', bound=Dict[str, Any])  # Filter parameter type
 
 
-class IBaseRepository(ABC, Generic[T]):
+# Ordering and sorting type definitions
+class SortDirection(str, Enum):
+    """Enumeration of supported sort directions with validation."""
+    ASC = "asc"
+    DESC = "desc"
+    ASCENDING = "ascending"
+    DESCENDING = "descending"
+
+
+class OrderingField(TypedDict):
+    """Type definition for ordering field specification."""
+    field: str
+    direction: SortDirection
+    nulls_first: NotRequired[bool]  # Whether NULL values should come first
+
+
+# Pagination and filtering type definitions
+class PaginationParams(TypedDict):
+    """Type definition for pagination parameters with validation."""
+    limit: NotRequired[int]  # Maximum number of results (1-10000)
+    offset: NotRequired[int]  # Number of results to skip (>=0)
+
+
+class FilterOperator(str, Enum):
+    """Enumeration of supported filter operators."""
+    EQ = "eq"           # Equal
+    NE = "ne"           # Not equal
+    GT = "gt"           # Greater than
+    GTE = "gte"         # Greater than or equal
+    LT = "lt"           # Less than
+    LTE = "lte"         # Less than or equal
+    IN = "in"           # Value in list
+    NOT_IN = "not_in"   # Value not in list
+    LIKE = "like"       # Pattern matching
+    ILIKE = "ilike"     # Case-insensitive pattern matching
+    IS_NULL = "is_null" # Field is null
+    NOT_NULL = "not_null" # Field is not null
+    CONTAINS = "contains" # Array/JSON contains value
+    CONTAINED_BY = "contained_by" # Value contained by array/JSON
+
+
+class FilterCondition(TypedDict):
+    """Type definition for complex filter conditions."""
+    field: str
+    operator: FilterOperator
+    value: Any
+    case_sensitive: NotRequired[bool]
+
+
+# Result type definitions
+class OperationResult(TypedDict, Generic[EntityType]):
+    """Type definition for operation results with metadata."""
+    success: bool
+    entity: NotRequired[EntityType]
+    entities: NotRequired[List[EntityType]]
+    affected_count: NotRequired[int]
+    error: NotRequired[str]
+    metadata: NotRequired[Dict[str, Any]]
+
+
+class PaginatedResult(TypedDict, Generic[EntityType]):
+    """Type definition for paginated query results."""
+    entities: List[EntityType]
+    total_count: int
+    page_size: int
+    current_offset: int
+    has_more: bool
+    metadata: NotRequired[Dict[str, Any]]
+
+
+# Protocol for validatable entities
+@runtime_checkable
+class ValidatableEntity(Protocol):
+    """Protocol for entities that support validation."""
+    
+    def validate(self) -> bool:
+        """Validate entity data."""
+        ...
+    
+    def get_validation_errors(self) -> List[str]:
+        """Get list of validation errors."""
+        ...
+
+
+# Protocol for timestamped entities
+@runtime_checkable
+class TimestampedEntity(Protocol):
+    """Protocol for entities with automatic timestamps."""
+    
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+
+
+# Protocol for versioned entities
+@runtime_checkable
+class VersionedEntity(Protocol):
+    """Protocol for entities with version control."""
+    
+    version: Optional[str]
+    last_modified_by: Optional[str]
+
+
+class IBaseRepository(ABC, Generic[EntityType]):
     """
     Abstract base repository interface defining common database operations.
     
@@ -35,182 +155,324 @@ class IBaseRepository(ABC, Generic[T]):
         ```
     """
     
+    # Core CRUD operations with enhanced type safety
     @abstractmethod
-    async def create(self, entity: T) -> T:
+    async def create(self, entity: EntityType) -> EntityType:
         """
-        Create a new entity in the database.
+        Create a new entity in the database with validation and constraint checking.
         
         Args:
-            entity: The entity instance to create
+            entity: The entity instance to create (must implement ValidatableEntity if validation needed)
             
         Returns:
-            The created entity with any database-generated fields populated
+            The created entity with database-generated fields populated (id, timestamps)
             
         Raises:
-            RepositoryError: If creation fails due to validation or database errors
-            DuplicateEntityError: If an entity with the same identifier already exists
+            ValidationError: If entity data fails validation rules
+            DuplicateEntityError: If entity violates uniqueness constraints
+            ConstraintViolationError: If entity violates database constraints
+            DatabaseOperationError: If database operation fails
+            
+        Type Safety:
+            - Input entity must be of type EntityType
+            - Returned entity guaranteed to have id and timestamps populated
+            - Validation performed if entity implements ValidatableEntity protocol
+        """
+        pass
+    
+    @overload
+    async def get_by_id(self, id: UUID) -> Optional[EntityType]: ...
+    @overload
+    async def get_by_id(self, id: str) -> Optional[EntityType]: ...
+    @overload
+    async def get_by_id(self, id: int) -> Optional[EntityType]: ...
+    
+    @abstractmethod
+    async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[EntityType]:
+        """
+        Retrieve an entity by its unique identifier with type safety.
+        
+        Args:
+            id: The unique identifier (UUID for primary keys, str for natural keys, int for legacy IDs)
+            
+        Returns:
+            The entity if found, None if not found (never raises for missing entities)
+            
+        Raises:
+            ValidationError: If id format is invalid
+            DatabaseConnectionError: If database connection fails
+            DatabaseOperationError: If database query fails
+            
+        Type Safety:
+            - Accepts only valid ID types (UUID, str, int)
+            - Returns strongly typed Optional[EntityType]
+            - None return indicates entity not found (not an error condition)
         """
         pass
     
     @abstractmethod
-    async def get_by_id(self, id: Union[str, UUID, int]) -> Optional[T]:
+    async def update(
+        self, 
+        id: Union[str, UUID, int], 
+        data: Dict[str, Any],
+        *,
+        validate: bool = True,
+        ignore_missing: bool = False
+    ) -> Optional[EntityType]:
         """
-        Retrieve an entity by its unique identifier.
+        Update an existing entity with validation and concurrency control.
         
         Args:
-            id: The unique identifier of the entity (UUID, string, or integer)
+            id: Unique identifier of entity to update
+            data: Dictionary of field updates (only changed fields)
+            validate: Whether to perform validation on updated entity
+            ignore_missing: If True, return None for missing entities instead of raising
             
         Returns:
-            The entity if found, None otherwise
+            Updated entity with new timestamps, None if not found and ignore_missing=True
             
         Raises:
-            RepositoryError: If retrieval fails due to database errors
+            EntityNotFoundError: If entity doesn't exist and ignore_missing=False
+            ValidationError: If updated data fails validation (when validate=True)
+            ConcurrencyError: If entity was modified by another process
+            ConstraintViolationError: If update violates constraints
+            DatabaseOperationError: If database update fails
+            
+        Type Safety:
+            - Validates data keys against entity schema
+            - Returns fully typed entity with updated fields
+            - Automatically updates updated_at timestamp if supported
         """
         pass
     
     @abstractmethod
-    async def update(self, id: Union[str, UUID, int], data: Dict[str, Any]) -> Optional[T]:
+    async def delete(self, id: Union[str, UUID, int], *, soft_delete: bool = False) -> bool:
         """
-        Update an existing entity with new data.
+        Delete an entity with support for soft deletion.
         
         Args:
-            id: The unique identifier of the entity to update
-            data: Dictionary containing the fields to update and their new values
+            id: Unique identifier of entity to delete
+            soft_delete: If True, mark as deleted instead of removing from database
             
         Returns:
-            The updated entity if found and updated successfully, None if not found
+            True if entity was deleted, False if not found
             
         Raises:
-            RepositoryError: If update fails due to validation or database errors
-            EntityNotFoundError: If no entity exists with the given identifier
+            ConstraintViolationError: If deletion violates foreign key constraints
+            DatabaseOperationError: If database deletion fails
+            
+        Type Safety:
+            - Validates ID type and format
+            - Boolean return clearly indicates operation success
+            - Soft delete preserves referential integrity when supported
         """
         pass
     
-    @abstractmethod
-    async def delete(self, id: Union[str, UUID, int]) -> bool:
-        """
-        Delete an entity by its unique identifier.
-        
-        Args:
-            id: The unique identifier of the entity to delete
-            
-        Returns:
-            True if the entity was deleted successfully, False if not found
-            
-        Raises:
-            RepositoryError: If deletion fails due to database errors
-        """
-        pass
+    # Enhanced list method with comprehensive filtering and ordering
+    @overload
+    async def list(
+        self,
+        *,
+        filters: Optional[Dict[str, Any]] = None,
+        pagination: Optional[PaginationParams] = None,
+        ordering: Optional[List[OrderingField]] = None,
+        return_total_count: Literal[False] = False
+    ) -> List[EntityType]: ...
+    
+    @overload
+    async def list(
+        self,
+        *,
+        filters: Optional[Dict[str, Any]] = None,
+        pagination: Optional[PaginationParams] = None,
+        ordering: Optional[List[OrderingField]] = None,
+        return_total_count: Literal[True]
+    ) -> PaginatedResult[EntityType]: ...
     
     @abstractmethod
     async def list(
         self, 
+        *,
         filters: Optional[Dict[str, Any]] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-        order_by: Optional[str] = None,
-        order_direction: Optional[str] = "asc"
-    ) -> List[T]:
+        pagination: Optional[PaginationParams] = None,
+        ordering: Optional[List[OrderingField]] = None,
+        return_total_count: bool = False
+    ) -> Union[List[EntityType], PaginatedResult[EntityType]]:
         """
-        List entities with optional filtering, pagination, and ordering.
+        List entities with advanced filtering, pagination, and guaranteed ordering.
         
         Args:
-            filters: Dictionary of field-value pairs to filter by
-            limit: Maximum number of entities to return
-            offset: Number of entities to skip (for pagination)
-            order_by: Field name to order results by
-            order_direction: Sort direction - "asc" or "desc"
+            filters: Simple field-value filters or complex FilterCondition objects
+            pagination: Limit and offset parameters with validation
+            ordering: List of fields to sort by with direction and null handling
+            return_total_count: Whether to return paginated result with total count
             
         Returns:
-            List of entities matching the criteria
+            List of entities or paginated result with metadata
             
         Raises:
-            RepositoryError: If query fails due to database errors
+            ValidationError: If filter values or pagination params are invalid
+            QueryError: If ordering fields don't exist or query construction fails
+            DatabaseOperationError: If database query fails
+            
+        Type Safety & Ordering Guarantees:
+            - Results always ordered by: specified ordering, then created_at DESC, then id ASC
+            - Pagination parameters validated (limit 1-10000, offset >= 0)
+            - Filter values type-checked against entity schema
+            - Deterministic ordering ensures consistent pagination
+        """
+        pass
+    
+    @abstractmethod
+    async def count(
+        self, 
+        filters: Optional[Dict[str, Any]] = None,
+        *,
+        distinct_field: Optional[str] = None
+    ) -> int:
+        """
+        Count entities with optional distinct counting.
+        
+        Args:
+            filters: Same filter format as list() method
+            distinct_field: If provided, count distinct values of this field
+            
+        Returns:
+            Number of entities/distinct values matching criteria
+            
+        Raises:
             ValidationError: If filter parameters are invalid
+            QueryError: If distinct_field doesn't exist
+            DatabaseOperationError: If count query fails
+            
+        Type Safety:
+            - Validates filter types and values
+            - Returns non-negative integer count
+            - Distinct counting validates field existence
         """
         pass
     
     @abstractmethod
-    async def count(self, filters: Optional[Dict[str, Any]] = None) -> int:
+    async def exists(
+        self, 
+        id: Union[str, UUID, int],
+        *,
+        additional_filters: Optional[Dict[str, Any]] = None
+    ) -> bool:
         """
-        Count entities matching the given filters.
+        Check entity existence with optional additional conditions.
         
         Args:
-            filters: Dictionary of field-value pairs to filter by
+            id: Primary identifier to check
+            additional_filters: Additional conditions entity must meet
             
         Returns:
-            Number of entities matching the criteria
+            True if entity exists and matches all conditions
             
         Raises:
-            RepositoryError: If count query fails due to database errors
+            ValidationError: If id format or filters are invalid
+            DatabaseOperationError: If existence check fails
+            
+        Type Safety:
+            - Validates ID type and format
+            - Boolean return with no ambiguity
+            - Additional filters follow same validation as list()
         """
         pass
     
+    # Batch operations with detailed error tracking
     @abstractmethod
-    async def exists(self, id: Union[str, UUID, int]) -> bool:
+    async def create_batch(
+        self, 
+        entities: Sequence[EntityType],
+        *,
+        batch_size: int = 100,
+        validate_all: bool = True,
+        stop_on_first_error: bool = False
+    ) -> OperationResult[EntityType]:
         """
-        Check if an entity exists by its unique identifier.
+        Create multiple entities with comprehensive error handling.
         
         Args:
-            id: The unique identifier to check
+            entities: Sequence of entities to create
+            batch_size: Number of entities to process in each database batch
+            validate_all: Whether to validate all entities before processing
+            stop_on_first_error: Whether to abort on first error or continue
             
         Returns:
-            True if an entity with the given ID exists, False otherwise
+            Operation result with success/failure details and created entities
             
         Raises:
-            RepositoryError: If existence check fails due to database errors
-        """
-        pass
-    
-    @abstractmethod
-    async def create_batch(self, entities: List[T]) -> List[T]:
-        """
-        Create multiple entities in a single batch operation.
-        
-        Args:
-            entities: List of entity instances to create
+            ValidationError: If validate_all=True and any entity is invalid
+            BatchOperationError: If batch processing encounters errors
+            DatabaseOperationError: If database batch operation fails
             
-        Returns:
-            List of created entities with database-generated fields populated
-            
-        Raises:
-            RepositoryError: If batch creation fails
-            ValidationError: If any entity in the batch is invalid
+        Type Safety & Error Handling:
+            - Validates all entities implement required protocols
+            - Returns detailed results with per-item success/failure status
+            - Failed entities include specific error messages
+            - Successful entities guaranteed to have IDs populated
         """
         pass
     
     @abstractmethod
     async def update_batch(
         self, 
-        updates: List[Dict[str, Any]]
-    ) -> List[T]:
+        updates: Sequence[Dict[str, Any]],
+        *,
+        batch_size: int = 100,
+        validate_updates: bool = True
+    ) -> OperationResult[EntityType]:
         """
-        Update multiple entities in a single batch operation.
+        Update multiple entities with validation and error tracking.
         
         Args:
-            updates: List of dictionaries, each containing 'id' and update data
+            updates: Sequence of update dictionaries, each must contain 'id' key
+            batch_size: Number of updates to process in each batch
+            validate_updates: Whether to validate update data
             
         Returns:
-            List of updated entities
+            Operation result with updated entities and error details
             
         Raises:
-            RepositoryError: If batch update fails
-            ValidationError: If update data is invalid
+            ValidationError: If any update dictionary is invalid
+            BatchOperationError: If batch processing encounters errors
+            DatabaseOperationError: If database batch update fails
+            
+        Type Safety:
+            - Validates each update dict has required 'id' key
+            - Type-checks update values against entity schema
+            - Returns typed entities with updated fields
         """
         pass
     
     @abstractmethod
-    async def delete_batch(self, ids: List[Union[str, UUID, int]]) -> int:
+    async def delete_batch(
+        self, 
+        ids: Sequence[Union[str, UUID, int]],
+        *,
+        batch_size: int = 100,
+        soft_delete: bool = False
+    ) -> int:
         """
-        Delete multiple entities by their identifiers.
+        Delete multiple entities with optional soft deletion.
         
         Args:
-            ids: List of unique identifiers of entities to delete
+            ids: Sequence of entity identifiers to delete
+            batch_size: Number of deletions to process in each batch
+            soft_delete: Whether to perform soft deletion
             
         Returns:
-            Number of entities successfully deleted
+            Number of entities actually deleted (may be less than input if some not found)
             
         Raises:
-            RepositoryError: If batch deletion fails
+            ValidationError: If any ID format is invalid
+            ConstraintViolationError: If deletions violate foreign key constraints
+            DatabaseOperationError: If batch deletion fails
+            
+        Type Safety:
+            - Validates all IDs are proper types and formats
+            - Return count guaranteed to be <= len(ids)
+            - Batch processing ensures transaction consistency
         """
         pass
