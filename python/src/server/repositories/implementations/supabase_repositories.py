@@ -1072,10 +1072,12 @@ class SupabaseProjectRepository(IProjectRepository):
     async def search_by_title(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Search projects by title."""
         try:
-            response = self._client.table(self._table).select('*').ilike('title', f'%{query}%').limit(limit).execute()
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).select('*').ilike('title', f'%{query}%').limit(limit).execute()
+            )
             return response.data or []
         except Exception as e:
-            self._logger.error(f"Failed to search projects by title: {e}")
+            self._logger.exception("Failed to search projects by title")
             return []
     
     async def get_project_statistics(self) -> Dict[str, Any]:
