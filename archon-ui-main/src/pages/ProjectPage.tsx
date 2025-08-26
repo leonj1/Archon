@@ -80,11 +80,21 @@ export function ProjectPage({
   const { showToast } = useToast();
   
   // Clipboard functionality with visual feedback
-  const { copy: copyToClipboard, copied: projectIdCopied } = useClipboardWithFeedback({
+  const { copy: copyToClipboard, copied: projectIdCopied, reset: resetCopiedState } = useClipboardWithFeedback({
     successMessage: 'Project ID copied to clipboard',
     errorMessage: 'Failed to copy project ID',
     showToast
   });
+  
+  // Track which specific project ID was copied
+  const [copiedProjectId, setCopiedProjectId] = useState<string | null>(null);
+
+  // Reset copied project ID when the global copied state resets
+  useEffect(() => {
+    if (!projectIdCopied) {
+      setCopiedProjectId(null);
+    }
+  }, [projectIdCopied]);
 
   // Load projects on mount - simplified approach
   useEffect(() => {
@@ -854,12 +864,13 @@ export function ProjectPage({
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
+                          setCopiedProjectId(project.id);
                           copyToClipboard(project.id);
                         }}
                         className="flex-1 flex items-center justify-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors py-1"
                         title="Copy Project ID to clipboard"
                       >
-                        {projectIdCopied ? (
+                        {copiedProjectId === project.id && projectIdCopied ? (
                           <>
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>

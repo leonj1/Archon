@@ -12,7 +12,8 @@ from contextlib import asynccontextmanager
 
 from supabase import Client
 
-from ..interfaces.unit_of_work import IUnitOfWork
+from ..interfaces.unit_of_work import IUnitOfWork, TransactionError
+from ..exceptions import DatabaseOperationError
 from .supabase_repositories import (
     SupabaseCodeExampleRepository,
     SupabaseDocumentRepository,
@@ -55,7 +56,7 @@ class SupabaseDatabase(IUnitOfWork):
         self._prompts: SupabasePromptRepository | None = None
 
         # Transaction state management
-        self._active = False
+        self._transaction_active = False
         self._savepoints: dict[str, str] = {}
         self._savepoint_counter = 0
 
@@ -160,7 +161,7 @@ class SupabaseDatabase(IUnitOfWork):
             self._logger.debug("Database transaction committed successfully")
         except Exception as e:
             self._logger.error(f"Database transaction failed: {e}")
-            if self._active:
+            if self._transaction_active:
                 await self.rollback()
             raise
 
@@ -173,14 +174,14 @@ class SupabaseDatabase(IUnitOfWork):
         for Supabase compatibility.
         
         Raises:
-            RuntimeError: If no active transaction exists
+            TransactionError: If no active transaction exists
         """
-        if not self._active:
-            raise RuntimeError("Cannot commit: no active transaction")
+        if not self._transaction_active:
+            raise TransactionError("Cannot commit: no active transaction")
 
         # Supabase auto-commits individual operations
         # This method is a no-op but maintained for interface compatibility
-        self._active = False
+        self._transaction_active = False
         self._logger.debug("Transaction committed (Supabase auto-commits)")
 
     async def rollback(self):
@@ -192,15 +193,15 @@ class SupabaseDatabase(IUnitOfWork):
         a no-op for Supabase compatibility.
         
         Raises:
-            RuntimeError: If no active transaction exists
+            TransactionError: If no active transaction exists
         """
-        if not self._active:
-            raise RuntimeError("Cannot rollback: no active transaction")
+        if not self._transaction_active:
+            raise TransactionError("Cannot rollback: no active transaction")
 
         # Supabase doesn't support rollback in the Python client
         # Application-level rollback would need to be implemented here
         self._logger.warning("Rollback requested but not implemented for Supabase (no-op)")
-        self._active = False
+        self._transaction_active = False
 
     async def begin(self) -> None:
         """
@@ -208,10 +209,13 @@ class SupabaseDatabase(IUnitOfWork):
         
         Note: With Supabase, transactions are not explicitly managed.
         This method sets the internal active state for interface compatibility.
+        
+        Raises:
+            TransactionError: If a transaction is already active
         """
-        if self._active:
-            self._logger.warning("Transaction already active")
-        self._active = True
+        if self._transaction_active:
+            raise TransactionError("Transaction already active")
+        self._transaction_active = True
         self._logger.debug("Transaction begun (simulated)")
 
     async def is_active(self) -> bool:
@@ -221,7 +225,7 @@ class SupabaseDatabase(IUnitOfWork):
         Returns:
             True if a transaction is currently active, False otherwise
         """
-        return self._active
+        return self._transaction_active
 
     async def savepoint(self, name: str) -> str:
         """
@@ -235,9 +239,12 @@ class SupabaseDatabase(IUnitOfWork):
             
         Returns:
             The savepoint identifier that can be used for rollback
+            
+        Raises:
+            TransactionError: If no active transaction exists
         """
-        if not self._active:
-            self._logger.warning("Cannot create savepoint without active transaction")
+        if not self._transaction_active:
+            raise TransactionError("Cannot create savepoint without active transaction")
 
         self._savepoint_counter += 1
         savepoint_id = f"{name}_{self._savepoint_counter}"
@@ -254,10 +261,12 @@ class SupabaseDatabase(IUnitOfWork):
         
         Args:
             savepoint_id: The savepoint identifier to rollback to
+            
+        Raises:
+            TransactionError: If savepoint doesn't exist or rollback fails
         """
         if savepoint_id not in self._savepoints:
-            self._logger.error(f"Savepoint not found: {savepoint_id}")
-            raise ValueError(f"Savepoint '{savepoint_id}' does not exist")
+            raise TransactionError(f"Savepoint '{savepoint_id}' does not exist")
 
         self._logger.debug(f"Rolled back to savepoint: {savepoint_id} (simulated)")
         # Remove all savepoints created after this one
@@ -277,10 +286,12 @@ class SupabaseDatabase(IUnitOfWork):
         
         Args:
             savepoint_id: The savepoint identifier to release
+            
+        Raises:
+            TransactionError: If savepoint doesn't exist or release fails
         """
         if savepoint_id not in self._savepoints:
-            self._logger.error(f"Savepoint not found: {savepoint_id}")
-            raise ValueError(f"Savepoint '{savepoint_id}' does not exist")
+            raise TransactionError(f"Savepoint '{savepoint_id}' does not exist")
 
         del self._savepoints[savepoint_id]
         self._logger.debug(f"Savepoint released: {savepoint_id} (simulated)")

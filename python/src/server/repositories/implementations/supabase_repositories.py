@@ -247,30 +247,136 @@ class SupabaseSourceRepository(ISourceRepository):
 
     async def get_by_source_id(self, source_id: str) -> dict[str, Any] | None:
         """Retrieve source by source_id."""
+        operation = "get_source_by_source_id"
+        
         try:
-            response = self._client.table(self._table).select('*').eq('source_id', source_id).execute()
-            return response.data[0] if response.data else None
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).select('*').eq('source_id', source_id).execute()
+            )
+            
+            result = response.data[0] if response.data else None
+            
+            if result:
+                self._logger.debug(f"Retrieved source with source_id: {source_id}")
+            else:
+                self._logger.debug(f"Source not found with source_id: {source_id}")
+                
+            return result
+            
         except Exception as e:
-            self._logger.error(f"Failed to get source by source_id {source_id}: {e}")
-            return None
+            self._logger.error(f"Failed to get source by source_id {source_id}: {e}", exc_info=True)
+            
+            # Check for connection errors
+            if "connection" in str(e).lower() or "timeout" in str(e).lower():
+                raise DatabaseConnectionError(
+                    f"Database connection failed: {e}",
+                    operation=operation,
+                    original_error=e
+                ) from e
+            
+            raise DatabaseOperationError(
+                f"Database operation failed: {e}",
+                operation=operation,
+                entity_type="Source",
+                original_error=e
+            ) from e
 
     async def update(self, id: str | UUID | int, data: dict[str, Any]) -> dict[str, Any] | None:
         """Update source record."""
+        operation = "update_source"
+        
         try:
-            response = self._client.table(self._table).update(data).eq('id', str(id)).execute()
-            return response.data[0] if response.data else None
+            # Validate ID format
+            validated_id = self._validator.validate_id(id, "source_id")
+            
+            # Validate update data
+            validated_data = self._validator.validate_entity_data(
+                data,
+                required_fields=[],  # No required fields for updates
+                operation="update"
+            )
+            
+            # Add updated timestamp
+            validated_data['updated_at'] = datetime.utcnow().isoformat()
+            
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).update(validated_data).eq('id', str(validated_id)).execute()
+            )
+            
+            if not response.data:
+                return None  # Entity not found or no changes made
+                
+            result = response.data[0]
+            self._logger.info(f"Updated source with ID: {validated_id}")
+            return result
+            
+        except ValidationError:
+            # Re-raise validation errors as-is
+            raise
         except Exception as e:
-            self._logger.error(f"Failed to update source {id}: {e}")
-            return None
+            self._logger.error(f"Failed to update source {id}: {e}", exc_info=True)
+            
+            # Check for connection errors
+            if "connection" in str(e).lower() or "timeout" in str(e).lower():
+                raise DatabaseConnectionError(
+                    f"Database connection failed during source update: {e}",
+                    operation=operation,
+                    entity_id=id,
+                    original_error=e
+                ) from e
+            
+            raise DatabaseOperationError(
+                f"Database operation failed: {e}",
+                operation=operation,
+                entity_type="Source",
+                entity_id=id,
+                original_error=e
+            ) from e
 
     async def delete(self, id: str | UUID | int) -> bool:
         """Delete source record."""
+        operation = "delete_source"
+        
         try:
-            response = self._client.table(self._table).delete().eq('id', str(id)).execute()
-            return len(response.data) > 0
+            # Validate ID format
+            validated_id = self._validator.validate_id(id, "source_id")
+            
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).delete().eq('id', str(validated_id)).execute()
+            )
+            
+            deleted_count = len(response.data) if response.data else 0
+            success = deleted_count > 0
+            
+            if success:
+                self._logger.info(f"Deleted source with ID: {validated_id}")
+            else:
+                self._logger.debug(f"No source found to delete with ID: {validated_id}")
+                
+            return success
+            
+        except ValidationError:
+            # Re-raise validation errors as-is
+            raise
         except Exception as e:
-            self._logger.error(f"Failed to delete source {id}: {e}")
-            return False
+            self._logger.error(f"Failed to delete source {id}: {e}", exc_info=True)
+            
+            # Check for connection errors
+            if "connection" in str(e).lower() or "timeout" in str(e).lower():
+                raise DatabaseConnectionError(
+                    f"Database connection failed during source deletion: {e}",
+                    operation=operation,
+                    entity_id=id,
+                    original_error=e
+                ) from e
+            
+            raise DatabaseOperationError(
+                f"Database operation failed: {e}",
+                operation=operation,
+                entity_type="Source",
+                entity_id=id,
+                original_error=e
+            ) from e
 
     @overload
     async def list(
@@ -366,8 +472,14 @@ class SupabaseSourceRepository(ISourceRepository):
                         if not isinstance(value, dict):
                             count_query = count_query.eq(field, value)
 
-                count_response = count_query.execute()
-                total_count = count_response.count or 0
+                count_response = await asyncio.to_thread(lambda: count_query.execute())
+                count_value = count_response.count
+                
+                if count_value is None:
+                    self._logger.warning("Count query returned None, defaulting to 0")
+                    total_count = 0
+                else:
+                    total_count = int(count_value)
 
             # Apply pagination
             if validated_pagination:
@@ -377,7 +489,7 @@ class SupabaseSourceRepository(ISourceRepository):
                     query = query.offset(validated_pagination['offset'])
 
             # Execute query
-            response = query.execute()
+            response = await asyncio.to_thread(lambda: query.execute())
             entities = response.data or []
 
             self._logger.debug(
@@ -461,10 +573,41 @@ class SupabaseSourceRepository(ISourceRepository):
     async def count(self, filters: dict[str, Any] | None = None) -> int:
         """Count sources."""
         try:
-            sources = await self.list(filters=filters)
-            return len(sources)
-        except Exception:
-            return 0
+            # Use Supabase count feature for efficiency
+            query = self._client.table(self._table).select('id', count='exact')
+            
+            # Apply filters if provided
+            if filters:
+                for field, value in filters.items():
+                    if isinstance(value, dict) and 'operator' in value:
+                        # Handle complex filter conditions
+                        query = self._apply_complex_filter(query, field, value)
+                    else:
+                        # Simple equality filter
+                        query = query.eq(field, value)
+            
+            response = await asyncio.to_thread(lambda: query.execute())
+            count_value = response.count
+            
+            if count_value is None:
+                raise DatabaseOperationError(
+                    "Count operation returned None",
+                    operation="count_sources",
+                    entity_type="Source"
+                )
+            
+            return int(count_value)
+        except DatabaseOperationError:
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            self._logger.error(f"Failed to count sources: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Database operation failed during count: {e}",
+                operation="count_sources",
+                entity_type="Source",
+                original_error=e
+            ) from e
 
     async def exists(self, id: str | UUID | int) -> bool:
         """Check if source exists."""
@@ -510,26 +653,57 @@ class SupabaseSourceRepository(ISourceRepository):
     ) -> dict[str, Any] | None:
         """Update crawling status and progress."""
         try:
-            update_data = {'crawl_status': status}
+            update_data = {'crawl_status': status, 'updated_at': datetime.utcnow().isoformat()}
             if pages_crawled is not None:
                 update_data['pages_crawled'] = pages_crawled
             if total_pages is not None:
                 update_data['total_pages'] = total_pages
 
-            response = self._client.table(self._table).update(update_data).eq('source_id', source_id).execute()
-            return response.data[0] if response.data else None
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).update(update_data).eq('source_id', source_id).execute()
+            )
+            
+            result = response.data[0] if response.data else None
+            if result:
+                self._logger.info(f"Updated crawl status for source {source_id} to {status}")
+            else:
+                self._logger.warning(f"No source found to update crawl status for source_id: {source_id}")
+            return result
+            
         except Exception as e:
-            self._logger.error(f"Failed to update crawl status for {source_id}: {e}")
-            return None
+            self._logger.error(f"Failed to update crawl status for {source_id}: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Failed to update crawl status: {e}",
+                operation="update_crawl_status",
+                entity_type="Source",
+                query_info=f"source_id={source_id}, status={status}",
+                original_error=e
+            ) from e
 
     async def update_metadata(self, source_id: str, metadata: dict[str, Any]) -> dict[str, Any] | None:
         """Update source metadata."""
         try:
-            response = self._client.table(self._table).update({'metadata': metadata}).eq('source_id', source_id).execute()
-            return response.data[0] if response.data else None
+            update_data = {'metadata': metadata, 'updated_at': datetime.utcnow().isoformat()}
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).update(update_data).eq('source_id', source_id).execute()
+            )
+            
+            result = response.data[0] if response.data else None
+            if result:
+                self._logger.info(f"Updated metadata for source {source_id}")
+            else:
+                self._logger.warning(f"No source found to update metadata for source_id: {source_id}")
+            return result
+            
         except Exception as e:
-            self._logger.error(f"Failed to update metadata for {source_id}: {e}")
-            return None
+            self._logger.error(f"Failed to update metadata for {source_id}: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Failed to update metadata: {e}",
+                operation="update_source_metadata",
+                entity_type="Source",
+                query_info=f"source_id={source_id}",
+                original_error=e
+            ) from e
 
     async def get_by_status(self, status: str) -> builtins.list[dict[str, Any]]:
         """Get sources by crawling status."""
@@ -655,10 +829,36 @@ class SupabaseDocumentRepository(IDocumentRepository):
     async def count(self, filters: dict[str, Any] | None = None) -> int:
         """Count documents."""
         try:
-            documents = await self.list(filters=filters)
-            return len(documents)
-        except Exception:
-            return 0
+            # Use Supabase count feature for efficiency
+            query = self._client.table(self._table).select('id', count='exact')
+            
+            # Apply filters if provided
+            if filters:
+                for field, value in filters.items():
+                    query = query.eq(field, value)
+            
+            response = await asyncio.to_thread(lambda: query.execute())
+            count_value = response.count
+            
+            if count_value is None:
+                raise DatabaseOperationError(
+                    "Count operation returned None",
+                    operation="count_documents",
+                    entity_type="Document"
+                )
+            
+            return int(count_value)
+        except DatabaseOperationError:
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            self._logger.error(f"Failed to count documents: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Database operation failed during count: {e}",
+                operation="count_documents",
+                entity_type="Document",
+                original_error=e
+            ) from e
 
     async def exists(self, id: str | UUID | int) -> bool:
         """Check if document exists."""
@@ -774,20 +974,44 @@ class SupabaseDocumentRepository(IDocumentRepository):
     async def delete_by_source(self, source_id: str) -> int:
         """Delete all documents for a source."""
         try:
-            response = self._client.table(self._table).delete().eq('source_id', source_id).execute()
-            return len(response.data)
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).delete().eq('source_id', source_id).execute()
+            )
+            
+            deleted_count = len(response.data) if response.data else 0
+            self._logger.info(f"Deleted {deleted_count} documents for source {source_id}")
+            return deleted_count
+            
         except Exception as e:
-            self._logger.error(f"Failed to delete documents by source {source_id}: {e}")
-            return 0
+            self._logger.error(f"Failed to delete documents by source {source_id}: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Failed to delete documents for source: {e}",
+                operation="delete_documents_by_source",
+                entity_type="Document",
+                query_info=f"source_id={source_id}",
+                original_error=e
+            ) from e
 
     async def delete_by_url(self, url: str) -> int:
         """Delete all documents for a URL."""
         try:
-            response = self._client.table(self._table).delete().eq('url', url).execute()
-            return len(response.data)
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).delete().eq('url', url).execute()
+            )
+            
+            deleted_count = len(response.data) if response.data else 0
+            self._logger.info(f"Deleted {deleted_count} documents for URL {url}")
+            return deleted_count
+            
         except Exception as e:
-            self._logger.error(f"Failed to delete documents by URL {url}: {e}")
-            return 0
+            self._logger.error(f"Failed to delete documents by URL {url}: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Failed to delete documents for URL: {e}",
+                operation="delete_documents_by_url",
+                entity_type="Document",
+                query_info=f"url={url}",
+                original_error=e
+            ) from e
 
     async def get_content_statistics(self) -> dict[str, Any]:
         """Get content statistics."""
@@ -979,10 +1203,36 @@ class SupabaseProjectRepository(IProjectRepository):
     async def count(self, filters: dict[str, Any] | None = None) -> int:
         """Count projects."""
         try:
-            projects = await self.list(filters=filters)
-            return len(projects)
-        except Exception:
-            return 0
+            # Use Supabase count feature for efficiency
+            query = self._client.table(self._table).select('id', count='exact')
+            
+            # Apply filters if provided
+            if filters:
+                for field, value in filters.items():
+                    query = query.eq(field, value)
+            
+            response = await asyncio.to_thread(lambda: query.execute())
+            count_value = response.count
+            
+            if count_value is None:
+                raise DatabaseOperationError(
+                    "Count operation returned None",
+                    operation="count_projects",
+                    entity_type="Project"
+                )
+            
+            return int(count_value)
+        except DatabaseOperationError:
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            self._logger.error(f"Failed to count projects: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Database operation failed during count: {e}",
+                operation="count_projects",
+                entity_type="Project",
+                original_error=e
+            ) from e
 
     async def exists(self, id: str | UUID | int) -> bool:
         """Check if project exists."""
@@ -1160,11 +1410,26 @@ class SupabaseSettingsRepository(ISettingsRepository):
     async def get_by_key(self, key: str) -> dict[str, Any] | None:
         """Retrieve setting by key."""
         try:
-            response = self._client.table(self._table).select('*').eq('key', key).execute()
-            return response.data[0] if response.data else None
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).select('*').eq('key', key).execute()
+            )
+            
+            result = response.data[0] if response.data else None
+            if result:
+                self._logger.debug(f"Retrieved setting with key: {key}")
+            else:
+                self._logger.debug(f"Setting not found with key: {key}")
+            return result
+            
         except Exception as e:
-            self._logger.error(f"Failed to get setting by key {key}: {e}")
-            return None
+            self._logger.error(f"Failed to get setting by key {key}: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Failed to retrieve setting: {e}",
+                operation="get_setting_by_key",
+                entity_type="Setting",
+                query_info=f"key={key}",
+                original_error=e
+            ) from e
 
     async def update(self, id: str | UUID | int, data: dict[str, Any]) -> dict[str, Any] | None:
         """Update setting record."""
@@ -1222,10 +1487,36 @@ class SupabaseSettingsRepository(ISettingsRepository):
     async def count(self, filters: dict[str, Any] | None = None) -> int:
         """Count settings."""
         try:
-            settings = await self.list(filters=filters)
-            return len(settings)
-        except Exception:
-            return 0
+            # Use Supabase count feature for efficiency
+            query = self._client.table(self._table).select('id', count='exact')
+            
+            # Apply filters if provided
+            if filters:
+                for field, value in filters.items():
+                    query = query.eq(field, value)
+            
+            response = await asyncio.to_thread(lambda: query.execute())
+            count_value = response.count
+            
+            if count_value is None:
+                raise DatabaseOperationError(
+                    "Count operation returned None",
+                    operation="count_settings",
+                    entity_type="Setting"
+                )
+            
+            return int(count_value)
+        except DatabaseOperationError:
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            self._logger.error(f"Failed to count settings: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Database operation failed during count: {e}",
+                operation="count_settings",
+                entity_type="Setting",
+                original_error=e
+            ) from e
 
     async def exists(self, id: str | UUID | int) -> bool:
         """Check if setting exists."""
@@ -1299,12 +1590,24 @@ class SupabaseSettingsRepository(ISettingsRepository):
 
             if existing:
                 # Update existing
-                response = self._client.table(self._table).update(setting_data).eq('key', key).execute()
+                response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).update(setting_data).eq('key', key).execute()
+            )
             else:
                 # Create new
-                response = self._client.table(self._table).insert(setting_data).execute()
+                response = await asyncio.to_thread(
+                    lambda: self._client.table(self._table).insert(setting_data).execute()
+                )
 
-            return response.data[0] if response.data else {}
+            result = response.data[0] if response.data else {}
+            if not result:
+                raise DatabaseOperationError(
+                    "No data returned from upsert operation",
+                    operation="upsert_setting",
+                    entity_type="Setting"
+                )
+            
+            return result
         except Exception as e:
             self._logger.error(f"Failed to upsert setting {key}: {e}")
             raise
@@ -1477,8 +1780,37 @@ class SupabaseTaskRepository(ITaskRepository):
             return []
 
     async def count(self, filters=None) -> int:
-        tasks = await self.list(filters=filters)
-        return len(tasks)
+        try:
+            # Use Supabase count feature for efficiency
+            query = self._client.table(self._table).select('id', count='exact')
+            
+            # Apply filters if provided
+            if filters:
+                for field, value in filters.items():
+                    query = query.eq(field, value)
+            
+            response = await asyncio.to_thread(lambda: query.execute())
+            count_value = response.count
+            
+            if count_value is None:
+                raise DatabaseOperationError(
+                    "Count operation returned None",
+                    operation="count_tasks",
+                    entity_type="Task"
+                )
+            
+            return int(count_value)
+        except DatabaseOperationError:
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            self._logger.error(f"Failed to count tasks: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Database operation failed during count: {e}",
+                operation="count_tasks",
+                entity_type="Task",
+                original_error=e
+            ) from e
 
     async def exists(self, id) -> bool:
         return await self.get_by_id(id) is not None
@@ -1618,8 +1950,37 @@ class SupabaseVersionRepository(IVersionRepository):
             return []
 
     async def count(self, filters=None) -> int:
-        versions = await self.list(filters=filters)
-        return len(versions)
+        try:
+            # Use Supabase count feature for efficiency
+            query = self._client.table(self._table).select('id', count='exact')
+            
+            # Apply filters if provided
+            if filters:
+                for field, value in filters.items():
+                    query = query.eq(field, value)
+            
+            response = await asyncio.to_thread(lambda: query.execute())
+            count_value = response.count
+            
+            if count_value is None:
+                raise DatabaseOperationError(
+                    "Count operation returned None",
+                    operation="count_versions",
+                    entity_type="Version"
+                )
+            
+            return int(count_value)
+        except DatabaseOperationError:
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            self._logger.error(f"Failed to count versions: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Database operation failed during count: {e}",
+                operation="count_versions",
+                entity_type="Version",
+                original_error=e
+            ) from e
 
     async def exists(self, id) -> bool:
         return await self.get_by_id(id) is not None
@@ -1740,8 +2101,37 @@ class SupabaseCodeExampleRepository(ICodeExampleRepository):
             return []
 
     async def count(self, filters=None) -> int:
-        examples = await self.list(filters=filters)
-        return len(examples)
+        try:
+            # Use Supabase count feature for efficiency
+            query = self._client.table(self._table).select('id', count='exact')
+            
+            # Apply filters if provided
+            if filters:
+                for field, value in filters.items():
+                    query = query.eq(field, value)
+            
+            response = await asyncio.to_thread(lambda: query.execute())
+            count_value = response.count
+            
+            if count_value is None:
+                raise DatabaseOperationError(
+                    "Count operation returned None",
+                    operation="count_code_examples",
+                    entity_type="CodeExample"
+                )
+            
+            return int(count_value)
+        except DatabaseOperationError:
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            self._logger.error(f"Failed to count code examples: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Database operation failed during count: {e}",
+                operation="count_code_examples",
+                entity_type="CodeExample",
+                original_error=e
+            ) from e
 
     async def exists(self, id) -> bool:
         return await self.get_by_id(id) is not None
@@ -1834,10 +2224,23 @@ class SupabaseCodeExampleRepository(ICodeExampleRepository):
 
     async def delete_by_source(self, source_id) -> int:
         try:
-            response = self._client.table(self._table).delete().eq('source_id', source_id).execute()
-            return len(response.data)
-        except Exception:
-            return 0
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).delete().eq('source_id', source_id).execute()
+            )
+            
+            deleted_count = len(response.data) if response.data else 0
+            self._logger.info(f"Deleted {deleted_count} code examples for source {source_id}")
+            return deleted_count
+            
+        except Exception as e:
+            self._logger.error(f"Failed to delete code examples by source {source_id}: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Failed to delete code examples for source: {e}",
+                operation="delete_code_examples_by_source",
+                entity_type="CodeExample",
+                query_info=f"source_id={source_id}",
+                original_error=e
+            ) from e
 
     async def get_code_statistics(self) -> dict[str, Any]:
         examples = await self.list()
@@ -2052,8 +2455,37 @@ class SupabasePromptRepository(IPromptRepository):
             return []
 
     async def count(self, filters=None) -> int:
-        prompts = await self.list(filters=filters)
-        return len(prompts)
+        try:
+            # Use Supabase count feature for efficiency
+            query = self._client.table(self._table).select('id', count='exact')
+            
+            # Apply filters if provided
+            if filters:
+                for field, value in filters.items():
+                    query = query.eq(field, value)
+            
+            response = await asyncio.to_thread(lambda: query.execute())
+            count_value = response.count
+            
+            if count_value is None:
+                raise DatabaseOperationError(
+                    "Count operation returned None",
+                    operation="count_prompts",
+                    entity_type="Prompt"
+                )
+            
+            return int(count_value)
+        except DatabaseOperationError:
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            self._logger.error(f"Failed to count prompts: {e}", exc_info=True)
+            raise DatabaseOperationError(
+                f"Database operation failed during count: {e}",
+                operation="count_prompts",
+                entity_type="Prompt",
+                original_error=e
+            ) from e
 
     async def exists(self, id) -> bool:
         return await self.get_by_id(id) is not None

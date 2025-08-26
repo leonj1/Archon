@@ -157,8 +157,9 @@ Parse comments to extract structured AI prompts with their metadata.
     IF contains "🤖 Prompt for AI Agents":
       EXTRACT prompt text from code block
       EXTRACT file path and line numbers
-      EXTRACT comment ID
-      STORE in prompts array
+      EXTRACT comment ID (numeric id)
+      EXTRACT comment node_id (GraphQL node ID like "PRRC_...")
+      STORE in prompts array with both IDs
 </extraction_logic>
 
 <prompt_parsing>
@@ -316,9 +317,21 @@ Use the file-creator subagent to create a JSON file mapping tasks to GitHub comm
     "repo": "{repo}",
     "pr_number": {number},
     "task_to_comment": {
-      "1.1": {comment_id_1},
-      "1.2": {comment_id_2},
-      "2.1": {comment_id_3},
+      "1.1": {
+        "comment_id": {comment_id_1},
+        "node_id": "{node_id_1}",
+        "thread_id": null
+      },
+      "1.2": {
+        "comment_id": {comment_id_2},
+        "node_id": "{node_id_2}",
+        "thread_id": null
+      },
+      "2.1": {
+        "comment_id": {comment_id_3},
+        "node_id": "{node_id_3}",
+        "thread_id": null
+      },
       ...
     },
     "resolution_commands": {
@@ -341,25 +354,71 @@ Use the file-creator subagent to create a helper script for comment resolution.
 <file_template>
   #!/bin/bash
   # GitHub Comment Resolution Helper
-  # Usage: ./resolve-comment.sh TASK_NUMBER COMMENT_ID
+  # Usage: ./resolve-comment.sh TASK_NUMBER
   
   TASK_NUMBER=$1
-  COMMENT_ID=$2
   OWNER="{owner}"
   REPO="{repo}"
   PR_NUMBER={number}
   
-  if [ -z "$COMMENT_ID" ]; then
-    echo "Usage: $0 TASK_NUMBER COMMENT_ID"
+  if [ -z "$TASK_NUMBER" ]; then
+    echo "Usage: $0 TASK_NUMBER"
     exit 1
   fi
+  
+  # Read comment mapping from JSON
+  COMMENT_INFO=$(jq -r ".task_to_comment[\"$TASK_NUMBER\"]" comment-map.json)
+  if [ "$COMMENT_INFO" = "null" ]; then
+    echo "Error: Task $TASK_NUMBER not found in comment-map.json"
+    exit 1
+  fi
+  
+  COMMENT_ID=$(echo "$COMMENT_INFO" | jq -r '.comment_id')
+  NODE_ID=$(echo "$COMMENT_INFO" | jq -r '.node_id')
   
   # Get current commit SHA
   COMMIT_SHA=$(git rev-parse HEAD)
   
+  # Find the thread ID for this comment
+  echo "Finding thread ID for comment node $NODE_ID..."
+  THREAD_ID=$(gh api graphql -f query='
+    query {
+      repository(owner: "'"$OWNER"'", name: "'"$REPO"'") {
+        pullRequest(number: '"$PR_NUMBER"') {
+          reviewThreads(first: 100) {
+            nodes {
+              id
+              comments(first: 10) {
+                nodes {
+                  id
+                  databaseId
+                }
+              }
+            }
+          }
+        }
+      }
+    }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[] | .databaseId == '"$COMMENT_ID"') | .id')
+  
+  if [ -n "$THREAD_ID" ]; then
+    # Resolve the thread using GraphQL
+    echo "Resolving thread $THREAD_ID..."
+    gh api graphql -f query='
+      mutation {
+        resolveReviewThread(input: {
+          threadId: "'"$THREAD_ID"'"
+        }) {
+          thread {
+            id
+            isResolved
+          }
+        }
+      }'
+  fi
+  
   # Add reaction to comment
   echo "Adding ✅ reaction to comment #$COMMENT_ID..."
-  gh api repos/$OWNER/$REPO/issues/comments/$COMMENT_ID/reactions -f content='+1'
+  gh api repos/$OWNER/$REPO/issues/comments/$COMMENT_ID/reactions -f content='+1' 2>/dev/null || true
   
   # Post resolution comment
   echo "Posting resolution confirmation..."
@@ -422,7 +481,7 @@ Present summary to user and provide guidance for task execution with real-time r
   💡 **Manual Resolution (if needed):**
   ```bash
   # To manually resolve a comment:
-  ./.agent-os/specs/{folder_name}/resolve-comment.sh TASK_NUMBER COMMENT_ID
+  ./.agent-os/specs/{folder_name}/resolve-comment.sh TASK_NUMBER
   ```
 </summary_presentation>
 
@@ -442,23 +501,46 @@ Present summary to user and provide guidance for task execution with real-time r
 <comment_resolution_workflow>
   IMMEDIATELY AFTER each task completion (not batched):
     1. READ comment-map.json for task-to-comment mapping
-    2. GET comment_id for completed task (e.g., task "1.1" -> comment_id)
+    2. GET comment metadata for completed task:
+       - comment_id (numeric ID)
+       - node_id (GraphQL node ID)
     3. CAPTURE git commit SHA if changes were made:
        COMMIT_SHA=$(git rev-parse HEAD)
     
     4. RESOLVE the GitHub conversation thread:
-       # Mark the conversation as resolved
-       gh api graphql -f query='
-         mutation {
-           resolveReviewThread(input: {
-             threadId: "{thread_id}",
-             clientMutationId: "agent-os-resolution"
-           }) {
-             thread {
-               isResolved
+       # First, get the thread ID for this comment using the database ID
+       THREAD_ID=$(gh api graphql -f query='
+         query {
+           repository(owner: "{owner}", name: "{repo}") {
+             pullRequest(number: {number}) {
+               reviewThreads(first: 100) {
+                 nodes {
+                   id
+                   comments(first: 10) {
+                     nodes {
+                       databaseId
+                     }
+                   }
+                 }
+               }
              }
            }
-         }'
+         }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[] | .databaseId == '${comment_id}') | .id')
+       
+       # Mark the conversation thread as resolved if found
+       if [ -n "$THREAD_ID" ]; then
+         gh api graphql -f query='
+           mutation {
+             resolveReviewThread(input: {
+               threadId: "'"${THREAD_ID}"'"
+             }) {
+               thread {
+                 id
+                 isResolved
+               }
+             }
+           }'
+       fi
     
     5. POST implementation confirmation:
        gh api repos/{owner}/{repo}/issues/comments \
@@ -479,6 +561,8 @@ Present summary to user and provide guidance for task execution with real-time r
          "task_to_comment": {
            "1.1": {
              "comment_id": {comment_id_1},
+             "node_id": "{node_id_1}",
+             "thread_id": "{thread_id_discovered}",
              "status": "resolved",
              "resolved_at": "{timestamp}",
              "commit_sha": "{commit_sha}"

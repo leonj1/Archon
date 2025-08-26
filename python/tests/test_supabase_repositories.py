@@ -40,7 +40,8 @@ class MockSupabaseDatabase(SupabaseDatabase):
     async def begin(self):
         """Begin transaction."""
         await super().begin()
-        self._transaction_active = self._active
+        # Mock doesn't have _active, use the transaction state directly
+        self._transaction_active = True
     
     async def is_active(self) -> bool:
         """Check if transaction is active."""
@@ -68,12 +69,12 @@ class MockSupabaseDatabase(SupabaseDatabase):
     async def commit(self):
         """Override to set transaction inactive."""
         await super().commit()
-        self._transaction_active = self._active
+        self._transaction_active = False
     
     async def rollback(self):
         """Override to set transaction inactive."""
         await super().rollback()
-        self._transaction_active = self._active
+        self._transaction_active = False
 
 
 class TestSupabaseDatabase:
@@ -326,9 +327,11 @@ class TestSupabaseDatabase:
             
             assert result is False
             
-            # Should log warning
-            mock_warning.assert_called_once_with(
-                "Database health check failed: No data returned"
+            # Should log warning for each retry attempt (3 times)
+            assert mock_warning.call_count == 3
+            # Check the last warning message
+            mock_warning.assert_called_with(
+                "Database health check attempt 3/3 failed: No data returned"
             )
     
     @pytest.mark.asyncio
@@ -345,9 +348,9 @@ class TestSupabaseDatabase:
             
             assert result is False
             
-            # Should log error
+            # Should log error after retries fail
             mock_error.assert_called_once_with(
-                "Database health check failed: Database connection failed",
+                "Database health check failed after 3 attempts",
                 exc_info=True
             )
     
