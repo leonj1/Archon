@@ -19,7 +19,7 @@ Archon UI provides a comprehensive dashboard for managing your AI's knowledge ba
 
 ## 🏗️ Architecture
 
-### Full-Stack Architecture
+### Technology Stack Architecture
 
 **Frontend (port 3737)**:
 - **React 18.3**: Modern React with hooks and functional components
@@ -322,7 +322,7 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
-EXPOSE 5173
+EXPOSE 3737
 CMD ["npm", "run", "preview"]
 ```
 
