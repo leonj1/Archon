@@ -18,6 +18,9 @@ RUN npm ci --include=dev
 # Stage 2: Test runner
 FROM node:20-alpine AS test-runner
 
+# ARG to control test failure behavior
+ARG ALLOW_TEST_FAILURE=false
+
 WORKDIR /app
 
 # Install runtime dependencies
@@ -33,7 +36,11 @@ COPY . .
 RUN mkdir -p /test-results /coverage
 
 # Run tests and save results
-RUN npm run test:coverage:run || true && \
+RUN if [ "$ALLOW_TEST_FAILURE" = "true" ]; then \
+        npm run test:coverage:run || true; \
+    else \
+        npm run test:coverage:run; \
+    fi && \
     cp -r public/test-results/* /test-results/ 2>/dev/null || true && \
     cp -r coverage/* /coverage/ 2>/dev/null || true
 

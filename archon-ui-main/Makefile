@@ -34,7 +34,7 @@ help: ## Show this help message
 .PHONY: build-test
 build-test: ## Build the test Docker container
 	@echo "$(YELLOW)Building test container...$(NC)"
-	@docker build -f Dockerfile.test -t $(DOCKER_IMAGE) .
+	docker build -f Dockerfile.test -t $(DOCKER_IMAGE) .
 	@echo "$(GREEN)✓ Test container built successfully$(NC)"
 
 .PHONY: test
@@ -147,6 +147,8 @@ ensure-image: ## Ensure Docker test image exists
 	@if [ -z "$$(docker images -q $(DOCKER_IMAGE) 2>/dev/null)" ]; then \
 		echo "$(YELLOW)Test image not found. Building...$(NC)"; \
 		$(MAKE) build-test; \
+	else \
+		echo "$(GREEN)Test image $(DOCKER_IMAGE) already exists$(NC)"; \
 	fi
 
 .PHONY: test-results

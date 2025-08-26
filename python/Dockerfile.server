@@ -52,10 +52,17 @@ COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 RUN playwright install chromium
 
+# Create non-root user for security
+RUN groupadd -r archon && useradd -r -g archon archon
+
 # Copy server code and tests
 COPY src/server/ src/server/
 COPY src/__init__.py src/
 COPY tests/ tests/
+
+# Change ownership to non-root user
+RUN chown -R archon:archon /app
+USER archon
 
 # Set environment variables
 ENV PYTHONPATH="/app:/root/.local/lib/python3.11/site-packages:$PYTHONPATH"

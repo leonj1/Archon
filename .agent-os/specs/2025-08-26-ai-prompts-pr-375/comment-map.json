@@ -1,0 +1,516 @@
+{
+  "pr_url": "https://github.com/coleam00/Archon/pull/375",
+  "owner": "coleam00",
+  "repo": "Archon",
+  "pr_number": 375,
+  "task_to_comment": {
+    "1.1": {
+      "comment_id": 2296441042,
+      "node_id": "PRRC_kwDON2FEhs6I4OjS",
+      "thread_id": null,
+      "file": "archon-ui-main/Makefile"
+    },
+    "1.2": {
+      "comment_id": 2296441043,
+      "node_id": "PRRC_kwDON2FEhs6I4OjT",
+      "thread_id": null,
+      "file": "archon-ui-main/Makefile"
+    },
+    "2.1": {
+      "comment_id": 2296441045,
+      "node_id": "PRRC_kwDON2FEhs6I4OjV",
+      "thread_id": null,
+      "file": "archon-ui-main/test-docker-patch.js"
+    },
+    "3.1": {
+      "comment_id": 2296441047,
+      "node_id": "PRRC_kwDON2FEhs6I4OjX",
+      "thread_id": null,
+      "file": "docs/specs/repository-pattern-spec.md"
+    },
+    "4.1": {
+      "comment_id": 2296441048,
+      "node_id": "PRRC_kwDON2FEhs6I4OjY",
+      "thread_id": null,
+      "file": "python/Makefile"
+    },
+    "5.1": {
+      "comment_id": 2296441049,
+      "node_id": "PRRC_kwDON2FEhs6I4OjZ",
+      "thread_id": null,
+      "file": "python/src/server/core/dependencies.py"
+    },
+    "5.2": {
+      "comment_id": 2296707382,
+      "node_id": "PRRC_kwDON2FEhs6I5Pk2",
+      "thread_id": null,
+      "file": "python/src/server/core/dependencies.py"
+    },
+    "5.3": {
+      "comment_id": 2296707384,
+      "node_id": "PRRC_kwDON2FEhs6I5Pk4",
+      "thread_id": null,
+      "file": "python/src/server/core/dependencies.py"
+    },
+    "5.4": {
+      "comment_id": 2296707385,
+      "node_id": "PRRC_kwDON2FEhs6I5Pk5",
+      "thread_id": null,
+      "file": "python/src/server/core/dependencies.py"
+    },
+    "5.5": {
+      "comment_id": 2296707387,
+      "node_id": "PRRC_kwDON2FEhs6I5Pk7",
+      "thread_id": null,
+      "file": "python/src/server/core/dependencies.py"
+    },
+    "5.6": {
+      "comment_id": 2296735143,
+      "node_id": "PRRC_kwDON2FEhs6I5WWn",
+      "thread_id": null,
+      "file": "python/src/server/core/dependencies.py"
+    },
+    "6.1": {
+      "comment_id": 2296441052,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojc",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/mock_repositories.py"
+    },
+    "6.2": {
+      "comment_id": 2296441053,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojd",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/mock_repositories.py"
+    },
+    "7.1": {
+      "comment_id": 2296441054,
+      "node_id": "PRRC_kwDON2FEhs6I4Oje",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_database.py"
+    },
+    "7.2": {
+      "comment_id": 2296441056,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojg",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_database.py"
+    },
+    "7.3": {
+      "comment_id": 2296441058,
+      "node_id": "PRRC_kwDON2FEhs6I4Oji",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_database.py"
+    },
+    "7.4": {
+      "comment_id": 2296735145,
+      "node_id": "PRRC_kwDON2FEhs6I5WWp",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_database.py"
+    },
+    "8.1": {
+      "comment_id": 2296441059,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojj",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.2": {
+      "comment_id": 2296441060,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojk",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.3": {
+      "comment_id": 2296441061,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojl",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.4": {
+      "comment_id": 2296441064,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojo",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.5": {
+      "comment_id": 2296441065,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojp",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.6": {
+      "comment_id": 2296441066,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojq",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.7": {
+      "comment_id": 2296441067,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojr",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.8": {
+      "comment_id": 2296441068,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojs",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.9": {
+      "comment_id": 2296735146,
+      "node_id": "PRRC_kwDON2FEhs6I5WWq",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.10": {
+      "comment_id": 2296735148,
+      "node_id": "PRRC_kwDON2FEhs6I5WWs",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.11": {
+      "comment_id": 2296735151,
+      "node_id": "PRRC_kwDON2FEhs6I5WWv",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.12": {
+      "comment_id": 2296735154,
+      "node_id": "PRRC_kwDON2FEhs6I5WWy",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.13": {
+      "comment_id": 2296735155,
+      "node_id": "PRRC_kwDON2FEhs6I5WWz",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.14": {
+      "comment_id": 2296735156,
+      "node_id": "PRRC_kwDON2FEhs6I5WW0",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.15": {
+      "comment_id": 2299263047,
+      "node_id": "PRRC_kwDON2FEhs6JC_hH",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.16": {
+      "comment_id": 2299263050,
+      "node_id": "PRRC_kwDON2FEhs6JC_hK",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.17": {
+      "comment_id": 2299263052,
+      "node_id": "PRRC_kwDON2FEhs6JC_hM",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.18": {
+      "comment_id": 2299263057,
+      "node_id": "PRRC_kwDON2FEhs6JC_hR",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "8.19": {
+      "comment_id": 2299263058,
+      "node_id": "PRRC_kwDON2FEhs6JC_hS",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/supabase_repositories.py"
+    },
+    "9.1": {
+      "comment_id": 2296441070,
+      "node_id": "PRRC_kwDON2FEhs6I4Oju",
+      "thread_id": null,
+      "file": "python/src/server/repositories/interfaces/__init__.py"
+    },
+    "10.1": {
+      "comment_id": 2296441071,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojv",
+      "thread_id": null,
+      "file": "python/src/server/repositories/interfaces/knowledge_repository.py"
+    },
+    "10.2": {
+      "comment_id": 2296441072,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojw",
+      "thread_id": null,
+      "file": "python/src/server/repositories/interfaces/knowledge_repository.py"
+    },
+    "10.3": {
+      "comment_id": 2296441073,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojx",
+      "thread_id": null,
+      "file": "python/src/server/repositories/interfaces/knowledge_repository.py"
+    },
+    "11.1": {
+      "comment_id": 2296441074,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojy",
+      "thread_id": null,
+      "file": "python/src/server/repositories/interfaces/project_repository.py"
+    },
+    "11.2": {
+      "comment_id": 2296441075,
+      "node_id": "PRRC_kwDON2FEhs6I4Ojz",
+      "thread_id": null,
+      "file": "python/src/server/repositories/interfaces/project_repository.py"
+    },
+    "11.3": {
+      "comment_id": 2296441076,
+      "node_id": "PRRC_kwDON2FEhs6I4Oj0",
+      "thread_id": null,
+      "file": "python/src/server/repositories/interfaces/project_repository.py"
+    },
+    "12.1": {
+      "comment_id": 2296441079,
+      "node_id": "PRRC_kwDON2FEhs6I4Oj3",
+      "thread_id": null,
+      "file": "python/src/server/repositories/interfaces/unit_of_work.py"
+    },
+    "12.2": {
+      "comment_id": 2296441080,
+      "node_id": "PRRC_kwDON2FEhs6I4Oj4",
+      "thread_id": null,
+      "file": "python/src/server/repositories/interfaces/unit_of_work.py"
+    },
+    "12.3": {
+      "comment_id": 2296735157,
+      "node_id": "PRRC_kwDON2FEhs6I5WW1",
+      "thread_id": null,
+      "file": "python/src/server/repositories/interfaces/unit_of_work.py"
+    },
+    "13.1": {
+      "comment_id": 2296441081,
+      "node_id": "PRRC_kwDON2FEhs6I4Oj5",
+      "thread_id": null,
+      "file": "python/tests/test_supabase_repositories.py"
+    },
+    "13.2": {
+      "comment_id": 2296441082,
+      "node_id": "PRRC_kwDON2FEhs6I4Oj6",
+      "thread_id": null,
+      "file": "python/tests/test_supabase_repositories.py"
+    },
+    "14.1": {
+      "comment_id": 2296693931,
+      "node_id": "PRRC_kwDON2FEhs6I5MSr",
+      "thread_id": null,
+      "file": "archon-ui-main/run-tests.sh"
+    },
+    "15.1": {
+      "comment_id": 2296735158,
+      "node_id": "PRRC_kwDON2FEhs6I5WW2",
+      "thread_id": null,
+      "file": "python/tests/test_repository_interfaces.py"
+    },
+    "16.1": {
+      "comment_id": 2299261249,
+      "node_id": "PRRC_kwDON2FEhs6JC_FB",
+      "thread_id": null,
+      "file": "archon-ui-main/.dockerignore"
+    },
+    "16.2": {
+      "comment_id": 2299261260,
+      "node_id": "PRRC_kwDON2FEhs6JC_FM",
+      "thread_id": null,
+      "file": "archon-ui-main/.dockerignore"
+    },
+    "17.1": {
+      "comment_id": 2299261268,
+      "node_id": "PRRC_kwDON2FEhs6JC_FU",
+      "thread_id": null,
+      "file": "archon-ui-main/Dockerfile"
+    },
+    "18.1": {
+      "comment_id": 2299261278,
+      "node_id": "PRRC_kwDON2FEhs6JC_Fe",
+      "thread_id": null,
+      "file": "archon-ui-main/Dockerfile.test.multistage"
+    },
+    "19.1": {
+      "comment_id": 2299261284,
+      "node_id": "PRRC_kwDON2FEhs6JC_Fk",
+      "thread_id": null,
+      "file": "archon-ui-main/package.json"
+    },
+    "20.1": {
+      "comment_id": 2299261288,
+      "node_id": "PRRC_kwDON2FEhs6JC_Fo",
+      "thread_id": null,
+      "file": "archon-ui-main/README.md"
+    },
+    "21.1": {
+      "comment_id": 2299261305,
+      "node_id": "PRRC_kwDON2FEhs6JC_F5",
+      "thread_id": null,
+      "file": "archon-ui-main/src/pages/ProjectPage.tsx"
+    },
+    "22.1": {
+      "comment_id": 2299261313,
+      "node_id": "PRRC_kwDON2FEhs6JC_GB",
+      "thread_id": null,
+      "file": "archon-ui-main/src/services/testService.ts"
+    },
+    "23.1": {
+      "comment_id": 2299261318,
+      "node_id": "PRRC_kwDON2FEhs6JC_GG",
+      "thread_id": null,
+      "file": "archon-ui-main/src/utils/clipboard.ts"
+    },
+    "23.2": {
+      "comment_id": 2299261321,
+      "node_id": "PRRC_kwDON2FEhs6JC_GJ",
+      "thread_id": null,
+      "file": "archon-ui-main/src/utils/clipboard.ts"
+    },
+    "23.3": {
+      "comment_id": 2299261326,
+      "node_id": "PRRC_kwDON2FEhs6JC_GO",
+      "thread_id": null,
+      "file": "archon-ui-main/src/utils/clipboard.ts"
+    },
+    "23.4": {
+      "comment_id": 2299261330,
+      "node_id": "PRRC_kwDON2FEhs6JC_GS",
+      "thread_id": null,
+      "file": "archon-ui-main/src/utils/clipboard.ts"
+    },
+    "24.1": {
+      "comment_id": 2299261334,
+      "node_id": "PRRC_kwDON2FEhs6JC_GW",
+      "thread_id": null,
+      "file": "archon-ui-main/vitest-fast.config.ts"
+    },
+    "25.1": {
+      "comment_id": 2299261339,
+      "node_id": "PRRC_kwDON2FEhs6JC_Gb",
+      "thread_id": null,
+      "file": "archon-ui-main/vitest.config.ts"
+    },
+    "25.2": {
+      "comment_id": 2299261345,
+      "node_id": "PRRC_kwDON2FEhs6JC_Gh",
+      "thread_id": null,
+      "file": "archon-ui-main/vitest.config.ts"
+    },
+    "26.1": {
+      "comment_id": 2299261351,
+      "node_id": "PRRC_kwDON2FEhs6JC_Gn",
+      "thread_id": null,
+      "file": "docker-compose.yml"
+    },
+    "27.1": {
+      "comment_id": 2299261356,
+      "node_id": "PRRC_kwDON2FEhs6JC_Gs",
+      "thread_id": null,
+      "file": "python/Dockerfile.agents"
+    },
+    "28.1": {
+      "comment_id": 2299261360,
+      "node_id": "PRRC_kwDON2FEhs6JC_Gw",
+      "thread_id": null,
+      "file": "python/Dockerfile.mcp"
+    },
+    "29.1": {
+      "comment_id": 2299261364,
+      "node_id": "PRRC_kwDON2FEhs6JC_G0",
+      "thread_id": null,
+      "file": "python/Dockerfile.server"
+    },
+    "30.1": {
+      "comment_id": 2299261369,
+      "node_id": "PRRC_kwDON2FEhs6JC_G5",
+      "thread_id": null,
+      "file": "python/docs/LAZY_LOADING_PERFORMANCE_GUIDE.md"
+    },
+    "30.2": {
+      "comment_id": 2299261374,
+      "node_id": "PRRC_kwDON2FEhs6JC_G-",
+      "thread_id": null,
+      "file": "python/docs/LAZY_LOADING_PERFORMANCE_GUIDE.md"
+    },
+    "30.3": {
+      "comment_id": 2299261375,
+      "node_id": "PRRC_kwDON2FEhs6JC_G_",
+      "thread_id": null,
+      "file": "python/docs/LAZY_LOADING_PERFORMANCE_GUIDE.md"
+    },
+    "31.1": {
+      "comment_id": 2299261380,
+      "node_id": "PRRC_kwDON2FEhs6JC_HE",
+      "thread_id": null,
+      "file": "python/docs/README.md"
+    },
+    "32.1": {
+      "comment_id": 2299261385,
+      "node_id": "PRRC_kwDON2FEhs6JC_HJ",
+      "thread_id": null,
+      "file": "python/docs/REPOSITORY_PATTERN_SPECIFICATION.md"
+    },
+    "32.2": {
+      "comment_id": 2299261387,
+      "node_id": "PRRC_kwDON2FEhs6JC_HL",
+      "thread_id": null,
+      "file": "python/docs/REPOSITORY_PATTERN_SPECIFICATION.md"
+    },
+    "33.1": {
+      "comment_id": 2299261402,
+      "node_id": "PRRC_kwDON2FEhs6JC_Ha",
+      "thread_id": null,
+      "file": "python/pytest-fast.ini"
+    },
+    "34.1": {
+      "comment_id": 2299261403,
+      "node_id": "PRRC_kwDON2FEhs6JC_Hb",
+      "thread_id": null,
+      "file": "python/scripts/test_performance_benchmark_fixed.py"
+    },
+    "35.1": {
+      "comment_id": 2299261406,
+      "node_id": "PRRC_kwDON2FEhs6JC_He",
+      "thread_id": null,
+      "file": "python/scripts/test-fast.sh"
+    },
+    "36.1": {
+      "comment_id": 2299261409,
+      "node_id": "PRRC_kwDON2FEhs6JC_Hh",
+      "thread_id": null,
+      "file": "python/src/server/core/enhanced_dependencies.py"
+    },
+    "36.2": {
+      "comment_id": 2299261413,
+      "node_id": "PRRC_kwDON2FEhs6JC_Hl",
+      "thread_id": null,
+      "file": "python/src/server/core/enhanced_dependencies.py"
+    },
+    "37.1": {
+      "comment_id": 2299261417,
+      "node_id": "PRRC_kwDON2FEhs6JC_Hp",
+      "thread_id": null,
+      "file": "python/src/server/repositories/dependency_injection.py"
+    },
+    "38.1": {
+      "comment_id": 2299261423,
+      "node_id": "PRRC_kwDON2FEhs6JC_Hv",
+      "thread_id": null,
+      "file": "python/src/server/repositories/exceptions.py"
+    },
+    "39.1": {
+      "comment_id": 2299261426,
+      "node_id": "PRRC_kwDON2FEhs6JC_Hy",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/lazy_supabase_database.py"
+    },
+    "39.2": {
+      "comment_id": 2299261431,
+      "node_id": "PRRC_kwDON2FEhs6JC_H3",
+      "thread_id": null,
+      "file": "python/src/server/repositories/implementations/lazy_supabase_database.py"
+    }
+  },
+  "resolution_commands": {
+    "mark_resolved": "gh api repos/coleam00/Archon/issues/comments/{comment_id}/reactions -f content='+1'",
+    "post_reply": "gh api repos/coleam00/Archon/issues/comments -f body='\u2705 This suggestion has been implemented in commit {commit_sha}'"
+  }
+}

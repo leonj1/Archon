@@ -358,7 +358,7 @@ class TestSupabaseDatabase:
             await database.close()
             
             # Should log info message
-            mock_info.assert_called_once_with("Database connections closed")
+            mock_info.assert_called_once_with("Database connections closed and resources cleaned up")
     
     def test_repr_method(self, mock_supabase_client):
         """Test string representation of database instance."""
@@ -627,6 +627,79 @@ class TestSupabaseRepositoryErrorHandling:
         # Verify all repositories use the same client
         for repo in repositories:
             assert repo._client is mock_supabase_client
+    
+    @pytest.mark.asyncio
+    async def test_database_concurrent_access(self, mock_supabase_client):
+        """Test that database can handle concurrent repository access."""
+        database = MockSupabaseDatabase(client=mock_supabase_client)
+        
+        # Simulate concurrent access to different repositories
+        import asyncio
+        
+        async def access_sources():
+            return database.sources
+        
+        async def access_documents():
+            return database.documents
+            
+        async def access_projects():
+            return database.projects
+        
+        # Run concurrent access
+        sources_task = asyncio.create_task(access_sources())
+        documents_task = asyncio.create_task(access_documents())
+        projects_task = asyncio.create_task(access_projects())
+        
+        sources_repo, documents_repo, projects_repo = await asyncio.gather(
+            sources_task, documents_task, projects_task
+        )
+        
+        # Verify all repositories were created successfully
+        assert isinstance(sources_repo, SupabaseSourceRepository)
+        assert isinstance(documents_repo, SupabaseDocumentRepository) 
+        assert isinstance(projects_repo, SupabaseProjectRepository)
+        
+        # Verify they all use the same client
+        assert sources_repo._client is mock_supabase_client
+        assert documents_repo._client is mock_supabase_client
+        assert projects_repo._client is mock_supabase_client
+    
+    @pytest.mark.asyncio 
+    async def test_repository_error_isolation(self, mock_client_with_errors, caplog):
+        """Test that errors in one repository don't affect others."""
+        database = MockSupabaseDatabase(client=mock_client_with_errors)
+        
+        # Access multiple repositories - some may have errors
+        sources_repo = database.sources
+        documents_repo = database.documents
+        projects_repo = database.projects
+        
+        # Verify repositories are created despite client errors
+        assert isinstance(sources_repo, SupabaseSourceRepository)
+        assert isinstance(documents_repo, SupabaseDocumentRepository)
+        assert isinstance(projects_repo, SupabaseProjectRepository)
+        
+        # Verify they're independent instances
+        assert sources_repo is not documents_repo
+        assert documents_repo is not projects_repo
+        assert sources_repo is not projects_repo
+        
+        # All should share the same problematic client
+        assert sources_repo._client is mock_client_with_errors
+        assert documents_repo._client is mock_client_with_errors
+        assert projects_repo._client is mock_client_with_errors
+    
+    def test_database_repr_method_comprehensive(self, mock_supabase_client):
+        """Test database repr method with different client types."""
+        database = MockSupabaseDatabase(client=mock_supabase_client)
+        
+        # Test repr with mock client
+        repr_str = repr(database)
+        expected = f"SupabaseDatabase(client={type(mock_supabase_client).__name__})"
+        assert repr_str == expected
+        
+        # Test repr shows the actual client type name
+        assert "MagicMock" in repr_str or "Mock" in repr_str
 
 
 @pytest.mark.integration

@@ -18,8 +18,11 @@ RUN mkdir -p /app/coverage && chmod 777 /app/coverage
 # Copy source code
 COPY . .
 
+# Build the application for production
+RUN npm run build
+
 # Expose the port configured in package.json (3737)
 EXPOSE 3737
 
-# Start Vite dev server (already configured with --port 3737 --host in package.json)
-CMD ["npm", "run", "dev"]
+# Start production preview server
+CMD ["npm", "run", "preview"]

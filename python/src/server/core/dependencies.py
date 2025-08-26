@@ -7,6 +7,7 @@ injection setup for managing database instances throughout the application.
 
 import logging
 import threading
+from typing import Optional
 
 from ..repositories.implementations.supabase_database import SupabaseDatabase
 from ..repositories.interfaces.unit_of_work import IUnitOfWork
@@ -20,7 +21,7 @@ class DatabaseProvider:
     centralized point for dependency injection and testing.
     """
 
-    _instance: IUnitOfWork | None = None
+    _instance: Optional[IUnitOfWork] = None
     _logger = logging.getLogger(__name__)
     _lock = threading.Lock()
 
@@ -146,12 +147,15 @@ async def get_database():
 
 
 
-async def setup_database():
+async def setup_database() -> None:
     """
     Initialize the database system during application startup.
 
     This function should be called during application startup to
     ensure the database is properly initialized and ready for use.
+    
+    Raises:
+        Exception: If database setup or health check fails
     """
     logger = logging.getLogger(__name__)
     try:
@@ -169,12 +173,16 @@ async def setup_database():
         raise
 
 
-async def teardown_database():
+async def teardown_database() -> None:
     """
     Clean up the database system during application shutdown.
 
     This function should be called during application shutdown to
     ensure proper cleanup of database connections and resources.
+    
+    Note:
+        Exceptions during teardown are logged but not re-raised to avoid
+        masking other shutdown errors.
     """
     logger = logging.getLogger(__name__)
     try:
@@ -238,7 +246,7 @@ def get_database_config() -> DatabaseConfig:
     return _database_config
 
 
-def set_database_config(config: DatabaseConfig):
+def set_database_config(config: DatabaseConfig) -> None:
     """
     Set the database configuration.
 
@@ -260,7 +268,7 @@ def set_database_config(config: DatabaseConfig):
 
 
 # Factory function for creating database instances based on configuration
-def create_database_instance(config: DatabaseConfig | None = None) -> IUnitOfWork:
+def create_database_instance(config: Optional[DatabaseConfig] = None) -> IUnitOfWork:
     """
     Create a database instance based on the provided configuration.
 

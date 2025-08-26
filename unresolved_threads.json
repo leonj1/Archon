@@ -1,0 +1,482 @@
+[
+  {
+    "path": "archon-ui-main/Dockerfile.test",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8E",
+        "line": 40,
+        "comment_id": 2299261272,
+        "preview": "**Removing .git/.env after COPY doesn’t prevent them from being baked into image layers. Use .dockerignore (and narrower COPY) instead.**"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/README.md",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8R",
+        "line": 24,
+        "comment_id": 2299261288,
+        "preview": "**Port mismatch: README says 3737, Dockerfile exposes 5173. Align the documented dev port.**"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/src/pages/ProjectPage.tsx",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8a",
+        "line": 875,
+        "comment_id": 2299261305,
+        "preview": "**Fix copied UI to be per-project instead of global**"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/src/services/testService.ts",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8h",
+        "line": 45,
+        "comment_id": 2299261313,
+        "preview": "**Avoid importing UI component types into services; move shared types to a neutral module**"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/src/utils/clipboard.ts",
+    "count": 4,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8l",
+        "line": 151,
+        "comment_id": 2299261318,
+        "preview": "<details>"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8n",
+        "line": 181,
+        "comment_id": 2299261321,
+        "preview": "**Per-call resetDelay is ignored — honor customOptions.resetDelay**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8r",
+        "line": 219,
+        "comment_id": 2299261326,
+        "preview": "**Same timeout typing issue in useClipboardWithFeedback**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8u",
+        "line": 249,
+        "comment_id": 2299261330,
+        "preview": "**Honor per-call resetDelay in useClipboardWithFeedback**"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/vitest-fast.config.ts",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8z",
+        "line": 44,
+        "comment_id": 2299261334,
+        "preview": "**Invalid reporter name 'basic' — switch to a supported built-in reporter.**"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/vitest.config.ts",
+    "count": 2,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg82",
+        "line": 133,
+        "comment_id": 2299261339,
+        "preview": "**Stray numeric key '100' breaks typings and is ignored. Remove it.**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg87",
+        "line": 151,
+        "comment_id": 2299261345,
+        "preview": "**Invalid 'watch' shape — use watchExclude at top-level 'test' config.**"
+      }
+    ]
+  },
+  {
+    "path": "docker-compose.yml",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8_",
+        "line": 224,
+        "comment_id": 2299261351,
+        "preview": "**Frontend healthcheck assumes curl is present.**"
+      }
+    ]
+  },
+  {
+    "path": "python/Dockerfile.agents",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9E",
+        "line": 11,
+        "comment_id": 2299261356,
+        "preview": "**Use --no-install-recommends and avoid apt-get upgrade in images.**"
+      }
+    ]
+  },
+  {
+    "path": "python/Dockerfile.mcp",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9I",
+        "line": 11,
+        "comment_id": 2299261360,
+        "preview": "**Harden apt usage: avoid `upgrade`, add `--no-install-recommends`.**"
+      }
+    ]
+  },
+  {
+    "path": "python/Dockerfile.server",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9K",
+        "line": 13,
+        "comment_id": 2299261364,
+        "preview": "**Harden apt usage: avoid `upgrade`, add `--no-install-recommends`, pin at least indirectly.**"
+      }
+    ]
+  },
+  {
+    "path": "python/docs/LAZY_LOADING_PERFORMANCE_GUIDE.md",
+    "count": 3,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9N",
+        "line": 66,
+        "comment_id": 2299261369,
+        "preview": "**Missing imports and undefined symbols in example code.**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9R",
+        "line": 127,
+        "comment_id": 2299261374,
+        "preview": "**Inconsistent statistics API (copy and get_summary usage).**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9T",
+        "line": 993,
+        "comment_id": 2299261375,
+        "preview": "**Health check snippet treats LoadingStatistics as dict.**"
+      }
+    ]
+  },
+  {
+    "path": "python/docs/README.md",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9X",
+        "line": 227,
+        "comment_id": 2299261380,
+        "preview": "<details>"
+      }
+    ]
+  },
+  {
+    "path": "python/docs/REPOSITORY_PATTERN_SPECIFICATION.md",
+    "count": 3,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9b",
+        "line": 99,
+        "comment_id": 2299261385,
+        "preview": "**Transactional example references non-existent repositories.**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9c",
+        "line": 157,
+        "comment_id": 2299261387,
+        "preview": "**Generic TypedDict isn’t supported; use a generic dataclass/Protocol instead.**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9h",
+        "line": 520,
+        "comment_id": 2299261392,
+        "preview": "**Health check snippet mixes names/casing for repository access.**"
+      }
+    ]
+  },
+  {
+    "path": "python/docs/TESTING_GUIDE.md",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9j",
+        "line": 1864,
+        "comment_id": 2299261395,
+        "preview": "_⚠️ Potential issue_"
+      }
+    ]
+  },
+  {
+    "path": "python/pytest-fast.ini",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9p",
+        "line": 66,
+        "comment_id": 2299261402,
+        "preview": "**Replace invalid collect_ignore with norecursedirs (collect_ignore is not a pytest INI option).**"
+      }
+    ]
+  },
+  {
+    "path": "python/scripts/test-fast.sh",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9u",
+        "line": 29,
+        "comment_id": 2299261406,
+        "preview": "**Explicitly load plugins needed by pytest-fast.ini (autoload is disabled). Add uv fallback.**"
+      }
+    ]
+  },
+  {
+    "path": "python/scripts/test_performance_benchmark_fixed.py",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9q",
+        "line": 55,
+        "comment_id": 2299261403,
+        "preview": "<details>"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/core/enhanced_dependencies.py",
+    "count": 2,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9v",
+        "line": 170,
+        "comment_id": 2299261409,
+        "preview": "**Fix the ImportError handling and module import path.**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9x",
+        "line": 452,
+        "comment_id": 2299261413,
+        "preview": "**Ensure proper async cleanup in dependency container.**"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/dependency_injection.py",
+    "count": 2,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg91",
+        "line": 83,
+        "comment_id": 2299261417,
+        "preview": "**Potential race condition with asyncio event loop time.**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg92",
+        "line": 383,
+        "comment_id": 2299261419,
+        "preview": "**Health monitoring task creation without event loop check.**"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/exceptions.py",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg96",
+        "line": 314,
+        "comment_id": 2299261423,
+        "preview": "**Import statement should be at module level.**"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/implementations/lazy_supabase_database.py",
+    "count": 2,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg99",
+        "line": 141,
+        "comment_id": 2299261426,
+        "preview": "**Import time module at the top of the file.**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg-B",
+        "line": 381,
+        "comment_id": 2299261431,
+        "preview": "**Potential issue with savepoint ID parsing.**"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/implementations/supabase_database.py",
+    "count": 2,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgC",
+        "line": null,
+        "comment_id": 2296441055,
+        "preview": "**Transaction context should manage active state, guard against nesting, and always reset state**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgD",
+        "line": null,
+        "comment_id": 2296441056,
+        "preview": "**Commit/Rollback should respect active state and document no-op behavior**"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/implementations/supabase_repositories.py",
+    "count": 10,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgH",
+        "line": null,
+        "comment_id": 2296441060,
+        "preview": "**Preserve stack traces in error logs**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgJ",
+        "line": 763,
+        "comment_id": 2296441062,
+        "preview": "**Validate/normalize hybrid_search weights**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgL",
+        "line": null,
+        "comment_id": 2296441064,
+        "preview": "**Upsert should validate input before persisting**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YZqpT",
+        "line": 275,
+        "comment_id": 2296735146,
+        "preview": "**update(): offload blocking call and include exc_info**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YZqpa",
+        "line": 853,
+        "comment_id": 2296735152,
+        "preview": "**search_content(): offload text_search execution; keep stack trace**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YghQ7",
+        "line": 283,
+        "comment_id": 2299263047,
+        "preview": "<details>"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YghQ9",
+        "line": 413,
+        "comment_id": 2299263050,
+        "preview": "**TypedDict cannot be instantiated; return a dict literal instead.**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YghQ-",
+        "line": 477,
+        "comment_id": 2299263052,
+        "preview": "**Method signature drift from IBaseRepository (count distinct_field missing) and inefficient counting.**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YghRA",
+        "line": 483,
+        "comment_id": 2299263055,
+        "preview": "<details>"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YghRC",
+        "line": 662,
+        "comment_id": 2299263057,
+        "preview": "**Swallowing exceptions by returning []/0 hides failures from callers.**"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/interfaces/__init__.py",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgR",
+        "line": null,
+        "comment_id": 2296441070,
+        "preview": "<details>"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/interfaces/knowledge_repository.py",
+    "count": 3,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgS",
+        "line": 100,
+        "comment_id": 2296441071,
+        "preview": "**Docstring says “merge” metadata, but current implementations overwrite it**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgT",
+        "line": 211,
+        "comment_id": 2296441072,
+        "preview": "**Vector search result shape is underspecified vs. implementations**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgU",
+        "line": 241,
+        "comment_id": 2296441073,
+        "preview": "<details>"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/interfaces/project_repository.py",
+    "count": 4,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgV",
+        "line": 63,
+        "comment_id": 2296441074,
+        "preview": "**get_with_tasks promises tasks eagerly; Supabase impl returns project only**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgW",
+        "line": 87,
+        "comment_id": 2296441075,
+        "preview": "**Validate JSONB field names on update_jsonb_field**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgX",
+        "line": 110,
+        "comment_id": 2296441076,
+        "preview": "**merge_jsonb_field contract vs. implementation**"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgY",
+        "line": 355,
+        "comment_id": 2296441077,
+        "preview": "<details>"
+      }
+    ]
+  }
+]

@@ -11,6 +11,10 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
+class ValidationError(Exception):
+    """Custom validation error for mock repositories."""
+    pass
+
 from ..interfaces.knowledge_repository import (
     ICodeExampleRepository,
     IDocumentRepository,
@@ -38,6 +42,9 @@ class MockSourceRepository(ISourceRepository):
     
     async def create(self, entity: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new source record."""
+        if not entity:
+            raise ValueError("Entity cannot be empty")
+        
         entity_id = entity.get('id', str(uuid4()))
         entity['id'] = entity_id
         entity['created_at'] = datetime.now().isoformat()
@@ -160,11 +167,28 @@ class MockSourceRepository(ISourceRepository):
         return None
     
     async def update_metadata(self, source_id: str, metadata: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Update source metadata."""
+        """Update source metadata with deep merge functionality."""
         source = await self.get_by_source_id(source_id)
         if source:
-            return await self.update(source['id'], {'metadata': metadata})
+            # Perform deep merge of metadata
+            current_metadata = source.get('metadata', {})
+            merged_metadata = self._deep_merge_dict(current_metadata, metadata)
+            return await self.update(source['id'], {'metadata': merged_metadata})
         return None
+    
+    def _deep_merge_dict(self, base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
+        """Deep merge two dictionaries, preserving existing nested values."""
+        result = base.copy()
+        
+        for key, value in update.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                # Recursively merge nested dictionaries
+                result[key] = self._deep_merge_dict(result[key], value)
+            else:
+                # Replace or add the value
+                result[key] = value
+                
+        return result
     
     async def get_by_status(self, status: str) -> List[Dict[str, Any]]:
         """Get sources by crawling status."""
@@ -328,7 +352,12 @@ class MockDocumentRepository(IDocumentRepository):
         results_with_similarity = []
         for result in results:
             result_copy = result.copy()
-            result_copy['similarity'] = random.uniform(0.5, 1.0)
+            similarity_score = random.uniform(0.5, 1.0)
+            result_copy['similarity'] = similarity_score
+            # Add metadata field with similarity_score as required by interface contract
+            if 'metadata' not in result_copy:
+                result_copy['metadata'] = {}
+            result_copy['metadata']['similarity_score'] = similarity_score
             results_with_similarity.append(result_copy)
         
         # Sort by similarity and limit
@@ -345,6 +374,10 @@ class MockDocumentRepository(IDocumentRepository):
         vector_weight: float = 0.5
     ) -> List[Dict[str, Any]]:
         """Perform mock hybrid search."""
+        # Validate weights sum to 1.0
+        if abs((keyword_weight + vector_weight) - 1.0) > 1e-6:
+            raise ValidationError("keyword_weight and vector_weight must sum to 1.0")
+        
         # Simplified implementation - just use vector search for mock
         return await self.vector_search(embedding, limit, source_filter)
     

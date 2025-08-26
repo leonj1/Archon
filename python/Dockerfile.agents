@@ -12,6 +12,11 @@ RUN pip install --no-cache-dir -r requirements.agents.txt
 COPY src/agents/ src/agents/
 COPY src/__init__.py src/
 
+# Create non-root user for security
+RUN groupadd -r archon && useradd -r -g archon archon && \
+    chown -R archon:archon /app
+USER archon
+
 # Set environment variables
 ENV PYTHONPATH="/app:$PYTHONPATH"
 ENV PYTHONUNBUFFERED=1

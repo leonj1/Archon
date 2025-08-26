@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './test/setup.ts',
+    setupFiles: ['./test/setup.ts'],
     include: [
       'test/components.test.tsx',
       'test/pages.test.tsx', 
@@ -36,7 +36,8 @@ export default defineConfig({
         'lcov'
       ],
       reportsDirectory: './public/test-results/coverage',
-      clean: false, // Don't clean the directory as it may be in use
+      clean: true,
+      cleanOnRerun: true,
       reportOnFailure: true, // Generate coverage reports even when tests fail
       exclude: [
         'node_modules/',

@@ -49,13 +49,31 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
     @abstractmethod
     async def get_with_tasks(self, project_id: UUID) -> Optional[Dict[str, Any]]:
         """
-        Retrieve a project with all associated tasks included.
+        Retrieve a project with all associated tasks included in the response.
+        
+        This method performs a join operation to include all tasks associated
+        with the project in a single response, avoiding the need for separate
+        queries to fetch tasks.
         
         Args:
             project_id: UUID of the project
             
         Returns:
-            Project record with tasks array if found, None otherwise
+            Project record with "tasks" key containing list of task dicts if found,
+            None if project doesn't exist. The "tasks" key will contain an array
+            of all tasks associated with this project, or empty array if no tasks exist.
+            
+            Example return structure:
+            {
+                "id": "project-uuid",
+                "title": "Project Title",
+                "description": "Project Description",
+                "tasks": [
+                    {"id": "task-1", "title": "Task 1", "status": "todo"},
+                    {"id": "task-2", "title": "Task 2", "status": "doing"}
+                ],
+                ... other project fields
+            }
             
         Raises:
             RepositoryError: If query fails due to database errors
@@ -94,18 +112,29 @@ class IProjectRepository(IBaseRepository[Dict[str, Any]]):
         value: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
-        Merge data into a JSONB field preserving existing content.
+        Merge data into a JSONB field using recursive deep merge semantics.
+        
+        Performs a read-modify-write operation with deep merge logic:
+        - New keys from 'value' are added to existing JSONB content
+        - Existing keys are overwritten with new values from 'value'
+        - Nested dictionaries are recursively merged (not replaced)
+        - Arrays are merged by appending non-duplicate elements
+        - None values in 'value' will remove existing keys
+        - Missing or null existing JSONB field is treated as empty dict {}
+        
+        The operation is performed atomically within a transaction to ensure
+        consistency during concurrent modifications.
         
         Args:
             project_id: UUID of the project
-            field_name: Name of JSONB field to merge into
-            value: Data to merge with existing JSONB content
+            field_name: Name of JSONB field to merge into ('prd', 'data', etc.)
+            value: Data dictionary to deep merge with existing JSONB content
             
         Returns:
-            Updated project record if found, None otherwise
+            Updated project record with merged JSONB field if found, None otherwise
             
         Raises:
-            RepositoryError: If merge fails due to database errors
+            RepositoryError: If merge fails due to database errors or transaction conflicts
         """
         pass
     

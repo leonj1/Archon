@@ -85,14 +85,21 @@ class ISourceRepository(IBaseRepository[Dict[str, Any]]):
         metadata: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
-        Update or merge metadata for a source.
+        Update metadata for a source using deep merge semantics.
+        
+        Performs a recursive deep merge where:
+        - New keys are added to existing metadata
+        - Existing keys are overwritten with new values
+        - Nested dictionaries are recursively merged
+        - Arrays are replaced entirely (not merged)
+        - None values in the input will remove existing keys
         
         Args:
             source_id: Unique identifier for the source
-            metadata: Metadata dictionary to merge with existing metadata
+            metadata: Metadata dictionary to deep merge with existing metadata
             
         Returns:
-            Updated source record if found, None otherwise
+            Updated source record with merged metadata if found, None otherwise
             
         Raises:
             RepositoryError: If update fails due to database errors
@@ -202,8 +209,16 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
             metadata_filter: Optional metadata conditions to filter results
             
         Returns:
-            List of document chunks ordered by similarity score (highest first)
-            Each result includes similarity score in metadata
+            List of document chunks ordered by similarity score (highest first).
+            Each result is a Dict with canonical structure:
+            - id: Document chunk ID
+            - url: Source URL or file path
+            - content: Document text content
+            - source_id: Source identifier
+            - metadata: Dict that MUST include "similarity_score" (float 0.0-1.0)
+            
+            The similarity score is always placed in result["metadata"]["similarity_score"]
+            and results are ordered by descending similarity score.
             
         Raises:
             RepositoryError: If vector search fails due to database errors
@@ -232,11 +247,18 @@ class IDocumentRepository(IBaseRepository[Dict[str, Any]]):
             vector_weight: Weight for vector search component (0.0-1.0)
             
         Returns:
-            List of document chunks with combined relevance scores
+            List of document chunks with combined relevance scores.
+            Results follow the same canonical structure as vector_search,
+            with combined scores in result["metadata"]["similarity_score"].
             
         Raises:
             RepositoryError: If hybrid search fails due to database errors
-            ValidationError: If weights don't sum to 1.0
+            ValidationError: If weights don't sum to 1.0 (within tolerance of 1e-6)
+        
+        Note:
+            Implementations MUST validate that abs((keyword_weight + vector_weight) - 1.0) <= 1e-6
+            and raise ValidationError with message "keyword_weight and vector_weight must sum to 1.0"
+            if the validation fails.
         """
         pass
     

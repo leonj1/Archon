@@ -6,7 +6,8 @@ A modern React-based web interface for the Archon Knowledge Engine MCP Server. B
 
 Archon UI provides a comprehensive dashboard for managing your AI's knowledge base:
 
-![UI Architecture](https://via.placeholder.com/800x400?text=Archon+UI+Architecture)
+<!-- ![UI Architecture](https://via.placeholder.com/800x400?text=Archon+UI+Architecture) -->
+*UI Architecture diagram will be added soon*
 
 ### Key Features
 

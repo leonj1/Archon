@@ -33,6 +33,83 @@ from ..interfaces.settings_repository import (
 )
 
 
+class RepositoryError(Exception):
+    """Base exception for repository operations."""
+    
+    def __init__(self, message: str, operation: str = "", table: str = "", context: Optional[Dict[str, Any]] = None):
+        """Initialize repository error with contextual information."""
+        self.operation = operation
+        self.table = table
+        self.context = context or {}
+        
+        # Build detailed error message
+        details = [message]
+        if operation:
+            details.append(f"Operation: {operation}")
+        if table:
+            details.append(f"Table: {table}")
+        if context:
+            details.append(f"Context: {context}")
+        
+        super().__init__(" | ".join(details))
+
+
+async def exponential_backoff_retry(
+    func: callable,
+    max_retries: int = 3,
+    base_delay: float = 0.5,
+    max_delay: float = 60.0,
+    operation: str = "database operation",
+    logger: Optional[logging.Logger] = None
+) -> Any:
+    """
+    Execute a function with exponential backoff retry logic.
+    
+    Args:
+        func: The function to execute
+        max_retries: Maximum number of retry attempts
+        base_delay: Initial delay between retries in seconds
+        max_delay: Maximum delay between retries in seconds
+        operation: Description of the operation for logging
+        logger: Logger instance for error reporting
+        
+    Returns:
+        The result of the function execution
+        
+    Raises:
+        The last exception encountered if all retries fail
+    """
+    last_exception = None
+    
+    for attempt in range(max_retries):
+        try:
+            return await func()
+        except Exception as e:
+            last_exception = e
+            
+            if attempt == max_retries - 1:
+                # Last attempt failed
+                if logger:
+                    logger.error(
+                        f"{operation} failed after {max_retries} attempts: {e}",
+                        exc_info=True
+                    )
+                raise
+            else:
+                # Calculate exponential backoff delay
+                delay = min(base_delay * (2 ** attempt), max_delay)
+                if logger:
+                    logger.warning(
+                        f"Attempt {attempt + 1}/{max_retries} failed for {operation}: {e}. "
+                        f"Retrying in {delay:.2f}s..."
+                    )
+                await asyncio.sleep(delay)
+    
+    # This should never be reached, but just in case
+    if last_exception:
+        raise last_exception
+
+
 class SupabaseSourceRepository(ISourceRepository):
     """Supabase implementation of source repository for archon_sources table."""
     
@@ -89,11 +166,18 @@ class SupabaseSourceRepository(ISourceRepository):
     async def get_by_source_id(self, source_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve source by source_id."""
         try:
-            response = self._client.table(self._table).select('*').eq('source_id', source_id).execute()
+            response = await asyncio.to_thread(
+                lambda: self._client.table(self._table).select('*').eq('source_id', source_id).execute()
+            )
             return response.data[0] if response.data else None
         except Exception as e:
             self._logger.error(f"Failed to get source by source_id {source_id}: {e}")
-            return None
+            raise RepositoryError(
+                f"Failed to get source by source_id: {e}",
+                operation="get_by_source_id",
+                table=self._table,
+                context={"source_id": source_id}
+            ) from e
     
     async def update(self, id: Union[str, UUID, int], data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update source record."""
@@ -104,7 +188,12 @@ class SupabaseSourceRepository(ISourceRepository):
             return response.data[0] if response.data else None
         except Exception as e:
             self._logger.error(f"Failed to update source {id}: {e}", exc_info=True)
-            return None
+            raise RepositoryError(
+                f"Failed to update source: {e}",
+                operation="update",
+                table=self._table,
+                context={"id": str(id), "data_keys": list(data.keys())}
+            ) from e
     
     async def delete(self, id: Union[str, UUID, int]) -> bool:
         """Delete source record."""
@@ -115,7 +204,12 @@ class SupabaseSourceRepository(ISourceRepository):
             return len(response.data) > 0
         except Exception as e:
             self._logger.error(f"Failed to delete source {id}: {e}", exc_info=True)
-            return False
+            raise RepositoryError(
+                f"Failed to delete source: {e}",
+                operation="delete",
+                table=self._table,
+                context={"id": str(id)}
+            ) from e
     
     async def list(
         self, 
@@ -145,11 +239,16 @@ class SupabaseSourceRepository(ISourceRepository):
             if offset:
                 query = query.offset(offset)
             
-            response = query.execute()
+            response = await asyncio.to_thread(lambda: query.execute())
             return response.data or []
         except Exception as e:
             self._logger.exception(f"Failed to list sources: {e}")
-            return []
+            raise RepositoryError(
+                f"Failed to list sources: {e}",
+                operation="list",
+                table=self._table,
+                context={"filters": filters, "limit": limit, "offset": offset}
+            ) from e
     
     # Implement remaining base repository methods with minimal functionality
     async def count(self, filters: Optional[Dict[str, Any]] = None) -> int:

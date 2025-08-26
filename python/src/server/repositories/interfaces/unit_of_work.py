@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import AsyncContextManager, Optional, Any, TypeVar, Self
+from typing import AsyncContextManager, Optional, Any, TypeVar, Self, Type
 
 
 # Type variable for Unit of Work implementations
@@ -204,35 +204,75 @@ class ITransactionContext(ABC):
     """
     
     @abstractmethod
-    def get_repository(self, repository_type: type) -> Any:
+    def get_repository(self, repository_type: Type[Any]) -> Any:
         """
         Get a repository instance within the current transaction context.
         
+        This method retrieves a repository instance that shares the same
+        database transaction/session as other repositories obtained through
+        this transaction context, ensuring data consistency.
+        
         Args:
-            repository_type: The type of repository to retrieve
+            repository_type: The type/class of repository to retrieve
             
         Returns:
-            Repository instance configured for the current transaction
+            Repository instance configured for the current transaction context
             
         Raises:
-            RepositoryError: If repository type is not supported
+            RepositoryError: If repository type is not supported or not registered
+            TransactionError: If no active transaction context exists
+            
+        Example:
+            ```python
+            async with uow.transaction() as tx_context:
+                user_repo = tx_context.get_repository(IUserRepository)
+                project_repo = tx_context.get_repository(IProjectRepository)
+                # Both repositories share the same transaction
+            ```
         """
         pass
 
 
 class TransactionError(Exception):
-    """Exception raised for transaction management errors."""
+    """
+    Exception raised for transaction management errors.
+    
+    This is the base exception for all transaction-related errors in the
+    Unit of Work pattern implementation. It provides context about the
+    original error when applicable.
+    
+    Attributes:
+        original_error: The underlying exception that caused this transaction error
+    """
     
     def __init__(self, message: str, original_error: Optional[Exception] = None):
         super().__init__(message)
         self.original_error = original_error
+    
+    def __str__(self) -> str:
+        if self.original_error:
+            return f"{super().__str__()} (caused by {type(self.original_error).__name__}: {self.original_error})"
+        return super().__str__()
 
 
 class SavepointError(TransactionError):
-    """Exception raised for savepoint-related errors."""
+    """
+    Exception raised for savepoint-related errors.
+    
+    This exception is raised when savepoint operations fail, such as:
+    - Creating a savepoint when no transaction is active
+    - Rolling back to a non-existent savepoint
+    - Releasing an already released savepoint
+    """
     pass
 
 
 class NestedTransactionError(TransactionError):
-    """Exception raised when attempting to nest transactions incorrectly."""
+    """
+    Exception raised when attempting to nest transactions incorrectly.
+    
+    This exception indicates that a transaction was started when another
+    transaction was already active, and the implementation doesn't support
+    nested transactions or the nesting was attempted incorrectly.
+    """
     pass

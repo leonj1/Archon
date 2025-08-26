@@ -1,0 +1,482 @@
+[
+  {
+    "path": "archon-ui-main/Dockerfile.test",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8E",
+        "line": 40,
+        "comment_id": 2299261272,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/README.md",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8R",
+        "line": 24,
+        "comment_id": 2299261288,
+        "preview": "_⚠️ Potential issue_"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/src/pages/ProjectPage.tsx",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8a",
+        "line": 875,
+        "comment_id": 2299261305,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/src/services/testService.ts",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8h",
+        "line": 45,
+        "comment_id": 2299261313,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/src/utils/clipboard.ts",
+    "count": 4,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8l",
+        "line": 151,
+        "comment_id": 2299261318,
+        "preview": "_💡 Verification agent_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8n",
+        "line": 181,
+        "comment_id": 2299261321,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8r",
+        "line": 219,
+        "comment_id": 2299261326,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8u",
+        "line": 249,
+        "comment_id": 2299261330,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/vitest-fast.config.ts",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8z",
+        "line": 44,
+        "comment_id": 2299261334,
+        "preview": "_⚠️ Potential issue_"
+      }
+    ]
+  },
+  {
+    "path": "archon-ui-main/vitest.config.ts",
+    "count": 2,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg82",
+        "line": 133,
+        "comment_id": 2299261339,
+        "preview": "_⚠️ Potential issue_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg87",
+        "line": 151,
+        "comment_id": 2299261345,
+        "preview": "_⚠️ Potential issue_"
+      }
+    ]
+  },
+  {
+    "path": "docker-compose.yml",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg8_",
+        "line": 224,
+        "comment_id": 2299261351,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/Dockerfile.agents",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9E",
+        "line": 11,
+        "comment_id": 2299261356,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/Dockerfile.mcp",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9I",
+        "line": 11,
+        "comment_id": 2299261360,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/Dockerfile.server",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9K",
+        "line": 13,
+        "comment_id": 2299261364,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/docs/LAZY_LOADING_PERFORMANCE_GUIDE.md",
+    "count": 3,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9N",
+        "line": 66,
+        "comment_id": 2299261369,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9R",
+        "line": 127,
+        "comment_id": 2299261374,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9T",
+        "line": 993,
+        "comment_id": 2299261375,
+        "preview": "_⚠️ Potential issue_"
+      }
+    ]
+  },
+  {
+    "path": "python/docs/README.md",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9X",
+        "line": 227,
+        "comment_id": 2299261380,
+        "preview": "_💡 Verification agent_"
+      }
+    ]
+  },
+  {
+    "path": "python/docs/REPOSITORY_PATTERN_SPECIFICATION.md",
+    "count": 3,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9b",
+        "line": 99,
+        "comment_id": 2299261385,
+        "preview": "_⚠️ Potential issue_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9c",
+        "line": 157,
+        "comment_id": 2299261387,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9h",
+        "line": 520,
+        "comment_id": 2299261392,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/docs/TESTING_GUIDE.md",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9j",
+        "line": 1864,
+        "comment_id": 2299261395,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/pytest-fast.ini",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9p",
+        "line": 66,
+        "comment_id": 2299261402,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/scripts/test-fast.sh",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9u",
+        "line": 29,
+        "comment_id": 2299261406,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/scripts/test_performance_benchmark_fixed.py",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9q",
+        "line": 55,
+        "comment_id": 2299261403,
+        "preview": "_💡 Verification agent_"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/core/enhanced_dependencies.py",
+    "count": 2,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9v",
+        "line": 170,
+        "comment_id": 2299261409,
+        "preview": "_⚠️ Potential issue_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg9x",
+        "line": 452,
+        "comment_id": 2299261413,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/dependency_injection.py",
+    "count": 2,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg91",
+        "line": 83,
+        "comment_id": 2299261417,
+        "preview": "_⚠️ Potential issue_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg92",
+        "line": 383,
+        "comment_id": 2299261419,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/exceptions.py",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg96",
+        "line": 314,
+        "comment_id": 2299261423,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/implementations/lazy_supabase_database.py",
+    "count": 2,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg99",
+        "line": 141,
+        "comment_id": 2299261426,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5Ygg-B",
+        "line": 381,
+        "comment_id": 2299261431,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/implementations/supabase_database.py",
+    "count": 2,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgC",
+        "line": null,
+        "comment_id": 2296441055,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgD",
+        "line": null,
+        "comment_id": 2296441056,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/implementations/supabase_repositories.py",
+    "count": 10,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgH",
+        "line": null,
+        "comment_id": 2296441060,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgJ",
+        "line": 763,
+        "comment_id": 2296441062,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgL",
+        "line": null,
+        "comment_id": 2296441064,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YZqpT",
+        "line": 275,
+        "comment_id": 2296735146,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YZqpa",
+        "line": 853,
+        "comment_id": 2296735152,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YghQ7",
+        "line": 283,
+        "comment_id": 2299263047,
+        "preview": "_💡 Verification agent_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YghQ9",
+        "line": 413,
+        "comment_id": 2299263050,
+        "preview": "_⚠️ Potential issue_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YghQ-",
+        "line": 477,
+        "comment_id": 2299263052,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YghRA",
+        "line": 483,
+        "comment_id": 2299263055,
+        "preview": "_💡 Verification agent_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YghRC",
+        "line": 662,
+        "comment_id": 2299263057,
+        "preview": "_🛠️ Refactor suggestion_"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/interfaces/__init__.py",
+    "count": 1,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgR",
+        "line": null,
+        "comment_id": 2296441070,
+        "preview": "_💡 Verification agent_"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/interfaces/knowledge_repository.py",
+    "count": 3,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgS",
+        "line": 100,
+        "comment_id": 2296441071,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgT",
+        "line": 211,
+        "comment_id": 2296441072,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgU",
+        "line": 241,
+        "comment_id": 2296441073,
+        "preview": "_💡 Verification agent_"
+      }
+    ]
+  },
+  {
+    "path": "python/src/server/repositories/interfaces/project_repository.py",
+    "count": 4,
+    "threads": [
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgV",
+        "line": 63,
+        "comment_id": 2296441074,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgW",
+        "line": 87,
+        "comment_id": 2296441075,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgX",
+        "line": 110,
+        "comment_id": 2296441076,
+        "preview": "_🛠️ Refactor suggestion_"
+      },
+      {
+        "id": "PRRT_kwDON2FEhs5YYzgY",
+        "line": 355,
+        "comment_id": 2296441077,
+        "preview": "_💡 Verification agent_"
+      }
+    ]
+  }
+]

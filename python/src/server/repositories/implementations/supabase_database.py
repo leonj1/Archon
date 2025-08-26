@@ -165,7 +165,7 @@ class SupabaseDatabase(IUnitOfWork):
                 await self.rollback()
             raise
     
-    async def commit(self):
+    async def commit(self) -> None:
         """
         Commit the current transaction.
         
@@ -184,7 +184,7 @@ class SupabaseDatabase(IUnitOfWork):
         self._active = False
         self._logger.debug("Transaction committed (Supabase auto-commits)")
     
-    async def rollback(self):
+    async def rollback(self) -> None:
         """
         Rollback the current transaction.
         
@@ -341,17 +341,33 @@ class SupabaseDatabase(IUnitOfWork):
         """
         return self._client
     
-    async def close(self):
+    async def close(self) -> None:
         """
         Close database connections and clean up resources.
         
         Note: Supabase client doesn't require explicit closing,
         but this method is provided for interface compatibility.
         """
-        self._logger.info("Database connections closed")
-        # Supabase client doesn't require explicit closing
-        # This method is provided for interface compatibility
-        pass
+        try:
+            # Reset all repository instances
+            self._sources = None
+            self._documents = None
+            self._code_examples = None
+            self._projects = None
+            self._tasks = None
+            self._versions = None
+            self._settings = None
+            self._prompts = None
+            
+            # Reset transaction state
+            self._active = False
+            self._savepoints.clear()
+            self._savepoint_counter = 0
+            
+            self._logger.info("Database connections closed and resources cleaned up")
+        except Exception as e:
+            self._logger.error(f"Error during database cleanup: {e}", exc_info=True)
+            # Don't re-raise during cleanup
     
     def __repr__(self) -> str:
         """String representation of the database instance."""

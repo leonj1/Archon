@@ -345,7 +345,8 @@ class TestTransactionErrorHandling:
         # With original error
         original = ValueError("Database connection lost")
         error2 = TransactionError("Transaction rollback failed", original)
-        assert str(error2) == "Transaction rollback failed"
+        expected_str = "Transaction rollback failed (caused by ValueError: Database connection lost)"
+        assert str(error2) == expected_str
         assert error2.original_error == original
     
     def test_savepoint_error_inheritance(self):
@@ -492,10 +493,13 @@ class TestSpecificRepositoryFeatures:
         results = await repo.vector_search(query_embedding, limit=5)
         
         assert len(results) <= 5
-        # Check that similarity scores are added
+        # Check that similarity scores are added in metadata as per interface contract
         for result in results:
-            assert 'similarity' in result
-            assert 0.0 <= result['similarity'] <= 1.0
+            assert 'metadata' in result
+            assert isinstance(result['metadata'], dict)
+            assert 'similarity_score' in result['metadata']
+            assert isinstance(result['metadata']['similarity_score'], float)
+            assert 0.0 <= result['metadata']['similarity_score'] <= 1.0
         
         # Test with source filter
         filtered_results = await repo.vector_search(
@@ -504,6 +508,91 @@ class TestSpecificRepositoryFeatures:
         
         for result in filtered_results:
             assert result['source_id'] == 'example-source'
+            # Ensure filtered results also have proper similarity scores
+            assert result['metadata']['similarity_score'] >= 0.0
+    
+    @pytest.mark.asyncio
+    async def test_document_repository_hybrid_search_weight_validation(self):
+        """Test hybrid search weight validation as per interface contract."""
+        from src.server.repositories.implementations.mock_repositories import ValidationError
+        repo = MockDocumentRepository()
+        
+        # Create a test document
+        document = {
+            'url': 'https://example.com/page1',
+            'chunk_number': 0,
+            'content': 'Python programming tutorial',
+            'source_id': 'example-source',
+            'embedding': [0.1, 0.2, 0.3]
+        }
+        await repo.create(document)
+        
+        query = "python programming"
+        query_embedding = [0.1, 0.2, 0.3]
+        
+        # Test valid weights (sum to 1.0)
+        results = await repo.hybrid_search(
+            query, query_embedding, limit=5,
+            keyword_weight=0.6, vector_weight=0.4
+        )
+        assert isinstance(results, list)
+        
+        # Test invalid weights (don't sum to 1.0) - should raise ValidationError
+        with pytest.raises(ValidationError, match="keyword_weight and vector_weight must sum to 1.0"):
+            await repo.hybrid_search(
+                query, query_embedding, limit=5,
+                keyword_weight=0.6, vector_weight=0.5  # Sum is 1.1
+            )
+        
+        with pytest.raises(ValidationError, match="keyword_weight and vector_weight must sum to 1.0"):
+            await repo.hybrid_search(
+                query, query_embedding, limit=5,
+                keyword_weight=0.3, vector_weight=0.3  # Sum is 0.6
+            )
+        
+        # Test edge case: very close to 1.0 but within tolerance
+        results = await repo.hybrid_search(
+            query, query_embedding, limit=5,
+            keyword_weight=0.5, vector_weight=0.5000001  # Within 1e-6 tolerance
+        )
+        assert isinstance(results, list)
+    
+    @pytest.mark.asyncio
+    async def test_source_repository_metadata_deep_merge(self):
+        """Test source repository metadata deep merge functionality."""
+        repo = MockSourceRepository()
+        
+        # Create source with initial metadata
+        source_data = {
+            'source_id': 'test-source',
+            'source_type': 'website',
+            'base_url': 'https://example.com',
+            'metadata': {
+                'settings': {'timeout': 30, 'retries': 3},
+                'tags': ['python', 'tutorial'],
+                'config': {'enabled': True}
+            }
+        }
+        created = await repo.create(source_data)
+        
+        # Test deep merge - should preserve existing nested structure
+        merge_metadata = {
+            'settings': {'timeout': 60},  # Should overwrite timeout, keep retries
+            'tags': ['javascript'],        # Should replace tags array entirely
+            'author': 'test-author',       # Should add new key
+            'config': {'ssl': True}        # Should merge into config
+        }
+        
+        updated = await repo.update_metadata('test-source', merge_metadata)
+        
+        assert updated is not None
+        expected_metadata = {
+            'settings': {'timeout': 60, 'retries': 3},  # Deep merged
+            'tags': ['javascript'],                      # Replaced
+            'config': {'enabled': True, 'ssl': True},   # Deep merged
+            'author': 'test-author'                      # Added
+        }
+        assert updated['metadata'] == expected_metadata
     
     @pytest.mark.asyncio
     async def test_project_repository_jsonb_operations(self):

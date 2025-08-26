@@ -24,6 +24,11 @@ COPY src/server/config/__init__.py src/server/config/
 COPY src/server/config/service_discovery.py src/server/config/
 COPY src/server/config/logfire_config.py src/server/config/
 
+# Create non-root user for security
+RUN groupadd -r archon && useradd -r -g archon archon && \
+    chown -R archon:archon /app
+USER archon
+
 # Set environment variables
 ENV PYTHONPATH="/app:$PYTHONPATH"
 ENV PYTHONUNBUFFERED=1
