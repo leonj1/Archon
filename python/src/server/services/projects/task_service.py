@@ -186,17 +186,36 @@ class TaskService:
             return False, {"error": f"Error creating task: {str(e)}"}
 
     def list_tasks(
-        self, project_id: str = None, status: str = None, include_closed: bool = False
+        self, 
+        project_id: str = None, 
+        status: str = None, 
+        include_closed: bool = False,
+        exclude_large_fields: bool = False
     ) -> tuple[bool, dict[str, Any]]:
         """
         List tasks with various filters.
+
+        Args:
+            project_id: Filter by project
+            status: Filter by status
+            include_closed: Include done tasks
+            exclude_large_fields: If True, excludes sources and code_examples fields
 
         Returns:
             Tuple of (success, result_dict)
         """
         try:
             # Start with base query
-            query = self.supabase_client.table("archon_tasks").select("*")
+            if exclude_large_fields:
+                # Select all fields except large JSONB ones
+                query = self.supabase_client.table("archon_tasks").select(
+                    "id, project_id, parent_task_id, title, description, "
+                    "status, assignee, task_order, feature, archived, "
+                    "archived_at, archived_by, created_at, updated_at, "
+                    "sources, code_examples"  # Still fetch for counting, but will process differently
+                )
+            else:
+                query = self.supabase_client.table("archon_tasks").select("*")
 
             # Track filters for debugging
             filters_applied = []
@@ -265,7 +284,7 @@ class TaskService:
 
             tasks = []
             for task in response.data:
-                tasks.append({
+                task_data = {
                     "id": task["id"],
                     "project_id": task["project_id"],
                     "title": task["title"],
@@ -276,7 +295,20 @@ class TaskService:
                     "feature": task.get("feature"),
                     "created_at": task["created_at"],
                     "updated_at": task["updated_at"],
-                })
+                }
+                
+                if not exclude_large_fields:
+                    # Include full JSONB fields
+                    task_data["sources"] = task.get("sources", [])
+                    task_data["code_examples"] = task.get("code_examples", [])
+                else:
+                    # Add counts instead of full content
+                    task_data["stats"] = {
+                        "sources_count": len(task.get("sources", [])),
+                        "code_examples_count": len(task.get("code_examples", []))
+                    }
+                
+                tasks.append(task_data)
 
             filter_info = []
             if project_id:
