@@ -210,6 +210,14 @@ const DraggableTaskRow = ({
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isHovering, setIsHovering] = useState(false);
   
+  // Clipboard functionality with visual feedback
+  const { showToast } = useToast();
+  const { copy: copyToClipboard, copied: taskIdCopied } = useClipboardWithFeedback({
+    successMessage: 'Task ID copied to clipboard',
+    errorMessage: 'Failed to copy task ID',
+    showToast
+  });
+  
   const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.TASK,
     item: { id: task.id, index, status: task.status },
@@ -574,13 +582,6 @@ export const TaskTableView = ({
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const { showToast } = useToast();
-
-  // Clipboard functionality with visual feedback
-  const { copy: copyToClipboard, copied: taskIdCopied } = useClipboardWithFeedback({
-    successMessage: 'Task ID copied to clipboard',
-    errorMessage: 'Failed to copy task ID',
-    showToast
-  });
 
   // Refs for scroll fade effect
   const tableContainerRef = useRef<HTMLDivElement>(null);
