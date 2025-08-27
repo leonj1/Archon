@@ -91,7 +91,6 @@ services:
       - app-network
     depends_on:
       - archon-server
-      - archon-agents
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
@@ -109,6 +108,8 @@ services:
 
   # AI Agents Service (ML/Reranking)
   archon-agents:
+    profiles:
+      - agents  # Only starts when explicitly using --profile agents
     build:
       context: ./python
       dockerfile: Dockerfile.agents
