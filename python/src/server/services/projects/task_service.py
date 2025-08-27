@@ -190,7 +190,8 @@ class TaskService:
         project_id: str = None, 
         status: str = None, 
         include_closed: bool = False,
-        exclude_large_fields: bool = False
+        exclude_large_fields: bool = False,
+        include_archived: bool = False
     ) -> tuple[bool, dict[str, Any]]:
         """
         List tasks with various filters.
@@ -200,6 +201,7 @@ class TaskService:
             status: Filter by status
             include_closed: Include done tasks
             exclude_large_fields: If True, excludes sources and code_examples fields
+            include_archived: If True, includes archived tasks
 
         Returns:
             Tuple of (success, result_dict)
@@ -239,9 +241,12 @@ class TaskService:
                 query = query.neq("status", "done")
                 filters_applied.append("exclude done tasks")
 
-            # Filter out archived tasks using is null or is false
-            query = query.or_("archived.is.null,archived.is.false")
-            filters_applied.append("exclude archived tasks (null or false)")
+            # Filter out archived tasks only if not including them
+            if not include_archived:
+                query = query.or_("archived.is.null,archived.is.false")
+                filters_applied.append("exclude archived tasks (null or false)")
+            else:
+                filters_applied.append("include all tasks (including archived)")
 
             logger.info(f"Listing tasks with filters: {', '.join(filters_applied)}")
 
@@ -295,6 +300,7 @@ class TaskService:
                     "feature": task.get("feature"),
                     "created_at": task["created_at"],
                     "updated_at": task["updated_at"],
+                    "archived": task.get("archived", False),
                 }
                 
                 if not exclude_large_fields:

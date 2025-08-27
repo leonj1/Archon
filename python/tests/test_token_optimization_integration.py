@@ -6,10 +6,11 @@ Run with: uv run pytest tests/test_token_optimization_integration.py -v
 import httpx
 import json
 import asyncio
+import pytest
 from typing import Dict, Any, Tuple
 
 
-async def measure_response_size(url: str, params: Dict[str, Any] = None) -> Tuple[int, int]:
+async def measure_response_size(url: str, params: dict[str, Any] | None = None) -> tuple[int, float]:
     """Measure response size and estimate token count."""
     async with httpx.AsyncClient() as client:
         try:
@@ -38,8 +39,7 @@ async def test_projects_endpoint():
     if size_full > 0:
         print(f"Full content: {size_full:,} bytes | ~{tokens_full:,.0f} tokens")
     else:
-        print("⚠️  Skipping - server not available")
-        return
+        pytest.skip("Server not available on http://localhost:8181")
     
     # Test lightweight
     size_light, tokens_light = await measure_response_size(base_url, {"include_content": "false"})
@@ -75,8 +75,7 @@ async def test_tasks_endpoint():
     if size_full > 0:
         print(f"Full content: {size_full:,} bytes | ~{tokens_full:,.0f} tokens")
     else:
-        print("⚠️  Skipping - server not available")
-        return
+        pytest.skip("Server not available on http://localhost:8181")
     
     # Test lightweight
     size_light, tokens_light = await measure_response_size(base_url, {"exclude_large_fields": "true"})

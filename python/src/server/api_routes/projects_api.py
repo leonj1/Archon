@@ -512,8 +512,9 @@ async def list_project_tasks(project_id: str, include_archived: bool = False, ex
         task_service = TaskService()
         success, result = task_service.list_tasks(
             project_id=project_id,
-            include_closed=True,  # Get all tasks, we'll filter archived separately
+            include_closed=True,  # Get all tasks, including done
             exclude_large_fields=exclude_large_fields,
+            include_archived=include_archived,  # Pass the flag down to service
         )
 
         if not success:
@@ -521,20 +522,11 @@ async def list_project_tasks(project_id: str, include_archived: bool = False, ex
 
         tasks = result.get("tasks", [])
 
-        # Apply filters
-        filtered_tasks = []
-        for task in tasks:
-            # Skip archived tasks if not including them (handle None as False)
-            if not include_archived and task.get("archived", False):
-                continue
-
-            filtered_tasks.append(task)
-
         logfire.info(
-            f"Project tasks retrieved | project_id={project_id} | task_count={len(filtered_tasks)}"
+            f"Project tasks retrieved | project_id={project_id} | task_count={len(tasks)}"
         )
 
-        return filtered_tasks
+        return tasks
 
     except HTTPException:
         raise
