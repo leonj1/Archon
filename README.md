@@ -140,10 +140,9 @@ sudo yum install make
 
 </details>
 
-<br/>
-
 <details>
 <summary><strong>🚀 Quick Command Reference for Make</strong></summary>
+<br/>
 
 | Command           | Description                                             |
 | ----------------- | ------------------------------------------------------- |
