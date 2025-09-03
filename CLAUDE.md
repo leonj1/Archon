@@ -35,7 +35,7 @@ These operations should continue but track and report failures clearly:
 - **Batch processing** - When crawling websites or processing documents, complete what you can and report detailed failures for each item
 - **Background tasks** - Embedding generation, async jobs should finish the queue but log failures
 - **WebSocket events** - Don't crash on a single event failure, log it and continue serving other clients
-- **Optional features** - If projects/tasks are disabled, log and skip rather than crash
+- **Optional features** - For disabled features, log and skip rather than crash
 - **External API calls** - Retry with exponential backoff, then fail with a clear message about what service failed and why
 
 #### Critical Nuance: Never Accept Corrupted Data
@@ -104,9 +104,9 @@ def process_batch(items):
 
 ## Architecture Overview
 
-Archon V2 Alpha is a microservices-based knowledge management system with MCP (Model Context Protocol) integration:
+Archon V2 Alpha is a knowledge base system with MCP (Model Context Protocol) integration:
 
-- **Frontend (port 3737)**: React + TypeScript + Vite + TailwindCSS
+- **Frontend (port 3737)**: React + TypeScript + Vite + TailwindCSS - Knowledge base UI
 - **Main Server (port 8181)**: FastAPI with HTTP polling for updates
 - **MCP Server (port 8051)**: Lightweight HTTP-based MCP protocol server
 - **Agents Service (port 8052)**: PydanticAI agents for AI/ML operations
@@ -165,17 +165,6 @@ uv run pytest tests/test_service_integration.py -v
 - `POST /api/mcp/tools/{tool_name}` - Execute MCP tool
 - `GET /api/mcp/tools` - List available tools
 
-### Projects & Tasks (when enabled)
-
-- `GET /api/projects` - List all projects
-- `POST /api/projects` - Create project
-- `GET /api/projects/{id}` - Get single project
-- `PUT /api/projects/{id}` - Update project
-- `DELETE /api/projects/{id}` - Delete project
-- `GET /api/projects/{id}/tasks` - Get tasks for project (use this, not getTasks)
-- `POST /api/tasks` - Create task
-- `PUT /api/tasks/{id}` - Update task
-- `DELETE /api/tasks/{id}` - Delete task
 
 ## Polling Architecture
 
@@ -183,12 +172,11 @@ uv run pytest tests/test_service_integration.py -v
 - **Polling intervals**: 1-2s for active operations, 5-10s for background data
 - **ETag caching**: Reduces bandwidth by ~70% via 304 Not Modified responses
 - **Smart pausing**: Stops polling when browser tab is inactive
-- **Progress endpoints**: `/api/progress/crawl`, `/api/progress/project-creation`
+- **Progress endpoints**: `/api/progress/crawl`
 
 ### Key Polling Hooks
 - `usePolling` - Generic polling with ETag support
 - `useDatabaseMutation` - Optimistic updates with rollback
-- `useProjectMutation` - Project-specific operations
 
 ## Environment Variables
 
@@ -231,25 +219,18 @@ Key tables in Supabase:
 
 - `sources` - Crawled websites and uploaded documents
 - `documents` - Processed document chunks with embeddings
-- `projects` - Project management (optional feature)
-- `tasks` - Task tracking linked to projects
 - `code_examples` - Extracted code snippets
 
 ## API Naming Conventions
 
-### Task Status Values
-Use database values directly (no UI mapping):
-- `todo`, `doing`, `review`, `done`
-
 ### Service Method Patterns
-- `get[Resource]sByProject(projectId)` - Scoped queries
 - `get[Resource](id)` - Single resource
 - `create[Resource](data)` - Create operations
 - `update[Resource](id, updates)` - Updates
 - `delete[Resource](id)` - Soft deletes
 
 ### State Naming
-- `is[Action]ing` - Loading states (e.g., `isSwitchingProject`)
+- `is[Action]ing` - Loading states (e.g., `isSearching`)
 - `[resource]Error` - Error messages
 - `selected[Resource]` - Current selection
 
@@ -292,13 +273,11 @@ When connected to Cursor/Windsurf:
 
 - `archon:perform_rag_query` - Search knowledge base
 - `archon:search_code_examples` - Find code snippets
-- `archon:manage_project` - Project operations
-- `archon:manage_task` - Task management
 - `archon:get_available_sources` - List knowledge sources
 
 ## Important Notes
 
-- Projects feature is optional - toggle in Settings UI
+- Knowledge base focused system with web crawling and document upload
 - All services communicate via HTTP, not gRPC
 - HTTP polling handles all updates (Socket.IO removed)
 - Frontend uses Vite proxy for API calls in development

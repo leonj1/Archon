@@ -8,7 +8,6 @@ Modules:
 - settings_api: Settings and credentials management
 - mcp_api: MCP server management and tool execution
 - knowledge_api: Knowledge base, crawling, and RAG operations
-- projects_api: Project and task management with streaming
 """
 
 import asyncio
@@ -25,7 +24,6 @@ from .api_routes.internal_api import router as internal_router
 from .api_routes.knowledge_api import router as knowledge_router
 from .api_routes.mcp_api import router as mcp_router
 from .api_routes.progress_api import router as progress_router
-from .api_routes.projects_api import router as projects_router
 
 # Import modular API routers
 from .api_routes.settings_api import router as settings_router
@@ -197,7 +195,6 @@ app.include_router(settings_router)
 app.include_router(mcp_router)
 # app.include_router(mcp_client_router)  # Removed - not part of new architecture
 app.include_router(knowledge_router)
-app.include_router(projects_router)
 app.include_router(progress_router)
 app.include_router(agent_chat_router)
 app.include_router(internal_router)
