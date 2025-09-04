@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <em>Power up your AI coding assistants with your own custom knowledge base and task management as an MCP server</em>
+  <em>Power up your AI coding assistants with your own custom knowledge base as an MCP server</em>
 </p>
 
 <p align="center">
@@ -20,17 +20,17 @@
 
 > Archon is currently in beta! Expect things to not work 100%, and please feel free to share any feedback and contribute with fixes/new features! Thank you to everyone for all the excitement we have for Archon already, as well as the bug reports, PRs, and discussions. It's a lot for our small team to get through but we're committed to addressing everything and making Archon into the best tool it possibly can be!
 
-Archon is the **command center** for AI coding assistants. For you, it's a sleek interface to manage knowledge, context, and tasks for your projects. For the AI coding assistant(s), it's a **Model Context Protocol (MCP) server** to collaborate on and leverage the same knowledge, context, and tasks. Connect Claude Code, Kiro, Cursor, Windsurf, etc. to give your AI agents access to:
+Archon is the **knowledge base** for AI coding assistants. For you, it's a sleek interface to manage knowledge and context for your coding projects. For AI coding assistants, it's a **Model Context Protocol (MCP) server** to access and leverage your curated knowledge base. Connect Claude Code, Kiro, Cursor, Windsurf, etc. to give your AI agents access to:
 
 - **Your documentation** (crawled websites, uploaded PDFs/docs)
 - **Smart search capabilities** with advanced RAG strategies
-- **Task management** integrated with your knowledge base
-- **Real-time updates** as you add new content and collaborate with your coding assistant on tasks
+- **Code examples** extracted from your knowledge sources
+- **Real-time updates** as you add new content and enhance your knowledge base
 - **Much more** coming soon to build Archon into an integrated environment for all context engineering
 
-This new vision for Archon replaces the old one (the agenteer). Archon used to be the AI agent that builds other agents, and now you can use Archon to do that and more.
+This streamlined version of Archon focuses on knowledge aggregation and retrieval, providing powerful contextual information to enhance your AI-driven development workflow.
 
-> It doesn't matter what you're building or if it's a new/existing codebase - Archon's knowledge and task management capabilities will improve the output of **any** AI driven coding.
+> It doesn't matter what you're building or if it's a new/existing codebase - Archon's knowledge base capabilities will improve the output of **any** AI driven coding.
 
 ## 🔗 Important Links
 

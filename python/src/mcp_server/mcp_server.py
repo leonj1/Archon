@@ -1,5 +1,5 @@
 """
-MCP Server for Archon (Microservices Version)
+MCP Server for Archon Knowledge Base (Microservices Version)
 
 This is the MCP server that uses HTTP calls to other services
 instead of importing heavy dependencies directly. This significantly reduces
@@ -7,7 +7,6 @@ the container size from 1.66GB to ~150MB.
 
 Modules:
 - RAG Module: RAG queries, search, and source management via HTTP
-- Project Module: Task and project management via HTTP
 - Health & Session: Local operations
 
 Note: Crawling and document upload operations are handled directly by the
@@ -189,77 +188,53 @@ async def lifespan(server: FastMCP) -> AsyncIterator[ArchonContext]:
 
 # Define MCP instructions for Claude Code and other clients
 MCP_INSTRUCTIONS = """
-# Archon MCP Server Instructions
+# Archon Knowledge Base MCP Server Instructions
 
 ## 🚨 CRITICAL RULES (ALWAYS FOLLOW)
-1. **Task Management**: ALWAYS use Archon MCP tools for task management.
-   - Combine with your local TODO tools for granular tracking
-   - First TODO: Update Archon task status
-   - Last TODO: Update Archon with findings/completion
-
-2. **Research First**: Before implementing, use perform_rag_query and search_code_examples
-3. **Task-Driven Development**: Never code without checking current tasks first
+1. **Research First**: Always use perform_rag_query and search_code_examples before implementing
+2. **Knowledge-Driven Development**: Leverage the knowledge base for informed decisions
 
 ## 📋 Core Workflow
 
-### Task Management Cycle
-1. **Get current task**: `get_task(task_id="...")`
-2. **Mark as doing**: `update_task(task_id="...", status="doing")`
-3. **Research phase**:
-   - `perform_rag_query(query="...", match_count=5)`
-   - `search_code_examples(query="...", match_count=3)`
-4. **Implementation**: Code based on research findings
-5. **Mark for review**: `update_task(task_id="...", status="review")`
-6. **Get next task**: `list_tasks(filter_by="status", filter_value="todo")`
+### Research Workflow
+1. **Identify need**: What information do you need?
+2. **Query knowledge base**: `perform_rag_query(query="...", match_count=5)`
+3. **Search code examples**: `search_code_examples(query="...", match_count=3)`
+4. **Apply findings**: Use discovered information for implementation
 
-### Available Task Functions
-- `create_task(project_id, title, description, assignee="User", ...)`
-- `list_tasks(filter_by="status", filter_value="todo", project_id=None)`
-- `get_task(task_id)`
-- `update_task(task_id, title=None, status=None, assignee=None, ...)`
-- `delete_task(task_id)`
+## 🔍 Research Functions
 
-## 🏗️ Project Management
+### RAG (Retrieval-Augmented Generation)
+- `perform_rag_query(query, match_count=5, source_type=None)`
+  - Search across all knowledge sources
+  - Get contextual information for your queries
+  - Filter by source_type if needed
 
-### Project Functions
-- `create_project(title, description, github_repo=None)`
-- `list_projects()`
-- `get_project(project_id)`
-- `update_project(project_id, title=None, description=None, ...)`
-- `delete_project(project_id)`
+### Code Examples
+- `search_code_examples(query, match_count=3, language=None)`
+  - Find relevant code snippets
+  - Get implementation examples
+  - Filter by programming language
 
-### Document Functions
-- `create_document(project_id, title, document_type, content=None, ...)`
-- `list_documents(project_id)`
-- `get_document(project_id, doc_id)`
-- `update_document(project_id, doc_id, title=None, content=None, ...)`
-- `delete_document(project_id, doc_id)`
+### Source Management
+- `get_available_sources()`
+  - List all crawled websites and uploaded documents
+  - See what knowledge is available
 
 ## 🔍 Research Patterns
 - **Architecture patterns**: `perform_rag_query(query="[tech] architecture patterns", match_count=5)`
-- **Code examples**: `search_code_examples(query="[feature] implementation", match_count=3)`
-- **Source discovery**: `get_available_sources()`
-- Keep match_count around 3-5 for focused results
+- **Implementation examples**: `search_code_examples(query="[feature] implementation", match_count=3)`
+- **API documentation**: `perform_rag_query(query="[library] API reference", match_count=5)`
+- **Best practices**: `perform_rag_query(query="[topic] best practices", match_count=5)`
 
-## 📊 Task Status Flow
-`todo` → `doing` → `review` → `done`
-- Only ONE task in 'doing' status at a time
-- Use 'review' for completed work awaiting validation
-- Mark tasks 'done' only after verification
-
-## 💾 Version Management
-- `create_version(project_id, field_name, content, change_summary)`
-- `list_versions(project_id, field_name=None)`
-- `get_version(project_id, field_name, version_number)`
-- `restore_version(project_id, field_name, version_number)`
-- Field names: "docs", "features", "data", "prd"
+Keep match_count around 3-5 for focused results
 
 ## 🎯 Best Practices
-1. **Atomic Tasks**: Create tasks that take 1-4 hours
-2. **Clear Descriptions**: Include acceptance criteria in task descriptions
-3. **Use Features**: Group related tasks with feature labels
-4. **Add Sources**: Link relevant documentation to tasks
-5. **Track Progress**: Update task status as you work
+1. **Specific Queries**: Use targeted, specific search terms
+2. **Multiple Sources**: Cross-reference information from different sources  
+3. **Code Examples**: Always search for implementation examples
+4. **Verify Information**: Check multiple sources when possible
+5. **Stay Current**: Be aware that crawled content reflects snapshot in time
 """
 
 # Initialize the main FastMCP server with fixed configuration
@@ -393,94 +368,8 @@ def register_modules():
 
     # Import and register all feature tools - separated and focused
 
-    # Project Management Tools
-    try:
-        from src.mcp_server.features.projects import register_project_tools
 
-        register_project_tools(mcp)
-        modules_registered += 1
-        logger.info("✓ Project tools registered")
-    except ImportError as e:
-        # Module not found - this is acceptable in modular architecture
-        logger.warning(f"⚠ Project tools module not available (optional): {e}")
-    except (SyntaxError, NameError, AttributeError) as e:
-        # Code errors that should not be ignored
-        logger.error(f"✗ Code error in project tools - MUST FIX: {e}")
-        logger.error(traceback.format_exc())
-        raise  # Re-raise to prevent running with broken code
-    except Exception as e:
-        # Unexpected errors during registration
-        logger.error(f"✗ Failed to register project tools: {e}")
-        logger.error(traceback.format_exc())
-        # Don't raise - allow other modules to register
 
-    # Task Management Tools
-    try:
-        from src.mcp_server.features.tasks import register_task_tools
-
-        register_task_tools(mcp)
-        modules_registered += 1
-        logger.info("✓ Task tools registered")
-    except ImportError as e:
-        logger.warning(f"⚠ Task tools module not available (optional): {e}")
-    except (SyntaxError, NameError, AttributeError) as e:
-        logger.error(f"✗ Code error in task tools - MUST FIX: {e}")
-        logger.error(traceback.format_exc())
-        raise
-    except Exception as e:
-        logger.error(f"✗ Failed to register task tools: {e}")
-        logger.error(traceback.format_exc())
-
-    # Document Management Tools
-    try:
-        from src.mcp_server.features.documents import register_document_tools
-
-        register_document_tools(mcp)
-        modules_registered += 1
-        logger.info("✓ Document tools registered")
-    except ImportError as e:
-        logger.warning(f"⚠ Document tools module not available (optional): {e}")
-    except (SyntaxError, NameError, AttributeError) as e:
-        logger.error(f"✗ Code error in document tools - MUST FIX: {e}")
-        logger.error(traceback.format_exc())
-        raise
-    except Exception as e:
-        logger.error(f"✗ Failed to register document tools: {e}")
-        logger.error(traceback.format_exc())
-
-    # Version Management Tools
-    try:
-        from src.mcp_server.features.documents import register_version_tools
-
-        register_version_tools(mcp)
-        modules_registered += 1
-        logger.info("✓ Version tools registered")
-    except ImportError as e:
-        logger.warning(f"⚠ Version tools module not available (optional): {e}")
-    except (SyntaxError, NameError, AttributeError) as e:
-        logger.error(f"✗ Code error in version tools - MUST FIX: {e}")
-        logger.error(traceback.format_exc())
-        raise
-    except Exception as e:
-        logger.error(f"✗ Failed to register version tools: {e}")
-        logger.error(traceback.format_exc())
-
-    # Feature Management Tools
-    try:
-        from src.mcp_server.features.feature_tools import register_feature_tools
-
-        register_feature_tools(mcp)
-        modules_registered += 1
-        logger.info("✓ Feature tools registered")
-    except ImportError as e:
-        logger.warning(f"⚠ Feature tools module not available (optional): {e}")
-    except (SyntaxError, NameError, AttributeError) as e:
-        logger.error(f"✗ Code error in feature tools - MUST FIX: {e}")
-        logger.error(traceback.format_exc())
-        raise
-    except Exception as e:
-        logger.error(f"✗ Failed to register feature tools: {e}")
-        logger.error(traceback.format_exc())
 
     logger.info(f"📦 Total modules registered: {modules_registered}")
 

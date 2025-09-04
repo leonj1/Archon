@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { MCPPage } from './pages/MCPPage';
@@ -7,8 +7,7 @@ import { OnboardingPage } from './pages/OnboardingPage';
 import { MainLayout } from './components/layouts/MainLayout';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
-import { SettingsProvider, useSettings } from './contexts/SettingsContext';
-import { ProjectPage } from './pages/ProjectPage';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { DisconnectScreenOverlay } from './components/DisconnectScreenOverlay';
 import { ErrorBoundaryWithBugReport } from './components/bug-report/ErrorBoundaryWithBugReport';
 import { MigrationBanner } from './components/ui/MigrationBanner';
@@ -16,22 +15,12 @@ import { serverHealthService } from './services/serverHealthService';
 import { useMigrationStatus } from './hooks/useMigrationStatus';
 
 const AppRoutes = () => {
-  const { projectsEnabled } = useSettings();
-  
   return (
     <Routes>
       <Route path="/" element={<KnowledgeBasePage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/mcp" element={<MCPPage />} />
-      {projectsEnabled ? (
-        <>
-          <Route path="/projects" element={<ProjectPage />} />
-          <Route path="/projects/:projectId" element={<ProjectPage />} />
-        </>
-      ) : (
-        <Route path="/projects" element={<Navigate to="/" replace />} />
-      )}
     </Routes>
   );
 };
