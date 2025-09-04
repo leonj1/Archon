@@ -171,6 +171,21 @@ class CredentialService:
                 except Exception as e:
                     logger.error(f"Failed to decrypt credential {key}: {e}")
                     return default
+        
+        # If no value found in database and it's None/default, try environment variable fallback
+        # for critical API keys
+        if value is None or value == default:
+            env_fallback_keys = {
+                "OPENAI_API_KEY": "OPENAI_API_KEY",
+                "GOOGLE_API_KEY": "GOOGLE_API_KEY",
+                "ANTHROPIC_API_KEY": "ANTHROPIC_API_KEY",
+            }
+            
+            if key in env_fallback_keys:
+                env_value = os.getenv(env_fallback_keys[key])
+                if env_value:
+                    logger.info(f"Credential {key} not found in database, using environment variable fallback")
+                    return env_value
 
         return value
 
