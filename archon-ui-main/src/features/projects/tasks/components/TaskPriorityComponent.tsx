@@ -1,10 +1,9 @@
 /**
  * TaskPriority Component
  *
- * Display-only priority selector for tasks.
- * NOTE: Priority is currently frontend-only and doesn't affect task ordering.
- * Task ordering is handled separately via drag-and-drop with task_order field.
- * This is purely for visual categorization until backend priority support is added.
+ * Server-backed priority selector for tasks.
+ * Priority is decoupled from drag-and-drop task_order.
+ * Levels: critical | high | medium | low.
  */
 
 import { AlertCircle } from "lucide-react";
