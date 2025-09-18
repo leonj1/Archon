@@ -1,4 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  createOptimisticEntity,
+  type OptimisticEntity,
+  removeDuplicateEntities,
+  replaceOptimisticEntity,
+} from "@/features/shared/optimistic";
 import { DISABLED_QUERY_KEY, STALE_TIMES } from "../../shared/queryPatterns";
 import { useSmartPolling } from "../../ui/hooks";
 import { useToast } from "../../ui/hooks/useToast";
@@ -17,7 +23,7 @@ export const projectKeys = {
 
 // Fetch all projects with smart polling
 export function useProjects() {
-  const { refetchInterval } = useSmartPolling(20000); // 20 second base interval for projects
+  const { refetchInterval } = useSmartPolling(2000); // 2 second base interval for active polling
 
   return useQuery<Project[]>({
     queryKey: projectKeys.lists(),
@@ -45,7 +51,12 @@ export function useCreateProject() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  return useMutation({
+  return useMutation<
+    Awaited<ReturnType<typeof projectService.createProject>>,
+    Error,
+    CreateProjectRequest,
+    { previousProjects?: Project[]; optimisticId: string }
+  >({
     mutationFn: (projectData: CreateProjectRequest) => projectService.createProject(projectData),
     onMutate: async (newProjectData) => {
       // Cancel any outgoing refetches
@@ -54,21 +65,19 @@ export function useCreateProject() {
       // Snapshot the previous value
       const previousProjects = queryClient.getQueryData<Project[]>(projectKeys.lists());
 
-      // Create optimistic project with temporary ID
-      const tempId = `temp-${Date.now()}`;
-      const optimisticProject: Project = {
-        id: tempId, // Temporary ID until real one comes back
+      // Create optimistic project with stable ID
+      const optimisticProject = createOptimisticEntity<Project>({
         title: newProjectData.title,
         description: newProjectData.description,
         github_repo: newProjectData.github_repo,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        prd: undefined,
-        features: [],
-        data: undefined,
         docs: [],
+        features: [],
+        prd: undefined,
+        data: undefined,
         pinned: false,
-      };
+      });
 
       // Optimistically add the new project
       queryClient.setQueryData(projectKeys.lists(), (old: Project[] | undefined) => {
@@ -77,7 +86,7 @@ export function useCreateProject() {
         return [optimisticProject, ...old];
       });
 
-      return { previousProjects, tempId };
+      return { previousProjects, optimisticId: optimisticProject._localId };
     },
     onError: (error, variables, context) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -94,17 +103,10 @@ export function useCreateProject() {
       // Extract the actual project from the response
       const newProject = response.project;
 
-      // Replace optimistic project with real one from server
-      queryClient.setQueryData(projectKeys.lists(), (old: Project[] | undefined) => {
-        if (!old) return [newProject];
-        // Replace only the specific temp project with real one
-        return old
-          .map((project) => (project.id === context?.tempId ? newProject : project))
-          .filter(
-            (project, index, self) =>
-              // Remove any duplicates just in case
-              index === self.findIndex((p) => p.id === project.id),
-          );
+      // Replace optimistic with server data
+      queryClient.setQueryData(projectKeys.lists(), (projects: (Project & Partial<OptimisticEntity>)[] = []) => {
+        const replaced = replaceOptimisticEntity(projects, context?.optimisticId || "", newProject);
+        return removeDuplicateEntities(replaced);
       });
 
       showToast("Project created successfully!", "success");
