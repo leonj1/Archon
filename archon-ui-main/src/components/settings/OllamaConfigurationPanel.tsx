@@ -686,7 +686,7 @@ const OllamaConfigurationPanel: React.FC<OllamaConfigurationPanelProps> = ({
               />
               <Input
                 type="url"
-                placeholder="http://localhost:11434"
+                placeholder="http://host.docker.internal:11434"
                 value={newInstanceUrl}
                 onChange={(e) => setNewInstanceUrl(e.target.value)}
               />
