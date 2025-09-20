@@ -595,7 +595,7 @@ const OllamaConfigurationPanel: React.FC<OllamaConfigurationPanelProps> = ({
                     value={tempUrls[instance.id] !== undefined ? tempUrls[instance.id] : instance.baseUrl}
                     onChange={(e) => handleUrlChange(instance.id, e.target.value)}
                     onBlur={() => handleUrlBlur(instance.id)}
-                    placeholder="http://localhost:11434"
+                    placeholder="http://host.docker.internal:11434"
                     className={cn(
                       "text-sm",
                       tempUrls[instance.id] !== undefined && tempUrls[instance.id] !== instance.baseUrl 
