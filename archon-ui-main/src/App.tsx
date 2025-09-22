@@ -22,15 +22,19 @@ import { useMigrationStatus } from './hooks/useMigrationStatus';
 
 
 const AppRoutes = () => {
-  const { projectsEnabled } = useSettings();
-  
+  const { projectsEnabled, styleGuideEnabled } = useSettings();
+
   return (
     <Routes>
       <Route path="/" element={<KnowledgeBasePage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/mcp" element={<MCPPage />} />
-      <Route path="/style-guide" element={<StyleGuidePage />} />
+      {styleGuideEnabled ? (
+        <Route path="/style-guide" element={<StyleGuidePage />} />
+      ) : (
+        <Route path="/style-guide" element={<Navigate to="/" replace />} />
+      )}
       {projectsEnabled ? (
         <>
           <Route path="/projects" element={<ProjectPage />} />

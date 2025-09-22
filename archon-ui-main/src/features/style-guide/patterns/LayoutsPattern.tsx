@@ -131,9 +131,9 @@ const SidebarTemplate = () => {
         sidebarPosition === 'top' ? "flex-col" : "flex-row",
         "gap-4 p-4"
       )}>
-        {/* Sidebar */}
+        {/* Sidebar - Using proper 1/4 width proportion */}
         <div className={cn(
-          sidebarPosition === 'left' && !sidebarCollapsed && "w-64",
+          sidebarPosition === 'left' && !sidebarCollapsed && "w-1/4",
           sidebarPosition === 'left' && sidebarCollapsed && "w-16",
           sidebarPosition === 'top' && "w-full",
           "transition-all duration-300"
@@ -177,14 +177,18 @@ const SidebarTemplate = () => {
           )}
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1">
+        {/* Main Content - Using proper 3/4 width proportion */}
+        <div className={cn(
+          sidebarPosition === 'left' && !sidebarCollapsed && "w-3/4",
+          sidebarPosition === 'left' && sidebarCollapsed && "flex-1",
+          sidebarPosition === 'top' && "w-full"
+        )}>
           <Card className="h-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600">
             <div className="text-center text-gray-500 dark:text-gray-400">
-              <h3 className="font-medium mb-2">Main Content Area</h3>
+              <h3 className="font-medium mb-2">Main Content Area (3/4 width)</h3>
               <p className="text-sm">Your application content goes here</p>
               <p className="text-xs mt-2">
-                Sidebar: {sidebarPosition === 'top' ? 'Top' : `Left (${sidebarCollapsed ? 'Collapsed' : 'Expanded'})`}
+                Sidebar: {sidebarPosition === 'top' ? 'Top' : `Left (${sidebarCollapsed ? 'Collapsed' : sidebarCollapsed === false ? '1/4 width' : 'Expanded'})`}
               </p>
             </div>
           </Card>
@@ -464,10 +468,16 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
  * WHEN NOT TO USE: Simple content pages, forms, dashboards
  *
  * FEATURES:
- * - Collapsible sidebar (280px -> 60px)
+ * - Proportional sidebar (1/4 width -> collapsed 60px)
+ * - Main content area (3/4 width -> flex-1 when collapsed)
  * - Responsive behavior (sidebar -> top nav on mobile)
  * - Smooth transitions and state preservation
  * - Keyboard navigation support
+ *
+ * PROPORTIONS:
+ * - Sidebar: 25% of container width (w-1/4)
+ * - Content: 75% of container width (w-3/4)
+ * - Collapsed: Sidebar 60px (w-16), Content flex-1
  *
  * ACCESSIBILITY:
  * - ARIA labels for collapse state
@@ -480,10 +490,10 @@ export const SidebarLayout = () => {
 
   return (
     <div className="flex h-full">
-      {/* Sidebar */}
+      {/* Sidebar - 1/4 width when expanded */}
       <div className={cn(
         "transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
+        collapsed ? "w-16" : "w-1/4"
       )}>
         <Card className="h-full p-4 rounded-none border-r">
           <Button
@@ -523,8 +533,11 @@ export const SidebarLayout = () => {
         </Card>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 p-6">
+      {/* Main Content - 3/4 width when sidebar expanded */}
+      <div className={cn(
+        "transition-all duration-300 p-6",
+        collapsed ? "flex-1" : "w-3/4"
+      )}>
         {/* Your main content */}
       </div>
     </div>

@@ -24,7 +24,7 @@ interface NavigationProps {
  */
 export function Navigation({ className }: NavigationProps) {
   const location = useLocation();
-  const { projectsEnabled } = useSettings();
+  const { projectsEnabled, styleGuideEnabled } = useSettings();
 
   // Navigation items configuration
   const navigationItems: NavigationItem[] = [
@@ -58,7 +58,7 @@ export function Navigation({ className }: NavigationProps) {
       path: "/style-guide",
       icon: <Palette className="h-5 w-5" />,
       label: "Style Guide",
-      enabled: true,
+      enabled: styleGuideEnabled,
     },
     {
       path: "/settings",
@@ -67,6 +67,9 @@ export function Navigation({ className }: NavigationProps) {
       enabled: true,
     },
   ];
+
+  // Filter out disabled navigation items
+  const enabledNavigationItems = navigationItems.filter(item => item.enabled);
 
   const isProjectsActive = location.pathname.startsWith("/projects");
 
@@ -131,15 +134,14 @@ export function Navigation({ className }: NavigationProps) {
 
       {/* Navigation Items */}
       <nav className="flex flex-col gap-4">
-        {navigationItems.map((item) => {
+        {enabledNavigationItems.map((item) => {
           const isActive = location.pathname === item.path;
-          const isEnabled = item.enabled !== false;
 
           return (
             <Tooltip key={item.path}>
               <TooltipTrigger asChild>
                 <Link
-                  to={isEnabled ? item.path : "#"}
+                  to={item.path}
                   className={cn(
                     "relative p-3 rounded-lg transition-all duration-300",
                     "flex items-center justify-center",
@@ -154,13 +156,7 @@ export function Navigation({ className }: NavigationProps) {
                           "hover:text-blue-600 dark:hover:text-blue-400",
                           "hover:bg-white/10 dark:hover:bg-white/5",
                         ],
-                    !isEnabled && "opacity-50 cursor-not-allowed pointer-events-none",
                   )}
-                  onClick={(e) => {
-                    if (!isEnabled) {
-                      e.preventDefault();
-                    }
-                  }}
                 >
                   {item.icon}
                   {/* Active state decorations with neon line */}

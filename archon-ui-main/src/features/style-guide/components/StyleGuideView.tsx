@@ -1,24 +1,27 @@
 import { useState } from 'react';
 import { Palette, Component, Layout, Code } from 'lucide-react';
-import { PillNavigation } from './shared/PillNavigation';
-import { ThemeToggle } from '../ui/ThemeToggle';
-import { GlassCardConfigurator } from './configurators/GlassCardConfigurator';
-import { ButtonConfigurator } from './configurators/ButtonConfigurator';
-import { ModalConfigurator } from './configurators/ModalConfigurator';
-import { FormConfigurator } from './configurators/FormConfigurator';
-import { TableConfigurator } from './configurators/TableConfigurator';
-import { ToggleConfigurator } from './configurators/ToggleConfigurator';
-import { ColorsFoundation } from './foundations/ColorsFoundation';
-import { TypographyFoundation } from './foundations/TypographyFoundation';
-import { SpacingFoundation } from './foundations/SpacingFoundation';
-import { EffectsFoundation } from './foundations/EffectsFoundation';
-import { LayoutsPattern } from './patterns/LayoutsPattern';
-import { FeedbackPattern } from './patterns/FeedbackPattern';
-import { NavigationPattern } from './patterns/NavigationPattern';
-import { DataDisplayPattern } from './patterns/DataDisplayPattern';
-import { CompositionsExample } from './examples/CompositionsExample';
-import { PagesExample } from './examples/PagesExample';
-import { WorkflowsExample } from './examples/WorkflowsExample';
+import { PillNavigation } from '../shared/PillNavigation';
+import { ThemeToggle } from '../../../components/ui/ThemeToggle';
+import { GlassCardConfigurator } from '../configurators/GlassCardConfigurator';
+import { ButtonConfigurator } from '../configurators/ButtonConfigurator';
+import { ModalConfigurator } from '../configurators/ModalConfigurator';
+import { FormConfigurator } from '../configurators/FormConfigurator';
+import { TableConfigurator } from '../configurators/TableConfigurator';
+import { ToggleConfigurator } from '../configurators/ToggleConfigurator';
+import { SwitchConfigurator } from '../configurators/SwitchConfigurator';
+import { CheckboxConfigurator } from '../configurators/CheckboxConfigurator';
+import { ColorsFoundation } from '../foundations/ColorsFoundation';
+import { TypographyFoundation } from '../foundations/TypographyFoundation';
+import { SpacingFoundation } from '../foundations/SpacingFoundation';
+import { EffectsFoundation } from '../foundations/EffectsFoundation';
+import { LayoutsPattern } from '../patterns/LayoutsPattern';
+import { FeedbackPattern } from '../patterns/FeedbackPattern';
+import { NavigationPattern } from '../patterns/NavigationPattern';
+import { DataDisplayPattern } from '../patterns/DataDisplayPattern';
+import { CompositionsExample } from '../examples/CompositionsExample';
+import { PagesExample } from '../examples/PagesExample';
+import { WorkflowsExample } from '../examples/WorkflowsExample';
+import { RAGSettingsExample } from '../examples/RAGSettingsExample';
 
 const FOUNDATION_TABS = [
   { id: 'Colors', label: 'Colors', component: ColorsFoundation },
@@ -34,6 +37,8 @@ const COMPONENT_TABS = [
   { id: 'Tables', label: 'Tables', component: TableConfigurator },
   { id: 'Modals', label: 'Modals', component: ModalConfigurator },
   { id: 'Toggles', label: 'Toggles', component: ToggleConfigurator },
+  { id: 'Switches', label: 'Switches', component: SwitchConfigurator },
+  { id: 'Checkboxes', label: 'Checkboxes', component: CheckboxConfigurator },
 ];
 
 const PATTERN_TABS = [
@@ -47,6 +52,7 @@ const EXAMPLE_TABS = [
   { id: 'Compositions', label: 'Compositions', component: CompositionsExample },
   { id: 'Pages', label: 'Pages', component: PagesExample },
   { id: 'Workflows', label: 'Workflows', component: WorkflowsExample },
+  { id: 'RAG Settings', label: 'RAG Settings', component: RAGSettingsExample },
 ];
 
 export const StyleGuideView = () => {
