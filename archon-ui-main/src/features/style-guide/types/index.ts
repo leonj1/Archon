@@ -2,6 +2,7 @@
 
 // Card types
 export type GlowColor = 'none' | 'purple' | 'blue' | 'cyan' | 'green' | 'orange' | 'pink' | 'red';
+export type GlowType = 'none' | 'inner' | 'outer';
 export type EdgePosition = 'none' | 'top' | 'left' | 'right' | 'bottom';
 export type EdgeColor = 'purple' | 'blue' | 'cyan' | 'green' | 'orange' | 'pink' | 'red';
 export type CardSize = 'sm' | 'md' | 'lg' | 'xl';

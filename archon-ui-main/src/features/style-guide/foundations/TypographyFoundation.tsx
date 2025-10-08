@@ -1,345 +1,168 @@
+import { useState } from 'react';
 import { Card } from '@/features/ui/primitives/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/ui/primitives/select';
 import { CodeDisplay } from '../shared/CodeDisplay';
 import { cn } from '@/features/ui/primitives/styles';
 
-interface TypographyStyle {
-  name: string;
-  className: string;
-  size: string;
-  weight: string;
-  usage: string;
-  example: string;
-}
-
-const HEADING_STYLES: TypographyStyle[] = [
-  {
-    name: 'Display Large',
-    className: 'text-4xl md:text-5xl lg:text-6xl font-bold',
-    size: '3.75rem / 4rem / 4.5rem',
-    weight: '700',
-    usage: 'Hero headings, landing page titles',
-    example: 'Hero Title'
-  },
-  {
-    name: 'Display Medium',
-    className: 'text-3xl md:text-4xl font-bold',
-    size: '1.875rem / 2.25rem',
-    weight: '700',
-    usage: 'Page titles, section headers',
-    example: 'Page Title'
-  },
-  {
-    name: 'Heading 1',
-    className: 'text-2xl font-bold',
-    size: '1.5rem',
-    weight: '700',
-    usage: 'Main section titles',
-    example: 'Section Title'
-  },
-  {
-    name: 'Heading 2',
-    className: 'text-xl font-semibold',
-    size: '1.25rem',
-    weight: '600',
-    usage: 'Subsection titles',
-    example: 'Subsection Title'
-  },
-  {
-    name: 'Heading 3',
-    className: 'text-lg font-semibold',
-    size: '1.125rem',
-    weight: '600',
-    usage: 'Card titles, component headers',
-    example: 'Component Header'
-  },
-  {
-    name: 'Heading 4',
-    className: 'text-base font-medium',
-    size: '1rem',
-    weight: '500',
-    usage: 'Small headings, labels',
-    example: 'Label Text'
-  }
+// Typography scale
+const TYPOGRAPHY_SCALE = [
+  { name: 'Display', className: 'text-4xl md:text-5xl font-bold', example: 'Hero Title' },
+  { name: 'H1', className: 'text-3xl font-bold', example: 'Page Title' },
+  { name: 'H2', className: 'text-2xl font-bold', example: 'Section Title' },
+  { name: 'H3', className: 'text-xl font-semibold', example: 'Subsection Title' },
+  { name: 'H4', className: 'text-lg font-semibold', example: 'Component Header' },
+  { name: 'Body Large', className: 'text-lg font-normal', example: 'Large body text for important content' },
+  { name: 'Body', className: 'text-base font-normal', example: 'Standard body text for regular content' },
+  { name: 'Body Small', className: 'text-sm font-normal', example: 'Small text for descriptions' },
+  { name: 'Caption', className: 'text-xs font-normal', example: 'Caption and metadata text' },
+  { name: 'Button', className: 'text-sm font-medium', example: 'Button Label' },
+  { name: 'Code', className: 'text-sm font-mono', example: 'const variable = value;' }
 ];
 
-const BODY_STYLES: TypographyStyle[] = [
-  {
-    name: 'Body Large',
-    className: 'text-lg font-normal',
-    size: '1.125rem',
-    weight: '400',
-    usage: 'Large body text, introductions',
-    example: 'This is large body text used for introductions and important content that needs to stand out.'
-  },
-  {
-    name: 'Body Medium',
-    className: 'text-base font-normal',
-    size: '1rem',
-    weight: '400',
-    usage: 'Standard body text, paragraphs',
-    example: 'This is standard body text used for regular content, paragraphs, and general information.'
-  },
-  {
-    name: 'Body Small',
-    className: 'text-sm font-normal',
-    size: '0.875rem',
-    weight: '400',
-    usage: 'Secondary text, descriptions',
-    example: 'This is small body text used for secondary information and descriptions.'
-  },
-  {
-    name: 'Caption',
-    className: 'text-xs font-normal',
-    size: '0.75rem',
-    weight: '400',
-    usage: 'Captions, metadata, helper text',
-    example: 'This is caption text used for metadata and helper information.'
-  }
+// Color variations
+const TEXT_COLORS = [
+  { name: 'Primary', className: 'text-gray-900 dark:text-gray-100' },
+  { name: 'Secondary', className: 'text-gray-700 dark:text-gray-300' },
+  { name: 'Muted', className: 'text-gray-500 dark:text-gray-400' },
+  { name: 'Accent', className: 'text-cyan-500' },
+  { name: 'Success', className: 'text-emerald-500' },
+  { name: 'Warning', className: 'text-orange-500' },
+  { name: 'Error', className: 'text-red-500' }
 ];
-
-const UTILITY_STYLES: TypographyStyle[] = [
-  {
-    name: 'Button Text',
-    className: 'text-sm font-medium',
-    size: '0.875rem',
-    weight: '500',
-    usage: 'Button labels, action text',
-    example: 'Button Label'
-  },
-  {
-    name: 'Code',
-    className: 'text-sm font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded',
-    size: '0.875rem',
-    weight: '400',
-    usage: 'Inline code, technical text',
-    example: 'const variable = value;'
-  },
-  {
-    name: 'Link',
-    className: 'text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 underline',
-    size: 'inherit',
-    weight: 'inherit',
-    usage: 'Links, interactive text',
-    example: 'This is a link'
-  },
-  {
-    name: 'Muted',
-    className: 'text-gray-500 dark:text-gray-400',
-    size: 'inherit',
-    weight: 'inherit',
-    usage: 'Secondary text, disabled states',
-    example: 'This is muted text'
-  }
-];
-
-const COLOR_VARIATIONS = [
-  {
-    name: 'Primary Text',
-    className: 'text-gray-900 dark:text-gray-100',
-    usage: 'Main content, headings'
-  },
-  {
-    name: 'Secondary Text',
-    className: 'text-gray-700 dark:text-gray-300',
-    usage: 'Body text, secondary content'
-  },
-  {
-    name: 'Muted Text',
-    className: 'text-gray-500 dark:text-gray-400',
-    usage: 'Helper text, captions, disabled'
-  },
-  {
-    name: 'Accent Text',
-    className: 'text-cyan-600 dark:text-cyan-400',
-    usage: 'Links, highlights, active states'
-  },
-  {
-    name: 'Success Text',
-    className: 'text-green-600 dark:text-green-400',
-    usage: 'Success messages, positive states'
-  },
-  {
-    name: 'Warning Text',
-    className: 'text-orange-600 dark:text-orange-400',
-    usage: 'Warning messages, caution states'
-  },
-  {
-    name: 'Error Text',
-    className: 'text-red-600 dark:text-red-400',
-    usage: 'Error messages, destructive actions'
-  }
-];
-
-const generateCode = () => {
-  return `/**
- * 🤖 AI CONTEXT: Typography System
- *
- * PURPOSE: Consistent text styles across the application
- * WHEN TO USE: All text content should use these utility classes
- * WHEN NOT TO USE: Never hardcode font sizes, always use system classes
- *
- * HIERARCHY GUIDELINES:
- * - Display Large: Hero sections, landing pages
- * - Display Medium: Page titles, main headers
- * - Heading 1-4: Section titles, descending importance
- * - Body Large: Important content, introductions
- * - Body Medium: Standard content, paragraphs
- * - Body Small: Secondary content, descriptions
- * - Caption: Metadata, helper text, timestamps
- *
- * COLOR SEMANTIC MEANINGS:
- * - Primary: Main content, most important text
- * - Secondary: Body content, readable but less prominent
- * - Muted: Helper text, less important information
- * - Accent: Interactive elements, links, highlights
- * - Success/Warning/Error: Status-based messaging
- *
- * RESPONSIVE BEHAVIOR:
- * - Display styles scale down on smaller screens
- * - Body text maintains consistent size across devices
- * - Use responsive classes (md:, lg:) for display text
- */
-
-// Heading Examples
-<h1 className="text-2xl font-bold">Main Section Title</h1>
-<h2 className="text-xl font-semibold">Subsection Title</h2>
-<h3 className="text-lg font-semibold">Component Header</h3>
-
-// Body Text Examples
-<p className="text-lg font-normal">Large body text for introductions</p>
-<p className="text-base font-normal">Standard body text for content</p>
-<p className="text-sm font-normal">Small text for descriptions</p>
-
-// Utility Examples
-<button className="text-sm font-medium">Button Label</button>
-<code className="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">
-  code snippet
-</code>
-<a className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 underline">
-  Link text
-</a>
-
-// Color Variations
-<span className="text-gray-900 dark:text-gray-100">Primary text</span>
-<span className="text-gray-500 dark:text-gray-400">Muted text</span>
-<span className="text-cyan-600 dark:text-cyan-400">Accent text</span>`;
-};
 
 export const TypographyFoundation = () => {
+  const [selectedColor, setSelectedColor] = useState('Primary');
+  const [selectedType, setSelectedType] = useState('H1');
+
+  const currentColorClass = TEXT_COLORS.find(color => color.name === selectedColor)?.className || 'text-gray-900 dark:text-gray-100';
+
+  const generateCode = () => {
+    const selectedTypeData = TYPOGRAPHY_SCALE.find(type => type.name === selectedType);
+    const selectedColorData = TEXT_COLORS.find(color => color.name === selectedColor);
+
+    if (!selectedTypeData || !selectedColorData) return '';
+
+    const className = selectedColorData.name === 'Primary'
+      ? selectedTypeData.className
+      : `${selectedTypeData.className} ${selectedColorData.className}`;
+
+    return `// ${selectedTypeData.name} with ${selectedColorData.name} color
+<${selectedType.toLowerCase().startsWith('h') ? selectedType.toLowerCase() : 'p'} className="${className}">
+  ${selectedTypeData.example}
+</${selectedType.toLowerCase().startsWith('h') ? selectedType.toLowerCase() : 'p'}>`;
+  };
+
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Typography System</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Consistent typography scale and styles for clear content hierarchy and optimal readability.
+      {/* Header */}
+      <div className="text-center">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Typography System</h2>
+        <p className="text-gray-600 dark:text-gray-400 text-lg">
+          Interactive typography configurator with live examples
         </p>
       </div>
 
-      {/* Heading Styles */}
-      <Card className="p-6 max-w-none">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Headings</h3>
-        <div className="space-y-6">
-          {HEADING_STYLES.map((style) => (
-            <div key={style.name} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0">
-              <div className={cn(style.className, 'mb-2')}>
-                {style.example}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-gray-600 dark:text-gray-400">
-                <div>
-                  <span className="font-medium">Style:</span> {style.name}
-                </div>
-                <div>
-                  <span className="font-medium">Size:</span> {style.size}
-                </div>
-                <div>
-                  <span className="font-medium">Usage:</span> {style.usage}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+      {/* Typography Configurator */}
+      <Card className="p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left: Controls */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Typography Configurator</h3>
 
-      {/* Body Styles */}
-      <Card className="p-6 max-w-none">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Body Text</h3>
-        <div className="space-y-6">
-          {BODY_STYLES.map((style) => (
-            <div key={style.name} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0">
-              <div className={cn(style.className, 'mb-2')}>
-                {style.example}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-gray-600 dark:text-gray-400">
-                <div>
-                  <span className="font-medium">Style:</span> {style.name}
-                </div>
-                <div>
-                  <span className="font-medium">Size:</span> {style.size}
-                </div>
-                <div>
-                  <span className="font-medium">Usage:</span> {style.usage}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Utility Styles */}
-      <Card className="p-6 max-w-none">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Utility Styles</h3>
-        <div className="space-y-6">
-          {UTILITY_STYLES.map((style) => (
-            <div key={style.name} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0">
-              <div className={cn(style.className, 'mb-2')}>
-                {style.example}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-gray-600 dark:text-gray-400">
-                <div>
-                  <span className="font-medium">Style:</span> {style.name}
-                </div>
-                <div>
-                  <span className="font-medium">Weight:</span> {style.weight}
-                </div>
-                <div>
-                  <span className="font-medium">Usage:</span> {style.usage}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Color Variations */}
-      <Card className="p-6 max-w-none">
-        <h3 className="text-lg font-semibold mb-4">Text Colors</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {COLOR_VARIATIONS.map((color) => (
-            <div key={color.name} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div className="space-y-4">
               <div>
-                <div className={cn(color.className, 'text-base font-medium mb-1')}>
-                  {color.name}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {color.usage}
-                </div>
+                <label className="block text-sm font-medium mb-2">Typography Style</label>
+                <Select value={selectedType} onValueChange={setSelectedType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TYPOGRAPHY_SCALE.map((type) => (
+                      <SelectItem key={type.name} value={type.name}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="text-xs font-mono text-gray-400 dark:text-gray-500">
-                {color.className.split(' ')[0]}
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Text Color</label>
+                <Select value={selectedColor} onValueChange={setSelectedColor}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEXT_COLORS.map((color) => (
+                      <SelectItem key={color.name} value={color.name}>
+                        {color.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Current Selection */}
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <div className="font-medium text-sm">Current Selection</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {selectedType} • {selectedColor}
+                </div>
+                <div className="text-xs font-mono text-gray-500 mt-1">
+                  {TYPOGRAPHY_SCALE.find(t => t.name === selectedType)?.className} {selectedColor !== 'Primary' ? TEXT_COLORS.find(c => c.name === selectedColor)?.className : ''}
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-      </Card>
+          </div>
 
-      {/* Usage Code */}
-      <Card className="p-6 max-w-none">
-        <h3 className="text-lg font-semibold mb-4">Usage Code</h3>
-        <CodeDisplay
-          code={generateCode()}
-          
-          showLineNumbers
-        />
+          {/* Right: Live Examples */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">Live Examples</h3>
+
+            {/* Card Example */}
+            <Card className="p-4">
+              <div className={cn(TYPOGRAPHY_SCALE.find(t => t.name === selectedType)?.className, currentColorClass)}>
+                Sample {selectedType} Text
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                This is how your typography appears in a card component
+              </div>
+            </Card>
+
+            {/* Code Example */}
+            <Card className="p-4 bg-gray-900 dark:bg-gray-950">
+              <div className="text-green-400 text-xs font-mono mb-1">// Code example</div>
+              <div className={cn(TYPOGRAPHY_SCALE.find(t => t.name === selectedType)?.className, currentColorClass, 'font-mono')}>
+                function example() {'{'}
+              </div>
+              <div className="text-gray-400 text-sm font-mono ml-4">
+                console.log('Typography in code context');
+              </div>
+              <div className={cn(TYPOGRAPHY_SCALE.find(t => t.name === selectedType)?.className, currentColorClass, 'font-mono')}>
+                {'}'}
+              </div>
+            </Card>
+
+            {/* Section Example */}
+            <div className="space-y-2">
+              <div className={cn(TYPOGRAPHY_SCALE.find(t => t.name === selectedType)?.className, currentColorClass)}>
+                Section Header Example
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                This demonstrates how the typography works as section headers with descriptions below.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Generated Code */}
+        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Generated Code</h4>
+          <CodeDisplay
+            code={generateCode()}
+            showLineNumbers={false}
+          />
+        </div>
       </Card>
     </div>
   );
