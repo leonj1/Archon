@@ -3,4 +3,3 @@ export { PillNavigation } from "./shared/PillNavigation";
 export { SideNavigation } from "./shared/SideNavigation";
 export { StyleGuideTab } from "./tabs/StyleGuideTab";
 export { LayoutsTab } from "./tabs/LayoutsTab";
-export { ConfiguratorsTab } from "./tabs/ConfiguratorsTab";
