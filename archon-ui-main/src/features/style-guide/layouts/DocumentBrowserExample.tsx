@@ -1,23 +1,19 @@
+import { Code, File, FileText, Globe, Search } from "lucide-react";
 import { useState } from "react";
-import { Search, Code, FileText, Globe, File } from "lucide-react";
 import { Button } from "@/features/ui/primitives/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/features/ui/primitives/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/features/ui/primitives/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/features/ui/primitives/dialog";
 import { Input } from "@/features/ui/primitives/input";
 import { StatPill } from "@/features/ui/primitives/pill";
 import { cn } from "@/features/ui/primitives/styles";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/primitives/tabs";
 
 const MOCK_DOCUMENTS = [
   {
     id: "1",
     title: "[Radix Homepage](https://www.radix-ui.com/)[Made by WorkOS](https://workos.com)",
     preview: "[Radix Homepage](https://www.radix-ui.com/)[Made by WorkOS]...",
-    content: "[Radix Homepage](https://www.radix-ui.com/)[Made by WorkOS](https://workos.com)\n\n[ThemesThemes](https://www.radix-ui.com/)[PrimitivesPrimitives](https://www.radix-ui.com/primitives)[IconsIcons](https://www.radix-ui.com/icons)[ColorsColors](https://www.radix-ui.com/colors)\n\n[Documentation](https://www.radix-ui.com/themes/docs/overview/getting-started)[Playground](https://www.radix-ui.com/themes/playground)[Blog](https://www.radix-ui.com/blog)[](https://github.com/radix-ui/themes)",
+    content:
+      "[Radix Homepage](https://www.radix-ui.com/)[Made by WorkOS](https://workos.com)\n\n[ThemesThemes](https://www.radix-ui.com/)[PrimitivesPrimitives](https://www.radix-ui.com/primitives)[IconsIcons](https://www.radix-ui.com/icons)[ColorsColors](https://www.radix-ui.com/colors)\n\n[Documentation](https://www.radix-ui.com/themes/docs/overview/getting-started)[Playground](https://www.radix-ui.com/themes/playground)[Blog](https://www.radix-ui.com/blog)[](https://github.com/radix-ui/themes)",
     sourceType: "Web" as const,
     category: "Technical" as const,
     url: "https://www.radix-ui.com/primitives/docs/guides/styling",
@@ -62,8 +58,9 @@ export const DocumentBrowserExample = () => {
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-600 dark:text-gray-400">
-        <strong>Use this pattern for:</strong> Document browser with header showing source type pills (Web Page/Document),
-        knowledge type badges (Technical/Business), and StatPills for counts. Uses Radix primitives for all components.
+        <strong>Use this pattern for:</strong> Document browser with header showing source type pills (Web
+        Page/Document), knowledge type badges (Technical/Business), and StatPills for counts. Uses Radix primitives for
+        all components.
       </p>
 
       <Button onClick={() => setOpen(true)}>Open Document Browser Example</Button>
@@ -73,26 +70,16 @@ export const DocumentBrowserExample = () => {
   );
 };
 
-const DocumentBrowserModal = ({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) => {
+const DocumentBrowserModal = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
   const [activeTab, setActiveTab] = useState<"documents" | "code">("documents");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(MOCK_DOCUMENTS[0]);
   const [selectedCode, setSelectedCode] = useState(MOCK_CODE[0]);
   const [sourceType, setSourceType] = useState<"web" | "document">("web");
 
-  const filteredDocuments = MOCK_DOCUMENTS.filter((doc) =>
-    doc.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredDocuments = MOCK_DOCUMENTS.filter((doc) => doc.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const filteredCode = MOCK_CODE.filter((example) =>
-    example.summary.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCode = MOCK_CODE.filter((example) => example.summary.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -129,7 +116,11 @@ const DocumentBrowserModal = ({
         </div>
 
         {/* Tabs and Content */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="flex-1 flex flex-col px-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+          className="flex-1 flex flex-col px-6"
+        >
           <div className="flex justify-start mb-4 mt-6">
             <TabsList>
               <TabsTrigger value="documents" color="cyan">
@@ -165,9 +156,7 @@ const DocumentBrowserModal = ({
                     onClick={() => setSelectedDoc(doc)}
                     className={cn(
                       "w-full text-left p-3 rounded-lg transition-colors",
-                      selectedDoc.id === doc.id
-                        ? "bg-cyan-500/10 border border-cyan-500/30"
-                        : "hover:bg-white/5"
+                      selectedDoc.id === doc.id ? "bg-cyan-500/10 border border-cyan-500/30" : "hover:bg-white/5",
                     )}
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -223,16 +212,12 @@ const DocumentBrowserModal = ({
                     onClick={() => setSelectedCode(code)}
                     className={cn(
                       "w-full text-left p-3 rounded-lg transition-colors",
-                      selectedCode.id === code.id
-                        ? "bg-cyan-500/10 border border-cyan-500/30"
-                        : "hover:bg-white/5"
+                      selectedCode.id === code.id ? "bg-cyan-500/10 border border-cyan-500/30" : "hover:bg-white/5",
                     )}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <Code className="w-4 h-4 text-cyan-400" />
-                      <span className="px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded">
-                        {code.language}
-                      </span>
+                      <span className="px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded">{code.language}</span>
                     </div>
                     <p className="text-xs text-gray-400 line-clamp-2">{code.summary}</p>
                   </button>
@@ -244,9 +229,7 @@ const DocumentBrowserModal = ({
             <div className="flex-1 overflow-y-auto pl-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">{selectedCode.summary}</h3>
-                <span className="px-2 py-1 text-xs bg-cyan-500/20 text-cyan-400 rounded">
-                  {selectedCode.language}
-                </span>
+                <span className="px-2 py-1 text-xs bg-cyan-500/20 text-cyan-400 rounded">{selectedCode.language}</span>
               </div>
               <pre className="bg-black/30 rounded-lg p-4 overflow-x-auto">
                 <code className="text-gray-300 text-sm">{selectedCode.code}</code>

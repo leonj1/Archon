@@ -1,23 +1,21 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { RotateCcw } from "lucide-react";
-import { Card } from "@/features/ui/primitives/card";
+import { useState } from "react";
 import { Button } from "@/features/ui/primitives/button";
+import { Card } from "@/features/ui/primitives/card";
 
 export const StaticEffects = () => {
   const [animationKey, setAnimationKey] = useState(0);
 
   const replayAnimation = () => {
-    setAnimationKey(prev => prev + 1);
+    setAnimationKey((prev) => prev + 1);
   };
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Effects & Animations</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Visual effects and animations used in the application
-        </p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Visual effects and animations used in the application</p>
       </div>
 
       {/* Hover Effects */}
@@ -50,9 +48,7 @@ export const StaticEffects = () => {
             <div className="flex justify-center py-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500" />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono text-center">
-              animate-spin
-            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono text-center">animate-spin</p>
           </Card>
 
           <Card className="p-6">
@@ -60,9 +56,7 @@ export const StaticEffects = () => {
             <div className="flex justify-center py-4">
               <div className="w-8 h-8 bg-blue-500 rounded-full animate-pulse" />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono text-center">
-              animate-pulse
-            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono text-center">animate-pulse</p>
           </Card>
 
           <Card className="p-6">
@@ -77,9 +71,7 @@ export const StaticEffects = () => {
                 />
               </div>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono text-center">
-              Framer Motion
-            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono text-center">Framer Motion</p>
           </Card>
         </div>
       </div>
@@ -88,12 +80,7 @@ export const StaticEffects = () => {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Stagger Entrance</h3>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={replayAnimation}
-            className="flex items-center gap-2"
-          >
+          <Button size="sm" variant="outline" onClick={replayAnimation} className="flex items-center gap-2">
             <RotateCcw className="w-4 h-4" />
             Replay
           </Button>

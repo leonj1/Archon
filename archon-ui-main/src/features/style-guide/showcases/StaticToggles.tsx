@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Card } from "@/features/ui/primitives/card";
 import { PowerButton } from "@/components/ui/PowerButton";
-import { Switch } from "@/features/ui/primitives/switch";
+import { Card } from "@/features/ui/primitives/card";
 import { Label } from "@/features/ui/primitives/label";
+import { Switch } from "@/features/ui/primitives/switch";
 
 export const StaticToggles = () => {
   const [powerStates, setPowerStates] = useState({
@@ -16,16 +16,12 @@ export const StaticToggles = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Toggles</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Toggle controls used in the application
-        </p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Toggle controls used in the application</p>
       </div>
 
       {/* Power Button */}
       <Card className="p-6">
-        <h4 className="text-sm font-semibold mb-4 text-gray-900 dark:text-white">
-          Power Button
-        </h4>
+        <h4 className="text-sm font-semibold mb-4 text-gray-900 dark:text-white">Power Button</h4>
         <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
           Animated toggle with glowing power icon. Used for collapsible settings cards.
         </p>
@@ -67,9 +63,7 @@ export const StaticToggles = () => {
             <span className="text-xs text-gray-500">Orange</span>
           </div>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 font-mono">
-          {"<PowerButton />"}
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 font-mono">{"<PowerButton />"}</p>
       </Card>
 
       {/* Switch Toggle */}
@@ -88,9 +82,7 @@ export const StaticToggles = () => {
             <Switch id="toggle-2" />
           </div>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 font-mono">
-          {"<Switch />"}
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 font-mono">{"<Switch />"}</p>
       </Card>
     </div>
   );

@@ -11,27 +11,33 @@ export const SelectValue = SelectPrimitive.Value;
 
 const selectColorVariants = {
   purple: {
-    trigger: "hover:border-purple-400/50 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] focus:border-purple-500 focus:shadow-[0_0_20px_rgba(168,85,247,0.4)]",
+    trigger:
+      "hover:border-purple-400/50 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] focus:border-purple-500 focus:shadow-[0_0_20px_rgba(168,85,247,0.4)]",
     item: "hover:bg-purple-500/20 dark:hover:bg-purple-400/20 data-[state=checked]:bg-purple-500/30 dark:data-[state=checked]:bg-purple-400/30 data-[state=checked]:text-purple-700 dark:data-[state=checked]:text-purple-300",
   },
   blue: {
-    trigger: "hover:border-blue-400/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] focus:border-blue-500 focus:shadow-[0_0_20px_rgba(59,130,246,0.4)]",
+    trigger:
+      "hover:border-blue-400/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] focus:border-blue-500 focus:shadow-[0_0_20px_rgba(59,130,246,0.4)]",
     item: "hover:bg-blue-500/20 dark:hover:bg-blue-400/20 data-[state=checked]:bg-blue-500/30 dark:data-[state=checked]:bg-blue-400/30 data-[state=checked]:text-blue-700 dark:data-[state=checked]:text-blue-300",
   },
   green: {
-    trigger: "hover:border-emerald-400/50 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] focus:border-emerald-500 focus:shadow-[0_0_20px_rgba(16,185,129,0.4)]",
+    trigger:
+      "hover:border-emerald-400/50 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] focus:border-emerald-500 focus:shadow-[0_0_20px_rgba(16,185,129,0.4)]",
     item: "hover:bg-emerald-500/20 dark:hover:bg-emerald-400/20 data-[state=checked]:bg-emerald-500/30 dark:data-[state=checked]:bg-emerald-400/30 data-[state=checked]:text-emerald-700 dark:data-[state=checked]:text-emerald-300",
   },
   pink: {
-    trigger: "hover:border-pink-400/50 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)] focus:border-pink-500 focus:shadow-[0_0_20px_rgba(236,72,153,0.4)]",
+    trigger:
+      "hover:border-pink-400/50 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)] focus:border-pink-500 focus:shadow-[0_0_20px_rgba(236,72,153,0.4)]",
     item: "hover:bg-pink-500/20 dark:hover:bg-pink-400/20 data-[state=checked]:bg-pink-500/30 dark:data-[state=checked]:bg-pink-400/30 data-[state=checked]:text-pink-700 dark:data-[state=checked]:text-pink-300",
   },
   orange: {
-    trigger: "hover:border-orange-400/50 hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] focus:border-orange-500 focus:shadow-[0_0_20px_rgba(249,115,22,0.4)]",
+    trigger:
+      "hover:border-orange-400/50 hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] focus:border-orange-500 focus:shadow-[0_0_20px_rgba(249,115,22,0.4)]",
     item: "hover:bg-orange-500/20 dark:hover:bg-orange-400/20 data-[state=checked]:bg-orange-500/30 dark:data-[state=checked]:bg-orange-400/30 data-[state=checked]:text-orange-700 dark:data-[state=checked]:text-orange-300",
   },
   cyan: {
-    trigger: "hover:border-cyan-400/50 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] focus:border-cyan-500 focus:shadow-[0_0_20px_rgba(34,211,238,0.4)]",
+    trigger:
+      "hover:border-cyan-400/50 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] focus:border-cyan-500 focus:shadow-[0_0_20px_rgba(34,211,238,0.4)]",
     item: "hover:bg-cyan-500/20 dark:hover:bg-cyan-400/20 data-[state=checked]:bg-cyan-500/30 dark:data-[state=checked]:bg-cyan-400/30 data-[state=checked]:text-cyan-700 dark:data-[state=checked]:text-cyan-300",
   },
 };

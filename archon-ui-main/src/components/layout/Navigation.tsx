@@ -69,7 +69,7 @@ export function Navigation({ className }: NavigationProps) {
   ];
 
   // Filter out disabled navigation items
-  const enabledNavigationItems = navigationItems.filter(item => item.enabled);
+  const enabledNavigationItems = navigationItems.filter((item) => item.enabled);
 
   const isProjectsActive = location.pathname.startsWith("/projects");
 

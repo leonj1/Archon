@@ -3,15 +3,15 @@ import { cn, glassCard } from "./styles";
 
 interface DataCardProps extends React.HTMLAttributes<HTMLDivElement> {
   // Edge-lit properties
-  edgePosition?: 'none' | 'top' | 'left' | 'right' | 'bottom';
-  edgeColor?: 'purple' | 'blue' | 'cyan' | 'green' | 'orange' | 'pink' | 'red';
+  edgePosition?: "none" | "top" | "left" | "right" | "bottom";
+  edgeColor?: "purple" | "blue" | "cyan" | "green" | "orange" | "pink" | "red";
 
   // Glow properties
-  glowColor?: 'none' | 'purple' | 'blue' | 'cyan' | 'green' | 'orange' | 'pink' | 'red';
+  glowColor?: "none" | "purple" | "blue" | "cyan" | "green" | "orange" | "pink" | "red";
 
   // Glass properties
-  blur?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
-  transparency?: 'clear' | 'light' | 'medium' | 'frosted' | 'solid';
+  blur?: "none" | "sm" | "md" | "lg" | "xl";
+  transparency?: "clear" | "light" | "medium" | "frosted" | "solid";
 }
 
 interface DataCardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
@@ -19,19 +19,22 @@ interface DataCardContentProps extends React.HTMLAttributes<HTMLDivElement> {}
 interface DataCardFooterProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export const DataCard = React.forwardRef<HTMLDivElement, DataCardProps>(
-  ({
-    className,
-    edgePosition = 'none',
-    edgeColor = 'cyan',
-    glowColor = 'none',
-    blur = 'md',
-    transparency = 'light',
-    children,
-    ...props
-  }, ref) => {
-    const hasEdge = edgePosition !== 'none';
+  (
+    {
+      className,
+      edgePosition = "none",
+      edgeColor = "cyan",
+      glowColor = "none",
+      blur = "md",
+      transparency = "light",
+      children,
+      ...props
+    },
+    ref,
+  ) => {
+    const hasEdge = edgePosition !== "none";
 
-    if (hasEdge && edgePosition === 'top') {
+    if (hasEdge && edgePosition === "top") {
       return (
         <div
           ref={ref}
@@ -39,29 +42,35 @@ export const DataCard = React.forwardRef<HTMLDivElement, DataCardProps>(
             glassCard.base,
             glassCard.edgeLit.color[edgeColor].border || "border-gray-300/20 dark:border-white/10",
             "min-h-[240px]",
-            className
+            className,
           )}
           {...props}
         >
           {/* Top edge light with glow */}
-          <div className={cn(
-            "absolute inset-x-0 top-0 h-[2px] pointer-events-none z-10",
-            glassCard.edgeLit.position.top,
-            glassCard.edgeLit.color[edgeColor].line,
-            glassCard.edgeLit.color[edgeColor].glow
-          )} />
+          <div
+            className={cn(
+              "absolute inset-x-0 top-0 h-[2px] pointer-events-none z-10",
+              glassCard.edgeLit.position.top,
+              glassCard.edgeLit.color[edgeColor].line,
+              glassCard.edgeLit.color[edgeColor].glow,
+            )}
+          />
           {/* Glow bleeding down */}
-          <div className={cn(
-            "absolute inset-x-0 top-0 h-16 bg-gradient-to-b to-transparent blur-lg pointer-events-none z-10",
-            glassCard.edgeLit.color[edgeColor].gradient.vertical
-          )} />
+          <div
+            className={cn(
+              "absolute inset-x-0 top-0 h-16 bg-gradient-to-b to-transparent blur-lg pointer-events-none z-10",
+              glassCard.edgeLit.color[edgeColor].gradient.vertical,
+            )}
+          />
 
           {/* Content wrapper with flex layout */}
-          <div className={cn(
-            "flex flex-col min-h-[240px]",
-            glassCard.blur[blur],
-            glassCard.tints[edgeColor]?.light || glassCard.transparency[transparency]
-          )}>
+          <div
+            className={cn(
+              "flex flex-col min-h-[240px]",
+              glassCard.blur[blur],
+              glassCard.tints[edgeColor]?.light || glassCard.transparency[transparency],
+            )}
+          >
             {children}
           </div>
         </div>
@@ -77,14 +86,14 @@ export const DataCard = React.forwardRef<HTMLDivElement, DataCardProps>(
           glassCard.blur[blur],
           glassCard.transparency[transparency],
           "flex flex-col",
-          className
+          className,
         )}
         {...props}
       >
         {children}
       </div>
     );
-  }
+  },
 );
 
 DataCard.displayName = "DataCard";
@@ -97,7 +106,7 @@ export const DataCardHeader = React.forwardRef<HTMLDivElement, DataCardHeaderPro
         {children}
       </div>
     );
-  }
+  },
 );
 
 DataCardHeader.displayName = "DataCardHeader";
@@ -110,7 +119,7 @@ export const DataCardContent = React.forwardRef<HTMLDivElement, DataCardContentP
         {children}
       </div>
     );
-  }
+  },
 );
 
 DataCardContent.displayName = "DataCardContent";
@@ -123,14 +132,14 @@ export const DataCardFooter = React.forwardRef<HTMLDivElement, DataCardFooterPro
         ref={ref}
         className={cn(
           "px-4 py-3 bg-gray-100/50 dark:bg-black/30 border-t border-gray-200/50 dark:border-white/10",
-          className
+          className,
         )}
         {...props}
       >
         {children}
       </div>
     );
-  }
+  },
 );
 
 DataCardFooter.displayName = "DataCardFooter";

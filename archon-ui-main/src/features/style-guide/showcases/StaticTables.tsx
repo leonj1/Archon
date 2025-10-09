@@ -3,9 +3,7 @@ export const StaticTables = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Tables</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Table styles with glassmorphism and hover states
-        </p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Table styles with glassmorphism and hover states</p>
       </div>
 
       {/* Standard Table - matching TaskView pattern */}
@@ -15,18 +13,10 @@ export const StaticTables = () => {
           <table className="w-full">
             <thead>
               <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-b-2 border-gray-200 dark:border-gray-700">
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Name
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Count
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Date
-                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Count</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Date</th>
               </tr>
             </thead>
             <tbody>

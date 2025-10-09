@@ -1,36 +1,29 @@
-import { Settings, Palette, Key, Database, Code, Globe, Moon, FileText, Flame, Monitor } from "lucide-react";
+import { Code, Database, FileText, Flame, Globe, Key, Monitor, Moon, Palette, Settings } from "lucide-react";
 import { CollapsibleSettingsCard } from "@/components/ui/CollapsibleSettingsCard";
 import { Card } from "@/features/ui/primitives/card";
-import { Switch } from "@/features/ui/primitives/switch";
 import { Input } from "@/features/ui/primitives/input";
 import { Label } from "@/features/ui/primitives/label";
+import { Switch } from "@/features/ui/primitives/switch";
 
 export const SettingsLayoutExample = () => {
   return (
     <div className="space-y-4">
       {/* Explanation Text */}
       <p className="text-sm text-gray-600 dark:text-gray-400">
-        <strong>Use this layout for:</strong> Settings pages, dashboard widgets, grouped
-        configuration sections. Two-column responsive grid with collapsible cards.
+        <strong>Use this layout for:</strong> Settings pages, dashboard widgets, grouped configuration sections.
+        Two-column responsive grid with collapsible cards.
       </p>
 
       {/* Bento Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Features Section */}
-        <CollapsibleSettingsCard
-          title="Features"
-          icon={Palette}
-          accentColor="purple"
-          defaultExpanded={true}
-        >
+        <CollapsibleSettingsCard title="Features" icon={Palette} accentColor="purple" defaultExpanded={true}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Dark Mode */}
             <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 backdrop-blur-sm border border-purple-500/20 shadow-lg">
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-800 dark:text-white text-sm">Dark Mode</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Switch between themes
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Switch between themes</p>
               </div>
               <div className="flex-shrink-0">
                 <Switch size="lg" defaultChecked color="purple" iconOn={<Moon className="w-5 h-5" />} />
@@ -41,9 +34,7 @@ export const SettingsLayoutExample = () => {
             <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/5 backdrop-blur-sm border border-blue-500/20 shadow-lg">
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-800 dark:text-white text-sm">Projects</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Enable Projects functionality
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Enable Projects functionality</p>
               </div>
               <div className="flex-shrink-0">
                 <Switch size="lg" defaultChecked color="blue" icon={<FileText className="w-5 h-5" />} />
@@ -54,9 +45,7 @@ export const SettingsLayoutExample = () => {
             <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 backdrop-blur-sm border border-cyan-500/20 shadow-lg">
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-800 dark:text-white text-sm">Style Guide</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Show UI components
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Show UI components</p>
               </div>
               <div className="flex-shrink-0">
                 <Switch size="lg" defaultChecked color="cyan" icon={<Palette className="w-5 h-5" />} />
@@ -67,9 +56,7 @@ export const SettingsLayoutExample = () => {
             <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 backdrop-blur-sm border border-orange-500/20 shadow-lg">
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-800 dark:text-white text-sm">Pydantic Logfire</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Logging platform
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Logging platform</p>
               </div>
               <div className="flex-shrink-0">
                 <Switch size="lg" color="orange" icon={<Flame className="w-5 h-5" />} />
@@ -80,9 +67,7 @@ export const SettingsLayoutExample = () => {
             <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/5 backdrop-blur-sm border border-green-500/20 shadow-lg">
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-800 dark:text-white text-sm">Disconnect Screen</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Show when disconnected
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Show when disconnected</p>
               </div>
               <div className="flex-shrink-0">
                 <Switch size="lg" defaultChecked color="green" icon={<Monitor className="w-5 h-5" />} />
@@ -127,15 +112,12 @@ export const SettingsLayoutExample = () => {
         </CollapsibleSettingsCard>
 
         {/* Database Settings */}
-        <CollapsibleSettingsCard
-          title="Database Settings"
-          icon={Database}
-          accentColor="blue"
-          defaultExpanded={false}
-        >
+        <CollapsibleSettingsCard title="Database Settings" icon={Database} accentColor="blue" defaultExpanded={false}>
           <Card edgePosition="top" edgeColor="blue">
             <div>
-              <Label htmlFor="db-url" className="text-sm font-medium">Database URL</Label>
+              <Label htmlFor="db-url" className="text-sm font-medium">
+                Database URL
+              </Label>
               <Input
                 id="db-url"
                 placeholder="postgresql://..."
@@ -144,85 +126,66 @@ export const SettingsLayoutExample = () => {
               />
             </div>
             <div className="flex items-center justify-between mt-4">
-              <Label htmlFor="auto-backup" className="text-sm font-medium">Auto Backup</Label>
+              <Label htmlFor="auto-backup" className="text-sm font-medium">
+                Auto Backup
+              </Label>
               <Switch id="auto-backup" />
             </div>
           </Card>
         </CollapsibleSettingsCard>
 
         {/* Code Extraction */}
-        <CollapsibleSettingsCard
-          title="Code Extraction"
-          icon={Code}
-          accentColor="green"
-          defaultExpanded={false}
-        >
+        <CollapsibleSettingsCard title="Code Extraction" icon={Code} accentColor="green" defaultExpanded={false}>
           <Card edgePosition="top" edgeColor="green">
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               Configure how code blocks are extracted from crawled documents.
             </p>
             <div className="flex items-center justify-between mb-4">
-              <Label htmlFor="extract-code" className="text-sm font-medium">Extract Code Examples</Label>
+              <Label htmlFor="extract-code" className="text-sm font-medium">
+                Extract Code Examples
+              </Label>
               <Switch id="extract-code" defaultChecked />
             </div>
             <div>
-              <Label htmlFor="max-examples" className="text-sm font-medium">Max Examples per Source</Label>
-              <Input
-                id="max-examples"
-                type="number"
-                placeholder="50"
-                className="mt-2"
-                defaultValue="50"
-              />
+              <Label htmlFor="max-examples" className="text-sm font-medium">
+                Max Examples per Source
+              </Label>
+              <Input id="max-examples" type="number" placeholder="50" className="mt-2" defaultValue="50" />
             </div>
           </Card>
         </CollapsibleSettingsCard>
 
         {/* RAG Configuration */}
-        <CollapsibleSettingsCard
-          title="RAG Configuration"
-          icon={Settings}
-          accentColor="orange"
-          defaultExpanded={true}
-        >
+        <CollapsibleSettingsCard title="RAG Configuration" icon={Settings} accentColor="orange" defaultExpanded={true}>
           <Card edgePosition="top" edgeColor="orange">
             <div>
-              <Label htmlFor="match-count" className="text-sm font-medium">Match Count</Label>
-              <Input
-                id="match-count"
-                type="number"
-                placeholder="5"
-                className="mt-2"
-                defaultValue="5"
-              />
+              <Label htmlFor="match-count" className="text-sm font-medium">
+                Match Count
+              </Label>
+              <Input id="match-count" type="number" placeholder="5" className="mt-2" defaultValue="5" />
             </div>
             <div className="flex items-center justify-between mt-4">
-              <Label htmlFor="rerank" className="text-sm font-medium">Enable Reranking</Label>
+              <Label htmlFor="rerank" className="text-sm font-medium">
+                Enable Reranking
+              </Label>
               <Switch id="rerank" defaultChecked />
             </div>
           </Card>
         </CollapsibleSettingsCard>
 
         {/* Crawling Settings */}
-        <CollapsibleSettingsCard
-          title="Crawling Settings"
-          icon={Globe}
-          accentColor="pink"
-          defaultExpanded={false}
-        >
+        <CollapsibleSettingsCard title="Crawling Settings" icon={Globe} accentColor="pink" defaultExpanded={false}>
           <Card edgePosition="top" edgeColor="pink">
             <div>
-              <Label htmlFor="max-depth" className="text-sm font-medium">Max Crawl Depth</Label>
-              <Input
-                id="max-depth"
-                type="number"
-                placeholder="3"
-                className="mt-2"
-                defaultValue="3"
-              />
+              <Label htmlFor="max-depth" className="text-sm font-medium">
+                Max Crawl Depth
+              </Label>
+              <Input id="max-depth" type="number" placeholder="3" className="mt-2" defaultValue="3" />
             </div>
             <div className="flex items-center justify-between mt-4">
-              <Label htmlFor="follow-links" className="text-sm font-medium">Follow External Links</Label>
+              <Label htmlFor="follow-links" className="text-sm font-medium">
+                Follow External Links
+              </Label>
               <Switch id="follow-links" />
             </div>
           </Card>

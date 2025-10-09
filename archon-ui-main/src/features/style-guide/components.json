@@ -104,7 +104,13 @@
           "name": "DocumentBrowser",
           "path": "archon-ui-main/src/features/knowledge/components/DocumentBrowser.tsx",
           "usage": "Modal for displaying documents, code, logs, or structured information with tabs and search",
-          "features": ["Dialog modal", "Tabs navigation", "Search filtering", "Expandable content", "Code syntax highlighting"],
+          "features": [
+            "Dialog modal",
+            "Tabs navigation",
+            "Search filtering",
+            "Expandable content",
+            "Code syntax highlighting"
+          ],
           "radix_used": ["Dialog", "Tabs", "Input"],
           "pattern": "Dialog + Tabs + Search input + Collapsible items with expand/collapse",
           "example": "Knowledge inspector, document viewer, code browser, log viewer"

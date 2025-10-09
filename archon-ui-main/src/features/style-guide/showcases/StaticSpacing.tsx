@@ -16,9 +16,7 @@ export const StaticSpacing = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Spacing</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Consistent spacing scale based on 4px increments
-        </p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Consistent spacing scale based on 4px increments</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

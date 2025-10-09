@@ -20,7 +20,7 @@ export const RadioGroupItem = React.forwardRef<
       "focus:outline-none focus:ring-2 focus:ring-cyan-500",
       "disabled:cursor-not-allowed disabled:opacity-50",
       "data-[state=checked]:border-cyan-500",
-      className
+      className,
     )}
     {...props}
   >

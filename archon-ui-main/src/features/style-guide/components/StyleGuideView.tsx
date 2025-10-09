@@ -1,9 +1,9 @@
+import { Layout, Palette } from "lucide-react";
 import { useState } from "react";
-import { Palette, Layout } from "lucide-react";
-import { PillNavigation, type PillNavigationItem } from "../shared/PillNavigation";
-import { StyleGuideTab } from "../tabs/StyleGuideTab";
-import { LayoutsTab } from "../tabs/LayoutsTab";
 import { ThemeToggle } from "../../../components/ui/ThemeToggle";
+import { PillNavigation, type PillNavigationItem } from "../shared/PillNavigation";
+import { LayoutsTab } from "../tabs/LayoutsTab";
+import { StyleGuideTab } from "../tabs/StyleGuideTab";
 
 export const StyleGuideView = () => {
   const [activeTab, setActiveTab] = useState<"style-guide" | "layouts">("style-guide");
@@ -21,9 +21,7 @@ export const StyleGuideView = () => {
           <ThemeToggle accentColor="blue" />
         </div>
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Archon UI Style Guide
-          </h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Archon UI Style Guide</h1>
           <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto">
             Design system foundations and layout patterns for building consistent interfaces.
           </p>

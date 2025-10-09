@@ -1,6 +1,7 @@
-import { cn } from "@/features/ui/primitives/styles";
 import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/primitives/select";
+import { cn } from "@/features/ui/primitives/styles";
 
 export interface PillNavigationItem {
   id: string;
@@ -92,20 +93,22 @@ export const PillNavigation = ({
                   {/* Dropdown selector inside the pill */}
                   {onItemClick && (
                     <div className="flex items-center ml-4 pl-4 border-l border-current/30">
-                      <select
-                        value={activeItem || ""}
-                        onChange={(e) => onItemClick(e.target.value)}
-                        className="bg-transparent border-none outline-none font-medium cursor-pointer text-inherit"
-                      >
-                        <option value="" disabled>
-                          Select...
-                        </option>
-                        {item.items?.map((subItem) => (
-                          <option key={subItem} value={subItem} className="bg-gray-800 text-white">
-                            {subItem}
-                          </option>
-                        ))}
-                      </select>
+                      <Select value={activeItem || ""} onValueChange={onItemClick}>
+                        <SelectTrigger
+                          className="bg-transparent border-none outline-none font-medium cursor-pointer text-inherit w-auto px-0 hover:border-none focus:border-none focus:shadow-none"
+                          showChevron={false}
+                          color={colorVariant}
+                        >
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent color={colorVariant}>
+                          {item.items?.map((subItem) => (
+                            <SelectItem key={subItem} value={subItem} color={colorVariant}>
+                              {subItem}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
 

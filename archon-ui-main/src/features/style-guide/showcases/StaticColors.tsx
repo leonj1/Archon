@@ -20,29 +20,20 @@ export const StaticColors = () => {
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Colors</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Color palette with semantic and accent colors
-        </p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Color palette with semantic and accent colors</p>
       </div>
 
       {/* Semantic Colors */}
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
-          Semantic Colors
-        </h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Semantic Colors</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {semanticColors.map((color) => (
             <Card key={color.name} className="p-4">
               <div className="flex items-center gap-4">
-                <div
-                  className={cn("w-16 h-16 rounded-lg border border-white/20", `bg-${color.tailwind}`)}
-                  style={{ backgroundColor: color.hex }}
-                />
+                <div className="w-16 h-16 rounded-lg border border-white/20" style={{ backgroundColor: color.hex }} />
                 <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 dark:text-white">{color.name}</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
-                    {color.hex}
-                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">{color.hex}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{color.usage}</p>
                 </div>
               </div>
@@ -53,9 +44,7 @@ export const StaticColors = () => {
 
       {/* Accent Colors */}
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
-          Accent Colors
-        </h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Accent Colors</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {accentColors.map((color) => (
             <Card key={color.name} className="p-4">
@@ -77,16 +66,28 @@ export const StaticColors = () => {
 
       {/* Grayscale */}
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
-          Grayscale
-        </h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Grayscale</h3>
         <div className="flex gap-1">
-          {[50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((weight) => (
-            <div key={weight} className="flex-1">
-              <div className={cn("h-12 rounded", `bg-gray-${weight}`)} />
-              <p className="text-xs text-center mt-1 text-gray-500 dark:text-gray-400">{weight}</p>
-            </div>
-          ))}
+          {[50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((weight) => {
+            const grayClasses: Record<number, string> = {
+              50: "bg-gray-50",
+              100: "bg-gray-100",
+              200: "bg-gray-200",
+              300: "bg-gray-300",
+              400: "bg-gray-400",
+              500: "bg-gray-500",
+              600: "bg-gray-600",
+              700: "bg-gray-700",
+              800: "bg-gray-800",
+              900: "bg-gray-900",
+            };
+            return (
+              <div key={weight} className="flex-1">
+                <div className={cn("h-12 rounded", grayClasses[weight])} />
+                <p className="text-xs text-center mt-1 text-gray-500 dark:text-gray-400">{weight}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

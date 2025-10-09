@@ -5,9 +5,7 @@ export const NavigationExplanation = () => {
     <div className="space-y-8">
       {/* Navigation Hierarchy at Top */}
       <div className="bg-white/80 dark:bg-black/40 border border-gray-300 dark:border-gray-700 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Navigation Hierarchy
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Navigation Hierarchy</h3>
         <div className="flex items-center gap-2 text-sm flex-wrap">
           <span className="px-3 py-1 bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 rounded border border-cyan-400/30 font-medium">
             Main Nav
@@ -41,10 +39,11 @@ export const NavigationExplanation = () => {
         <div className="pl-20 h-full flex flex-col gap-2">
           <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">Content Area</div>
           <div className="flex-1 bg-purple-100 dark:bg-purple-900/20 rounded-lg border-2 border-purple-500/50 p-4 space-y-3">
-
             {/* Page Tabs - Pill Shaped */}
             <div className="space-y-1">
-              <div className="text-[10px] font-semibold text-blue-700 dark:text-blue-400">Page Navigation (Pill Tabs)</div>
+              <div className="text-[10px] font-semibold text-blue-700 dark:text-blue-400">
+                Page Navigation (Pill Tabs)
+              </div>
               <div className="h-10 w-48 mx-auto bg-blue-200 dark:bg-blue-900/30 rounded-full border-2 border-blue-500/50 flex items-center justify-center">
                 <span className="text-xs text-blue-700 dark:text-blue-400">Docs | Tasks</span>
               </div>
@@ -69,10 +68,9 @@ export const NavigationExplanation = () => {
       {/* Key Point */}
       <div className="bg-orange-100 dark:bg-orange-500/10 border border-orange-400/50 rounded-lg p-4">
         <p className="text-sm text-gray-800 dark:text-gray-200">
-          <strong className="text-orange-700 dark:text-orange-400">Important:</strong>{" "}
-          Main navigation is OUTSIDE the content area (fixed position). All page layouts
-          (including sidebar variants) exist INSIDE the content area and use relative positioning
-          to avoid overlapping with the main nav.
+          <strong className="text-orange-700 dark:text-orange-400">Important:</strong> Main navigation is OUTSIDE the
+          content area (fixed position). All page layouts (including sidebar variants) exist INSIDE the content area and
+          use relative positioning to avoid overlapping with the main nav.
         </p>
       </div>
     </div>

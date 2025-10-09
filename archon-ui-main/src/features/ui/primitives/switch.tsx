@@ -36,39 +36,39 @@ const switchVariants = {
       checked: "data-[state=checked]:bg-purple-500/20 data-[state=checked]:border-purple-500/50",
       glow: "data-[state=checked]:shadow-[0_0_20px_rgba(168,85,247,0.5)]",
       thumb: "data-[state=checked]:border-purple-400 data-[state=checked]:shadow-[0_0_10px_rgba(168,85,247,0.5)]",
-      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-purple-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(168,85,247,0.7)]"
+      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-purple-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(168,85,247,0.7)]",
     },
     blue: {
       checked: "data-[state=checked]:bg-blue-500/20 data-[state=checked]:border-blue-500/50",
       glow: "data-[state=checked]:shadow-[0_0_20px_rgba(59,130,246,0.5)]",
       thumb: "data-[state=checked]:border-blue-400 data-[state=checked]:shadow-[0_0_10px_rgba(59,130,246,0.5)]",
-      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-blue-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(59,130,246,0.7)]"
+      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-blue-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(59,130,246,0.7)]",
     },
     green: {
       checked: "data-[state=checked]:bg-emerald-500/20 data-[state=checked]:border-emerald-500/50",
       glow: "data-[state=checked]:shadow-[0_0_20px_rgba(16,185,129,0.5)]",
       thumb: "data-[state=checked]:border-emerald-400 data-[state=checked]:shadow-[0_0_10px_rgba(16,185,129,0.5)]",
-      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-emerald-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(16,185,129,0.7)]"
+      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-emerald-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(16,185,129,0.7)]",
     },
     pink: {
       checked: "data-[state=checked]:bg-pink-500/20 data-[state=checked]:border-pink-500/50",
       glow: "data-[state=checked]:shadow-[0_0_20px_rgba(236,72,153,0.5)]",
       thumb: "data-[state=checked]:border-pink-400 data-[state=checked]:shadow-[0_0_10px_rgba(236,72,153,0.5)]",
-      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-pink-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(236,72,153,0.7)]"
+      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-pink-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(236,72,153,0.7)]",
     },
     orange: {
       checked: "data-[state=checked]:bg-orange-500/20 data-[state=checked]:border-orange-500/50",
       glow: "data-[state=checked]:shadow-[0_0_20px_rgba(249,115,22,0.5)]",
       thumb: "data-[state=checked]:border-orange-400 data-[state=checked]:shadow-[0_0_10px_rgba(249,115,22,0.5)]",
-      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-orange-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(249,115,22,0.7)]"
+      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-orange-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(249,115,22,0.7)]",
     },
     cyan: {
       checked: "data-[state=checked]:bg-cyan-500/20 data-[state=checked]:border-cyan-500/50",
       glow: "data-[state=checked]:shadow-[0_0_20px_rgba(34,211,238,0.5)]",
       thumb: "data-[state=checked]:border-cyan-400 data-[state=checked]:shadow-[0_0_10px_rgba(34,211,238,0.5)]",
-      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-cyan-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(34,211,238,0.7)]"
-    }
-  }
+      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-cyan-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(34,211,238,0.7)]",
+    },
+  },
 };
 
 /**
@@ -94,71 +94,72 @@ const switchVariants = {
  *    - iconOff: Displayed when unchecked
  *    - icon: Same icon for both states
  */
-const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  SwitchProps
->(({ className, size = "md", color = "cyan", icon, iconOn, iconOff, checked, ...props }, ref) => {
-  const sizeStyles = switchVariants.size[size];
-  const colorStyles = switchVariants.color[color];
+const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitives.Root>, SwitchProps>(
+  ({ className, size = "md", color = "cyan", icon, iconOn, iconOff, checked, ...props }, ref) => {
+    const sizeStyles = switchVariants.size[size];
+    const colorStyles = switchVariants.color[color];
 
-  const displayIcon = React.useMemo(() => {
-    if (size === "sm") return null;
+    const displayIcon = React.useMemo(() => {
+      if (size === "sm") return null;
 
-    if (checked !== undefined) {
-      return checked ? (iconOn || icon) : (iconOff || icon);
-    }
-    return icon;
-  }, [size, checked, icon, iconOn, iconOff]);
+      if (checked !== undefined) {
+        return checked ? iconOn || icon : iconOff || icon;
+      }
+      return icon;
+    }, [size, checked, icon, iconOn, iconOff]);
 
-  return (
-    <SwitchPrimitives.Root
-      className={cn(
-        "relative inline-flex shrink-0 cursor-pointer items-center rounded-full",
-        "bg-black/10 dark:bg-white/10 backdrop-blur-xl",
-        "border border-gray-300/30 dark:border-white/10",
-        "transition-all duration-500 ease-in-out",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-        `focus-visible:ring-${color}-500`,
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        colorStyles.checked,
-        colorStyles.glow,
-        sizeStyles.root,
-        glassmorphism.interactive.base,
-        className
-      )}
-      checked={checked}
-      {...props}
-      ref={ref}
-    >
-      <SwitchPrimitives.Thumb
+    return (
+      <SwitchPrimitives.Root
         className={cn(
-          "pointer-events-none relative flex items-center justify-center rounded-full",
-          // Glass effect for thumb with proper fill
-          "bg-gradient-to-br from-gray-100/80 to-white/60 dark:from-gray-700/80 dark:to-gray-800/60",
-          "backdrop-blur-sm border-2",
-          "border-gray-400/50 dark:border-white/30",
-          "shadow-lg ring-0 transition-all duration-500 cubic-bezier(0.23, 1, 0.32, 1)",
-          "data-[state=unchecked]:translate-x-0",
-          // Checked state gets color tinted glass
-          "data-[state=checked]:from-white/90 data-[state=checked]:to-white/70 dark:data-[state=checked]:from-gray-100/20 dark:data-[state=checked]:to-gray-200/10",
-          colorStyles.thumb,
-          sizeStyles.thumb
+          "relative inline-flex shrink-0 cursor-pointer items-center rounded-full",
+          "bg-black/10 dark:bg-white/10 backdrop-blur-xl",
+          "border border-gray-300/30 dark:border-white/10",
+          "transition-all duration-500 ease-in-out",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+          `focus-visible:ring-${color}-500`,
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          colorStyles.checked,
+          colorStyles.glow,
+          sizeStyles.root,
+          glassmorphism.interactive.base,
+          className,
         )}
+        checked={checked}
+        {...props}
+        ref={ref}
       >
-        {displayIcon && (
-          <div className={cn(
-            "flex items-center justify-center transition-all duration-500",
-            // Icons have color in both states with different opacity
-            colorStyles.icon,
-            sizeStyles.icon
-          )}>
-            {displayIcon}
-          </div>
-        )}
-      </SwitchPrimitives.Thumb>
-    </SwitchPrimitives.Root>
-  );
-});
+        <SwitchPrimitives.Thumb
+          className={cn(
+            "pointer-events-none relative flex items-center justify-center rounded-full",
+            // Glass effect for thumb with proper fill
+            "bg-gradient-to-br from-gray-100/80 to-white/60 dark:from-gray-700/80 dark:to-gray-800/60",
+            "backdrop-blur-sm border-2",
+            "border-gray-400/50 dark:border-white/30",
+            "shadow-lg ring-0 transition-all duration-500 cubic-bezier(0.23, 1, 0.32, 1)",
+            "data-[state=unchecked]:translate-x-0",
+            // Checked state gets color tinted glass
+            "data-[state=checked]:from-white/90 data-[state=checked]:to-white/70 dark:data-[state=checked]:from-gray-100/20 dark:data-[state=checked]:to-gray-200/10",
+            colorStyles.thumb,
+            sizeStyles.thumb,
+          )}
+        >
+          {displayIcon && (
+            <div
+              className={cn(
+                "flex items-center justify-center transition-all duration-500",
+                // Icons have color in both states with different opacity
+                colorStyles.icon,
+                sizeStyles.icon,
+              )}
+            >
+              {displayIcon}
+            </div>
+          )}
+        </SwitchPrimitives.Thumb>
+      </SwitchPrimitives.Root>
+    );
+  },
+);
 
 Switch.displayName = SwitchPrimitives.Root.displayName;
 

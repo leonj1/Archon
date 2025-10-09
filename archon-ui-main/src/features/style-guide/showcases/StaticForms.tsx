@@ -1,25 +1,17 @@
 import { Button } from "@/features/ui/primitives/button";
 import { Card } from "@/features/ui/primitives/card";
+import { Checkbox } from "@/features/ui/primitives/checkbox";
 import { Input } from "@/features/ui/primitives/input";
 import { Label } from "@/features/ui/primitives/label";
-import { Checkbox } from "@/features/ui/primitives/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/primitives/select";
 import { Switch } from "@/features/ui/primitives/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/features/ui/primitives/select";
 
 export const StaticForms = () => {
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Form Elements</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Form inputs and controls used in the application
-        </p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Form inputs and controls used in the application</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -36,9 +28,7 @@ export const StaticForms = () => {
               <Input id="example-disabled" placeholder="Disabled..." disabled className="mt-1" />
             </div>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">
-            {"<Input />"}
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">{"<Input />"}</p>
         </Card>
 
         {/* Textarea */}
@@ -53,9 +43,7 @@ export const StaticForms = () => {
               className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/30 px-3 py-2 text-sm backdrop-blur-sm focus:border-cyan-500 focus:outline-none"
             />
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">
-            {"<textarea />"}
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">{"<textarea />"}</p>
         </Card>
 
         {/* Checkbox */}
@@ -75,9 +63,7 @@ export const StaticForms = () => {
               <Label htmlFor="check-3">Disabled</Label>
             </div>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">
-            {"<Checkbox />"}
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">{"<Checkbox />"}</p>
         </Card>
 
         {/* Switch Toggle */}
@@ -97,9 +83,7 @@ export const StaticForms = () => {
               <Switch id="switch-3" disabled />
             </div>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">
-            {"<Switch />"}
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">{"<Switch />"}</p>
         </Card>
 
         {/* Select Dropdown */}
@@ -133,9 +117,7 @@ export const StaticForms = () => {
               </Select>
             </div>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">
-            {"<Select /> with color variants"}
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">{"<Select /> with color variants"}</p>
         </Card>
 
         {/* Submit Button */}
@@ -150,9 +132,7 @@ export const StaticForms = () => {
               Submit
             </Button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">
-            Complete form example
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">Complete form example</p>
         </Card>
       </div>
     </div>

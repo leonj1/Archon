@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { Card } from "@/features/ui/primitives/card";
 import { DraggableCard } from "@/features/ui/primitives/draggable-card";
 import { SelectableCard } from "@/features/ui/primitives/selectable-card";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import { cn } from "@/features/ui/primitives/styles";
 
 // Base Glass Card with transparency tabs
@@ -25,7 +25,7 @@ const BaseGlassCardShowcase = () => {
               "px-3 py-1 text-xs rounded-md transition-colors",
               activeTab === tab
                 ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/50"
-                : "bg-gray-200/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-300/50 dark:hover:bg-gray-600/50"
+                : "bg-gray-200/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-300/50 dark:hover:bg-gray-600/50",
             )}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -73,7 +73,7 @@ const OuterGlowCardShowcase = () => {
               "px-3 py-1 text-xs rounded-md transition-colors",
               activeSize === size
                 ? "bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/50"
-                : "bg-gray-200/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-300/50 dark:hover:bg-gray-600/50"
+                : "bg-gray-200/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-300/50 dark:hover:bg-gray-600/50",
             )}
           >
             {size.toUpperCase()}
@@ -114,7 +114,7 @@ const InnerGlowCardShowcase = () => {
               "px-3 py-1 text-xs rounded-md transition-colors",
               activeSize === size
                 ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/50"
-                : "bg-gray-200/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-300/50 dark:hover:bg-gray-600/50"
+                : "bg-gray-200/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-300/50 dark:hover:bg-gray-600/50",
             )}
           >
             {size.toUpperCase()}
@@ -170,7 +170,7 @@ const EdgeLitCardShowcase = () => {
               "px-3 py-1 text-xs rounded-md transition-colors",
               activeColor === color
                 ? tabColorClasses[color]
-                : "bg-gray-200/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-300/50 dark:hover:bg-gray-600/50"
+                : "bg-gray-200/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-300/50 dark:hover:bg-gray-600/50",
             )}
           >
             {color.charAt(0).toUpperCase() + color.slice(1)}
@@ -183,9 +183,7 @@ const EdgeLitCardShowcase = () => {
         <h5 className="font-medium text-gray-900 dark:text-white mb-2">
           {activeColor.charAt(0).toUpperCase() + activeColor.slice(1)} Edge Light
         </h5>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {colorDescriptions[activeColor]}
-        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{colorDescriptions[activeColor]}</p>
       </Card>
       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono">
         {`<Card edgePosition="top" edgeColor="${activeColor}" />`}
@@ -201,9 +199,7 @@ export const StaticCards = () => {
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Cards</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Glass card variants and advanced card components
-        </p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Glass card variants and advanced card components</p>
       </div>
 
       {/* Responsive Grid */}
@@ -236,7 +232,7 @@ export const StaticCards = () => {
           <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
             Card with selection states, hover effects, and optional aurora glow. Click cards to select.
           </p>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {["card-1", "card-2", "card-3"].map((id) => (
               <SelectableCard
                 key={id}
@@ -249,14 +245,12 @@ export const StaticCards = () => {
                 <h5 className="font-medium text-gray-900 dark:text-white mb-2">
                   {id === selectedCardId ? "Selected" : "Click to Select"}
                 </h5>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Card {id.split("-")[1]}
-                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Card {id.split("-")[1]}</p>
               </SelectableCard>
             ))}
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-mono">
-            {'<SelectableCard isSelected={...} showAuroraGlow onSelect={...} />'}
+            {"<SelectableCard isSelected={...} showAuroraGlow onSelect={...} />"}
           </p>
         </div>
 
@@ -267,7 +261,7 @@ export const StaticCards = () => {
             Card with drag-and-drop functionality. Try dragging cards to reorder.
           </p>
           <DndProvider backend={HTML5Backend}>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {[1, 2, 3].map((num) => (
                 <DraggableCard
                   key={num}
@@ -278,9 +272,7 @@ export const StaticCards = () => {
                   className="min-h-[120px] cursor-move"
                 >
                   <h5 className="font-medium text-gray-900 dark:text-white mb-2">Draggable {num}</h5>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Drag me to reorder
-                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Drag me to reorder</p>
                 </DraggableCard>
               ))}
             </div>

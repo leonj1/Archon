@@ -12,7 +12,7 @@ export const Label = React.forwardRef<
       "text-sm font-medium leading-none",
       "text-gray-700 dark:text-gray-200",
       "peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-      className
+      className,
     )}
     {...props}
   />

@@ -65,60 +65,49 @@ const checkboxVariants = {
  *    - Checked: Check icon with glow
  *    - Indeterminate: Minus icon (partial selection)
  */
-const Checkbox = React.forwardRef<
-  React.ElementRef<typeof CheckboxPrimitives.Root>,
-  CheckboxProps
->(({ className, color = "cyan", indeterminate, checked, ...props }, ref) => {
-  const colorStyles = checkboxVariants[color];
+const Checkbox = React.forwardRef<React.ElementRef<typeof CheckboxPrimitives.Root>, CheckboxProps>(
+  ({ className, color = "cyan", indeterminate, checked, ...props }, ref) => {
+    const colorStyles = checkboxVariants[color];
 
-  return (
-    <CheckboxPrimitives.Root
-      className={cn(
-        "peer h-5 w-5 shrink-0 rounded-md",
-        "bg-black/10 dark:bg-white/10 backdrop-blur-xl",
-        "border-2 border-gray-300/30 dark:border-white/10",
-        "transition-all duration-300",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-        `focus-visible:ring-${color}-500`,
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        "hover:border-gray-400/50 dark:hover:border-white/20",
-        colorStyles.checked,
-        colorStyles.glow,
-        "data-[state=indeterminate]:bg-opacity-50",
-        glassmorphism.interactive.base,
-        className
-      )}
-      checked={indeterminate ? "indeterminate" : checked}
-      {...props}
-      ref={ref}
-    >
-      <CheckboxPrimitives.Indicator
+    return (
+      <CheckboxPrimitives.Root
         className={cn(
-          "flex items-center justify-center",
-          "data-[state=checked]:animate-in data-[state=checked]:zoom-in-0",
-          "data-[state=unchecked]:animate-out data-[state=unchecked]:zoom-out-0",
-          "data-[state=indeterminate]:animate-in data-[state=indeterminate]:zoom-in-0"
+          "peer h-5 w-5 shrink-0 rounded-md",
+          "bg-black/10 dark:bg-white/10 backdrop-blur-xl",
+          "border-2 border-gray-300/30 dark:border-white/10",
+          "transition-all duration-300",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+          `focus-visible:ring-${color}-500`,
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          "hover:border-gray-400/50 dark:hover:border-white/20",
+          colorStyles.checked,
+          colorStyles.glow,
+          "data-[state=indeterminate]:bg-opacity-50",
+          glassmorphism.interactive.base,
+          className,
         )}
+        checked={indeterminate ? "indeterminate" : checked}
+        {...props}
+        ref={ref}
       >
-        {indeterminate ? (
-          <Minus
-            className={cn(
-              "h-3.5 w-3.5",
-              colorStyles.indicator
-            )}
-          />
-        ) : (
-          <Check
-            className={cn(
-              "h-4 w-4",
-              colorStyles.indicator
-            )}
-          />
-        )}
-      </CheckboxPrimitives.Indicator>
-    </CheckboxPrimitives.Root>
-  );
-});
+        <CheckboxPrimitives.Indicator
+          className={cn(
+            "flex items-center justify-center",
+            "data-[state=checked]:animate-in data-[state=checked]:zoom-in-0",
+            "data-[state=unchecked]:animate-out data-[state=unchecked]:zoom-out-0",
+            "data-[state=indeterminate]:animate-in data-[state=indeterminate]:zoom-in-0",
+          )}
+        >
+          {indeterminate ? (
+            <Minus className={cn("h-3.5 w-3.5", colorStyles.indicator)} />
+          ) : (
+            <Check className={cn("h-4 w-4", colorStyles.indicator)} />
+          )}
+        </CheckboxPrimitives.Indicator>
+      </CheckboxPrimitives.Root>
+    );
+  },
+);
 
 Checkbox.displayName = CheckboxPrimitives.Root.displayName;
 

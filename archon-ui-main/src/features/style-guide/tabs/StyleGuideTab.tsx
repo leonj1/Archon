@@ -1,15 +1,25 @@
+import {
+  Box,
+  CreditCard,
+  FormInput,
+  MousePointer,
+  Palette,
+  Power,
+  Sparkles,
+  Table as TableIcon,
+  Type,
+} from "lucide-react";
 import { useState } from "react";
-import { Type, Palette, Box, MousePointer, CreditCard, Table as TableIcon, FormInput, Power, Sparkles } from "lucide-react";
 import { SideNavigation, type SideNavigationSection } from "../shared/SideNavigation";
-import { StaticTypography } from "../showcases/StaticTypography";
-import { StaticColors } from "../showcases/StaticColors";
-import { StaticSpacing } from "../showcases/StaticSpacing";
 import { StaticButtons } from "../showcases/StaticButtons";
 import { StaticCards } from "../showcases/StaticCards";
-import { StaticTables } from "../showcases/StaticTables";
-import { StaticForms } from "../showcases/StaticForms";
-import { StaticToggles } from "../showcases/StaticToggles";
+import { StaticColors } from "../showcases/StaticColors";
 import { StaticEffects } from "../showcases/StaticEffects";
+import { StaticForms } from "../showcases/StaticForms";
+import { StaticSpacing } from "../showcases/StaticSpacing";
+import { StaticTables } from "../showcases/StaticTables";
+import { StaticToggles } from "../showcases/StaticToggles";
+import { StaticTypography } from "../showcases/StaticTypography";
 
 export const StyleGuideTab = () => {
   const [activeSection, setActiveSection] = useState("typography");
@@ -55,11 +65,7 @@ export const StyleGuideTab = () => {
   return (
     <div className="flex gap-6">
       {/* Side Navigation */}
-      <SideNavigation
-        sections={sections}
-        activeSection={activeSection}
-        onSectionClick={setActiveSection}
-      />
+      <SideNavigation sections={sections} activeSection={activeSection} onSectionClick={setActiveSection} />
 
       {/* Main Content */}
       <div className="flex-1 max-w-5xl">{renderContent()}</div>

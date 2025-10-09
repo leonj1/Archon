@@ -6,7 +6,7 @@ interface GroupedCardProps extends React.HTMLAttributes<HTMLDivElement> {
   cards: Array<{
     id: string;
     title: string;
-    edgeColor: 'purple' | 'blue' | 'cyan' | 'green' | 'orange' | 'pink' | 'red';
+    edgeColor: "purple" | "blue" | "cyan" | "green" | "orange" | "pink" | "red";
     children?: React.ReactNode;
   }>;
   maxVisible?: number;
@@ -31,9 +31,9 @@ export const GroupedCard = React.forwardRef<HTMLDivElement, GroupedCardProps>(
         {visibleCards.map((card, index) => {
           const isTop = index === 0;
           const zIndex = cardCount - index;
-          const scale = 1 - (index * 0.03); // 3% smaller per card
+          const scale = 1 - index * 0.03; // 3% smaller per card
           const yOffset = index * 16; // 16px raised per card to show edge lights
-          const opacity = 1 - (index * 0.15); // Fade background cards slightly
+          const opacity = 1 - index * 0.15; // Fade background cards slightly
 
           return (
             <div
@@ -49,10 +49,7 @@ export const GroupedCard = React.forwardRef<HTMLDivElement, GroupedCardProps>(
                 edgePosition="top"
                 edgeColor={card.edgeColor}
                 blur="lg"
-                className={cn(
-                  "transition-all duration-300",
-                  !isTop && "pointer-events-none"
-                )}
+                className={cn("transition-all duration-300", !isTop && "pointer-events-none")}
               >
                 {card.children || (
                   <div className="p-4">
@@ -73,7 +70,7 @@ export const GroupedCard = React.forwardRef<HTMLDivElement, GroupedCardProps>(
         </div>
       </div>
     );
-  }
+  },
 );
 
 GroupedCard.displayName = "GroupedCard";

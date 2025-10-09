@@ -1,5 +1,5 @@
-import { cn } from "@/features/ui/primitives/styles";
 import type { ReactNode } from "react";
+import { cn } from "@/features/ui/primitives/styles";
 
 export interface SideNavigationSection {
   id: string;

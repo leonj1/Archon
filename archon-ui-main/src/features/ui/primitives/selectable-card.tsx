@@ -1,9 +1,9 @@
-import React from "react";
 import { motion } from "framer-motion";
+import React from "react";
 import { Card, type CardProps } from "./card";
 import { cn } from "./styles";
 
-interface SelectableCardProps extends Omit<CardProps, 'ref'> {
+interface SelectableCardProps extends Omit<CardProps, "ref"> {
   // Selection state
   isSelected?: boolean;
   onSelect?: () => void;
@@ -20,19 +20,22 @@ interface SelectableCardProps extends Omit<CardProps, 'ref'> {
 }
 
 export const SelectableCard = React.forwardRef<HTMLDivElement, SelectableCardProps>(
-  ({
-    isSelected = false,
-    isPinned = false,
-    showAuroraGlow = false,
-    onSelect,
-    selectedBorderColor = "border-purple-400/60 dark:border-purple-500/60",
-    selectedShadow = "shadow-[0_0_15px_rgba(168,85,247,0.4),0_0_10px_rgba(147,51,234,0.3)] dark:shadow-[0_0_20px_rgba(168,85,247,0.5),0_0_15px_rgba(147,51,234,0.4)]",
-    pinnedBorderColor = "border-purple-500/80 dark:border-purple-500/80",
-    pinnedShadow = "shadow-[0_0_15px_rgba(168,85,247,0.3)]",
-    children,
-    className,
-    ...cardProps
-  }, ref) => {
+  (
+    {
+      isSelected = false,
+      isPinned = false,
+      showAuroraGlow = false,
+      onSelect,
+      selectedBorderColor = "border-purple-400/60 dark:border-purple-500/60",
+      selectedShadow = "shadow-[0_0_15px_rgba(168,85,247,0.4),0_0_10px_rgba(147,51,234,0.3)] dark:shadow-[0_0_20px_rgba(168,85,247,0.5),0_0_15px_rgba(147,51,234,0.4)]",
+      pinnedBorderColor = "border-purple-500/80 dark:border-purple-500/80",
+      pinnedShadow = "shadow-[0_0_15px_rgba(168,85,247,0.3)]",
+      children,
+      className,
+      ...cardProps
+    },
+    ref,
+  ) => {
     return (
       <motion.div
         onClick={onSelect}
@@ -58,7 +61,7 @@ export const SelectableCard = React.forwardRef<HTMLDivElement, SelectableCardPro
               isPinned && pinnedShadow,
               isSelected && !isPinned && selectedBorderColor,
               isSelected && !isPinned && selectedShadow,
-              className
+              className,
             )}
           >
             {children}
@@ -66,7 +69,7 @@ export const SelectableCard = React.forwardRef<HTMLDivElement, SelectableCardPro
         </div>
       </motion.div>
     );
-  }
+  },
 );
 
 SelectableCard.displayName = "SelectableCard";

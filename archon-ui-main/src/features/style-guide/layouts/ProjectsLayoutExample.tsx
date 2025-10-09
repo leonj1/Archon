@@ -1,16 +1,30 @@
+import {
+  Activity,
+  CheckCircle2,
+  Copy,
+  Edit,
+  FileText,
+  LayoutGrid,
+  List,
+  ListTodo,
+  Pin,
+  Search,
+  Table as TableIcon,
+  Tag,
+  Trash2,
+  User,
+} from "lucide-react";
 import { useState } from "react";
-import { LayoutGrid, List, ListTodo, Activity, CheckCircle2, FileText, Search, Table as TableIcon, Tag, User, Trash2, Pin, Copy, Edit } from "lucide-react";
-import { StatPill } from "@/features/ui/primitives/pill";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/features/ui/primitives/button";
-import { Card } from "@/features/ui/primitives/card";
 import { DraggableCard } from "@/features/ui/primitives/draggable-card";
-import { SelectableCard } from "@/features/ui/primitives/selectable-card";
 import { Input } from "@/features/ui/primitives/input";
-import { PillNavigation, type PillNavigationItem } from "../shared/PillNavigation";
+import { StatPill } from "@/features/ui/primitives/pill";
+import { SelectableCard } from "@/features/ui/primitives/selectable-card";
 import { cn } from "@/features/ui/primitives/styles";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/features/ui/primitives/tooltip";
+import { PillNavigation, type PillNavigationItem } from "../shared/PillNavigation";
 
 const MOCK_PROJECTS = [
   {
@@ -40,12 +54,54 @@ const MOCK_PROJECTS = [
 ];
 
 const MOCK_TASKS = [
-  { id: "1", title: "Update color palette", status: "todo" as const, assignee: "User", feature: "Design", priority: "high" as const },
-  { id: "2", title: "Refactor button component", status: "todo" as const, assignee: "AI", feature: "Components", priority: "medium" as const },
-  { id: "3", title: "Implement glassmorphism effects", status: "doing" as const, assignee: "User", feature: "Styling", priority: "high" as const },
-  { id: "4", title: "Add documentation", status: "review" as const, assignee: "User", feature: "Docs", priority: "low" as const },
-  { id: "5", title: "Setup project structure", status: "done" as const, assignee: "AI", feature: "Setup", priority: "high" as const },
-  { id: "6", title: "Create initial components", status: "done" as const, assignee: "User", feature: "Components", priority: "medium" as const },
+  {
+    id: "1",
+    title: "Update color palette",
+    status: "todo" as const,
+    assignee: "User",
+    feature: "Design",
+    priority: "high" as const,
+  },
+  {
+    id: "2",
+    title: "Refactor button component",
+    status: "todo" as const,
+    assignee: "AI",
+    feature: "Components",
+    priority: "medium" as const,
+  },
+  {
+    id: "3",
+    title: "Implement glassmorphism effects",
+    status: "doing" as const,
+    assignee: "User",
+    feature: "Styling",
+    priority: "high" as const,
+  },
+  {
+    id: "4",
+    title: "Add documentation",
+    status: "review" as const,
+    assignee: "User",
+    feature: "Docs",
+    priority: "low" as const,
+  },
+  {
+    id: "5",
+    title: "Setup project structure",
+    status: "done" as const,
+    assignee: "AI",
+    feature: "Setup",
+    priority: "high" as const,
+  },
+  {
+    id: "6",
+    title: "Create initial components",
+    status: "done" as const,
+    assignee: "User",
+    feature: "Components",
+    priority: "medium" as const,
+  },
 ];
 
 const MOCK_DOCUMENTS = [
@@ -96,7 +152,7 @@ export const ProjectsLayoutExample = () => {
       {layoutMode === "horizontal" ? (
         <>
           {/* Horizontal Project Cards - ONLY cards scroll, not whole page */}
-          <div className="w-full">
+          <div className="w-full max-w-full">
             <div className="overflow-x-auto overflow-y-visible py-8 -mx-6 px-6 scrollbar-hide">
               <div className="flex gap-4 min-w-max">
                 {MOCK_PROJECTS.map((project) => (
@@ -251,13 +307,15 @@ const SidebarProjectCard = ({
   isSelected,
   onSelect,
 }: {
-  project: typeof MOCK_PROJECTS[0];
+  project: (typeof MOCK_PROJECTS)[0];
   isSelected: boolean;
   onSelect: () => void;
 }) => {
   const getBackgroundClass = () => {
-    if (project.pinned) return "bg-gradient-to-b from-purple-100/80 via-purple-50/30 to-purple-100/50 dark:from-purple-900/30 dark:via-purple-900/20 dark:to-purple-900/10";
-    if (isSelected) return "bg-gradient-to-b from-white/70 via-purple-50/20 to-white/50 dark:from-white/5 dark:via-purple-900/5 dark:to-black/20";
+    if (project.pinned)
+      return "bg-gradient-to-b from-purple-100/80 via-purple-50/30 to-purple-100/50 dark:from-purple-900/30 dark:via-purple-900/20 dark:to-purple-900/10";
+    if (isSelected)
+      return "bg-gradient-to-b from-white/70 via-purple-50/20 to-white/50 dark:from-white/5 dark:via-purple-900/5 dark:to-black/20";
     return "bg-gradient-to-b from-white/80 to-white/60 dark:from-white/10 dark:to-black/30";
   };
 
@@ -269,18 +327,17 @@ const SidebarProjectCard = ({
       onSelect={onSelect}
       size="none"
       blur="md"
-      className={cn(
-        "p-2",
-        getBackgroundClass(),
-      )}
+      className={cn("p-2", getBackgroundClass())}
     >
       <div className="space-y-2">
         {/* Title */}
         <div className="flex items-center justify-between">
-          <h4 className={cn(
-            "font-medium text-sm line-clamp-1",
-            isSelected ? "text-purple-700 dark:text-purple-300" : "text-gray-700 dark:text-gray-300"
-          )}>
+          <h4
+            className={cn(
+              "font-medium text-sm line-clamp-1",
+              isSelected ? "text-purple-700 dark:text-purple-300" : "text-gray-700 dark:text-gray-300",
+            )}
+          >
             {project.title}
           </h4>
           {project.pinned && (
@@ -292,12 +349,7 @@ const SidebarProjectCard = ({
 
         {/* Status Pills - horizontal layout with icons */}
         <div className="flex items-center gap-1.5">
-          <StatPill
-            color="pink"
-            value={project.taskCounts.todo}
-            size="sm"
-            icon={<ListTodo className="w-3 h-3" />}
-          />
+          <StatPill color="pink" value={project.taskCounts.todo} size="sm" icon={<ListTodo className="w-3 h-3" />} />
           <StatPill
             color="blue"
             value={project.taskCounts.doing + project.taskCounts.review}
@@ -322,14 +374,16 @@ const ProjectCardExample = ({
   isSelected,
   onSelect,
 }: {
-  project: typeof MOCK_PROJECTS[0];
+  project: (typeof MOCK_PROJECTS)[0];
   isSelected: boolean;
   onSelect: () => void;
 }) => {
   // Custom gradients for pinned vs selected vs default
   const getBackgroundClass = () => {
-    if (project.pinned) return "bg-gradient-to-b from-purple-100/80 via-purple-50/30 to-purple-100/50 dark:from-purple-900/30 dark:via-purple-900/20 dark:to-purple-900/10";
-    if (isSelected) return "bg-gradient-to-b from-white/70 via-purple-50/20 to-white/50 dark:from-white/5 dark:via-purple-900/5 dark:to-black/20";
+    if (project.pinned)
+      return "bg-gradient-to-b from-purple-100/80 via-purple-50/30 to-purple-100/50 dark:from-purple-900/30 dark:via-purple-900/20 dark:to-purple-900/10";
+    if (isSelected)
+      return "bg-gradient-to-b from-white/70 via-purple-50/20 to-white/50 dark:from-white/5 dark:via-purple-900/5 dark:to-black/20";
     return "bg-gradient-to-b from-white/80 to-white/60 dark:from-white/10 dark:to-black/30";
   };
 
@@ -341,10 +395,7 @@ const ProjectCardExample = ({
       onSelect={onSelect}
       size="none"
       blur="xl"
-      className={cn(
-        "w-72 min-h-[180px] flex flex-col shrink-0",
-        getBackgroundClass(),
-      )}
+      className={cn("w-72 min-h-[180px] flex flex-col shrink-0", getBackgroundClass())}
     >
       {/* Main content */}
       <div className="flex-1 p-3 pb-2">
@@ -368,7 +419,12 @@ const ProjectCardExample = ({
         <div className="flex items-stretch gap-2 w-full">
           {/* Todo pill */}
           <div className="relative flex-1">
-            <div className={cn("absolute inset-0 bg-pink-600 rounded-full blur-md", isSelected ? "opacity-30 dark:opacity-75" : "opacity-0")} />
+            <div
+              className={cn(
+                "absolute inset-0 bg-pink-600 rounded-full blur-md",
+                isSelected ? "opacity-30 dark:opacity-75" : "opacity-0",
+              )}
+            />
             <div
               className={cn(
                 "relative flex items-center h-12 backdrop-blur-sm rounded-full border shadow-sm transition-all duration-300",
@@ -378,13 +434,28 @@ const ProjectCardExample = ({
               )}
             >
               <div className="flex flex-col items-center justify-center px-2 min-w-[40px]">
-                <ListTodo className={cn("w-4 h-4", isSelected ? "text-pink-600 dark:text-pink-400" : "text-gray-500 dark:text-gray-600")} />
-                <span className={cn("text-[8px] font-medium", isSelected ? "text-pink-600 dark:text-pink-400" : "text-gray-500 dark:text-gray-600")}>
+                <ListTodo
+                  className={cn(
+                    "w-4 h-4",
+                    isSelected ? "text-pink-600 dark:text-pink-400" : "text-gray-500 dark:text-gray-600",
+                  )}
+                />
+                <span
+                  className={cn(
+                    "text-[8px] font-medium",
+                    isSelected ? "text-pink-600 dark:text-pink-400" : "text-gray-500 dark:text-gray-600",
+                  )}
+                >
                   ToDo
                 </span>
               </div>
               <div className="flex-1 flex items-center justify-center border-l border-pink-300 dark:border-pink-500/30">
-                <span className={cn("text-lg font-bold", isSelected ? "text-pink-600 dark:text-pink-400" : "text-gray-500 dark:text-gray-600")}>
+                <span
+                  className={cn(
+                    "text-lg font-bold",
+                    isSelected ? "text-pink-600 dark:text-pink-400" : "text-gray-500 dark:text-gray-600",
+                  )}
+                >
                   {project.taskCounts.todo}
                 </span>
               </div>
@@ -393,7 +464,12 @@ const ProjectCardExample = ({
 
           {/* Doing pill */}
           <div className="relative flex-1">
-            <div className={cn("absolute inset-0 bg-blue-600 rounded-full blur-md", isSelected ? "opacity-30 dark:opacity-75" : "opacity-0")} />
+            <div
+              className={cn(
+                "absolute inset-0 bg-blue-600 rounded-full blur-md",
+                isSelected ? "opacity-30 dark:opacity-75" : "opacity-0",
+              )}
+            />
             <div
               className={cn(
                 "relative flex items-center h-12 backdrop-blur-sm rounded-full border shadow-sm transition-all duration-300",
@@ -403,13 +479,28 @@ const ProjectCardExample = ({
               )}
             >
               <div className="flex flex-col items-center justify-center px-2 min-w-[40px]">
-                <Activity className={cn("w-4 h-4", isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-600")} />
-                <span className={cn("text-[8px] font-medium", isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-600")}>
+                <Activity
+                  className={cn(
+                    "w-4 h-4",
+                    isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-600",
+                  )}
+                />
+                <span
+                  className={cn(
+                    "text-[8px] font-medium",
+                    isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-600",
+                  )}
+                >
                   Doing
                 </span>
               </div>
               <div className="flex-1 flex items-center justify-center border-l border-blue-300 dark:border-blue-500/30">
-                <span className={cn("text-lg font-bold", isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-600")}>
+                <span
+                  className={cn(
+                    "text-lg font-bold",
+                    isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-600",
+                  )}
+                >
                   {project.taskCounts.doing + project.taskCounts.review}
                 </span>
               </div>
@@ -418,7 +509,12 @@ const ProjectCardExample = ({
 
           {/* Done pill */}
           <div className="relative flex-1">
-            <div className={cn("absolute inset-0 bg-green-600 rounded-full blur-md", isSelected ? "opacity-30 dark:opacity-75" : "opacity-0")} />
+            <div
+              className={cn(
+                "absolute inset-0 bg-green-600 rounded-full blur-md",
+                isSelected ? "opacity-30 dark:opacity-75" : "opacity-0",
+              )}
+            />
             <div
               className={cn(
                 "relative flex items-center h-12 backdrop-blur-sm rounded-full border shadow-sm transition-all duration-300",
@@ -428,13 +524,28 @@ const ProjectCardExample = ({
               )}
             >
               <div className="flex flex-col items-center justify-center px-2 min-w-[40px]">
-                <CheckCircle2 className={cn("w-4 h-4", isSelected ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-600")} />
-                <span className={cn("text-[8px] font-medium", isSelected ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-600")}>
+                <CheckCircle2
+                  className={cn(
+                    "w-4 h-4",
+                    isSelected ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-600",
+                  )}
+                />
+                <span
+                  className={cn(
+                    "text-[8px] font-medium",
+                    isSelected ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-600",
+                  )}
+                >
                   Done
                 </span>
               </div>
               <div className="flex-1 flex items-center justify-center border-l border-green-300 dark:border-green-500/30">
-                <span className={cn("text-lg font-bold", isSelected ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-600")}>
+                <span
+                  className={cn(
+                    "text-lg font-bold",
+                    isSelected ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-600",
+                  )}
+                >
                   {project.taskCounts.done}
                 </span>
               </div>
@@ -498,7 +609,7 @@ const KanbanBoardView = () => {
     { status: "done" as const, title: "Done", color: "text-green-500", glow: "bg-green-500" },
   ];
 
-  const getTasksByStatus = (status: typeof columns[0]["status"]) => {
+  const getTasksByStatus = (status: (typeof columns)[0]["status"]) => {
     return MOCK_TASKS.filter((t) => t.status === status);
   };
 
@@ -511,7 +622,9 @@ const KanbanBoardView = () => {
             <div className="text-center py-3 relative">
               <h3 className={cn("font-mono text-sm font-medium", color)}>{title}</h3>
               <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{getTasksByStatus(status).length}</div>
-              <div className={cn("absolute bottom-0 left-[15%] right-[15%] w-[70%] mx-auto h-[1px]", glow, "shadow-md")} />
+              <div
+                className={cn("absolute bottom-0 left-[15%] right-[15%] w-[70%] mx-auto h-[1px]", glow, "shadow-md")}
+              />
             </div>
 
             {/* Tasks */}
@@ -528,7 +641,7 @@ const KanbanBoardView = () => {
 };
 
 // Task Card using DraggableCard primitive with actions
-const TaskCardExample = ({ task, index }: { task: typeof MOCK_TASKS[0]; index: number }) => {
+const TaskCardExample = ({ task, index }: { task: (typeof MOCK_TASKS)[0]; index: number }) => {
   const getPriorityColor = (priority: string) => {
     if (priority === "high") return { color: "bg-red-500", glow: "shadow-[0_0_10px_rgba(239,68,68,0.3)]" };
     if (priority === "medium") return { color: "bg-yellow-500", glow: "shadow-[0_0_10px_rgba(234,179,8,0.3)]" };
@@ -539,15 +652,15 @@ const TaskCardExample = ({ task, index }: { task: typeof MOCK_TASKS[0]; index: n
 
   return (
     <div className="relative group">
-      <DraggableCard
-        itemType="task"
-        itemId={task.id}
-        index={index}
-        size="none"
-        className="min-h-[140px]"
-      >
+      <DraggableCard itemType="task" itemId={task.id} index={index} size="none" className="min-h-[140px]">
         {/* Priority indicator on left edge */}
-        <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg opacity-80 group-hover:w-[4px] group-hover:opacity-100 transition-all duration-300", priorityStyle.color, priorityStyle.glow)} />
+        <div
+          className={cn(
+            "absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg opacity-80 group-hover:w-[4px] group-hover:opacity-100 transition-all duration-300",
+            priorityStyle.color,
+            priorityStyle.glow,
+          )}
+        />
 
         {/* Content */}
         <div className="flex flex-col h-full p-3">
@@ -592,9 +705,7 @@ const TaskCardExample = ({ task, index }: { task: typeof MOCK_TASKS[0]; index: n
           </div>
 
           {/* Title */}
-          <h4 className="text-xs font-medium text-gray-900 dark:text-white mb-2 pl-1.5 line-clamp-2">
-            {task.title}
-          </h4>
+          <h4 className="text-xs font-medium text-gray-900 dark:text-white mb-2 pl-1.5 line-clamp-2">{task.title}</h4>
 
           {/* Spacer */}
           <div className="flex-1" />
@@ -619,86 +730,91 @@ const TaskCardExample = ({ task, index }: { task: typeof MOCK_TASKS[0]; index: n
 // Task Table View - matching real TableView
 const TaskTableView = () => {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-b-2 border-gray-200 dark:border-gray-700">
-            <th className="w-1" />
-            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Title</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-32">Status</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-40">Feature</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-36">Assignee</th>
-          </tr>
-        </thead>
-        <tbody>
-          {MOCK_TASKS.map((task, index) => {
-            const getPriorityColor = (priority: string) => {
-              if (priority === "high") return { color: "bg-red-500", glow: "shadow-[0_0_10px_rgba(239,68,68,0.3)]" };
-              if (priority === "medium") return { color: "bg-yellow-500", glow: "shadow-[0_0_10px_rgba(234,179,8,0.3)]" };
-              return { color: "bg-green-500", glow: "shadow-[0_0_10px_rgba(34,197,94,0.3)]" };
-            };
+    <div className="w-full">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-b-2 border-gray-200 dark:border-gray-700">
+              <th className="w-1" />
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Title</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-32">Status</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-40">Feature</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-36">
+                Assignee
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {MOCK_TASKS.map((task, index) => {
+              const getPriorityColor = (priority: string) => {
+                if (priority === "high") return { color: "bg-red-500", glow: "shadow-[0_0_10px_rgba(239,68,68,0.3)]" };
+                if (priority === "medium")
+                  return { color: "bg-yellow-500", glow: "shadow-[0_0_10px_rgba(234,179,8,0.3)]" };
+                return { color: "bg-green-500", glow: "shadow-[0_0_10px_rgba(34,197,94,0.3)]" };
+              };
 
-            const priorityStyle = getPriorityColor(task.priority);
+              const priorityStyle = getPriorityColor(task.priority);
 
-            return (
-              <tr
-                key={task.id}
-                className={cn(
-                  "group transition-all duration-200",
-                  index % 2 === 0 ? "bg-white/50 dark:bg-black/50" : "bg-gray-50/80 dark:bg-gray-900/30",
-                  "hover:bg-gradient-to-r hover:from-cyan-50/70 hover:to-purple-50/70 dark:hover:from-cyan-900/20 dark:hover:to-purple-900/20",
-                  "border-b border-gray-200 dark:border-gray-800",
-                )}
-              >
-                {/* Priority indicator */}
-                <td className="w-1 p-0">
-                  <div className={cn("w-1 h-full", priorityStyle.color, priorityStyle.glow)} />
-                </td>
+              return (
+                <tr
+                  key={task.id}
+                  className={cn(
+                    "group transition-all duration-200",
+                    index % 2 === 0 ? "bg-white/50 dark:bg-black/50" : "bg-gray-50/80 dark:bg-gray-900/30",
+                    "hover:bg-gradient-to-r hover:from-cyan-50/70 hover:to-purple-50/70 dark:hover:from-cyan-900/20 dark:hover:to-purple-900/20",
+                    "border-b border-gray-200 dark:border-gray-800",
+                  )}
+                >
+                  {/* Priority indicator */}
+                  <td className="w-1 p-0">
+                    <div className={cn("w-1 h-full", priorityStyle.color, priorityStyle.glow)} />
+                  </td>
 
-                {/* Title */}
-                <td className="px-4 py-2">
-                  <span className="font-medium text-sm text-gray-900 dark:text-white">{task.title}</span>
-                </td>
+                  {/* Title */}
+                  <td className="px-4 py-2">
+                    <span className="font-medium text-sm text-gray-900 dark:text-white">{task.title}</span>
+                  </td>
 
-                {/* Status */}
-                <td className="px-4 py-2 w-32">
-                  <span
-                    className={cn(
-                      "px-2 py-1 text-xs rounded-md font-medium inline-block",
-                      task.status === "todo" && "bg-pink-500/10 text-pink-600 dark:text-pink-400",
-                      task.status === "doing" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-                      task.status === "review" && "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-                      task.status === "done" && "bg-green-500/10 text-green-600 dark:text-green-400",
-                    )}
-                  >
-                    {task.status}
-                  </span>
-                </td>
+                  {/* Status */}
+                  <td className="px-4 py-2 w-32">
+                    <span
+                      className={cn(
+                        "px-2 py-1 text-xs rounded-md font-medium inline-block",
+                        task.status === "todo" && "bg-pink-500/10 text-pink-600 dark:text-pink-400",
+                        task.status === "doing" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                        task.status === "review" && "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+                        task.status === "done" && "bg-green-500/10 text-green-600 dark:text-green-400",
+                      )}
+                    >
+                      {task.status}
+                    </span>
+                  </td>
 
-                {/* Feature */}
-                <td className="px-4 py-2 w-40">
-                  <div className="flex items-center gap-1">
-                    {task.feature && (
-                      <>
-                        <Tag className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{task.feature}</span>
-                      </>
-                    )}
-                  </div>
-                </td>
+                  {/* Feature */}
+                  <td className="px-4 py-2 w-40">
+                    <div className="flex items-center gap-1">
+                      {task.feature && (
+                        <>
+                          <Tag className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{task.feature}</span>
+                        </>
+                      )}
+                    </div>
+                  </td>
 
-                {/* Assignee - card style like real component */}
-                <td className="px-4 py-2 w-36">
-                  <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/70 dark:bg-black/40 border border-gray-300 dark:border-gray-600 backdrop-blur-sm">
-                    <User className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                    <span className="text-xs text-gray-700 dark:text-gray-300">{task.assignee}</span>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  {/* Assignee - card style like real component */}
+                  <td className="px-4 py-2 w-36">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/70 dark:bg-black/40 border border-gray-300 dark:border-gray-600 backdrop-blur-sm">
+                      <User className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">{task.assignee}</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
@@ -708,8 +824,8 @@ const EmbeddedDocumentBrowser = ({
   doc,
   onDocSelect,
 }: {
-  doc: typeof MOCK_DOCUMENTS[0];
-  onDocSelect: (doc: typeof MOCK_DOCUMENTS[0]) => void;
+  doc: (typeof MOCK_DOCUMENTS)[0];
+  onDocSelect: (doc: (typeof MOCK_DOCUMENTS)[0]) => void;
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -766,7 +882,9 @@ const EmbeddedDocumentBrowser = ({
         <div className="text-gray-600 dark:text-gray-400 space-y-4">
           <p>
             Document type:{" "}
-            <span className="px-2 py-1 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded">{doc.type}</span>
+            <span className="px-2 py-1 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded">
+              {doc.type}
+            </span>
           </p>
           <p>This area shows the full document content with rich formatting and embedded media.</p>
         </div>
