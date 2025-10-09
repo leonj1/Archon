@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Code, FileText, Globe } from "lucide-react";
+import { Search, Code, FileText, Globe, File } from "lucide-react";
 import { Button } from "@/features/ui/primitives/button";
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
 } from "@/features/ui/primitives/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/features/ui/primitives/tabs";
 import { Input } from "@/features/ui/primitives/input";
+import { StatPill } from "@/features/ui/primitives/pill";
 import { cn } from "@/features/ui/primitives/styles";
 
 const MOCK_DOCUMENTS = [
@@ -61,11 +62,11 @@ export const DocumentBrowserExample = () => {
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-600 dark:text-gray-400">
-        <strong>Use this pattern for:</strong> Browsing documents and code with sidebar selection,
-        tabs, and search filtering.
+        <strong>Use this pattern for:</strong> Document browser with header showing source type pills (Web Page/Document),
+        knowledge type badges (Technical/Business), and StatPills for counts. Uses Radix primitives for all components.
       </p>
 
-      <Button onClick={() => setOpen(true)}>Open Document Browser</Button>
+      <Button onClick={() => setOpen(true)}>Open Document Browser Example</Button>
 
       <DocumentBrowserModal open={open} onOpenChange={setOpen} />
     </div>
@@ -83,6 +84,7 @@ const DocumentBrowserModal = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(MOCK_DOCUMENTS[0]);
   const [selectedCode, setSelectedCode] = useState(MOCK_CODE[0]);
+  const [sourceType, setSourceType] = useState<"web" | "document">("web");
 
   const filteredDocuments = MOCK_DOCUMENTS.filter((doc) =>
     doc.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -95,22 +97,48 @@ const DocumentBrowserModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-[80vh] flex flex-col p-0">
-        {/* Header outside tabs */}
-        <div className="p-6 pb-4">
-          <DialogTitle>Document Browser</DialogTitle>
+        {/* Header - EXACT layout from InspectorHeader.tsx line 31-93 */}
+        <div className="px-6 py-4 border-b border-white/10">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold text-white mb-2">Radix UI</h2>
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Source Type Badge - exact classes from InspectorHeader line 37-56 */}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  <Globe className="w-3.5 h-3.5" />
+                  Web
+                </span>
+
+                {/* Knowledge Type Badge - exact classes from InspectorHeader line 59-78 */}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+                  <span>Technical</span>
+                </span>
+
+                {/* URL - exact classes from InspectorHeader line 81-90 */}
+                <a
+                  href="https://www.radix-ui.com/primitives/docs/guides/styling"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-cyan-400 hover:text-cyan-300 truncate max-w-xs"
+                >
+                  https://www.radix-ui.com/primitives/docs/guides/styling
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Tabs and Content */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="flex-1 flex flex-col px-6">
-          <div className="flex justify-start mb-4">
+          <div className="flex justify-start mb-4 mt-6">
             <TabsList>
               <TabsTrigger value="documents" color="cyan">
                 <FileText className="w-4 h-4" />
-                Documents ({filteredDocuments.length})
+                Documents
               </TabsTrigger>
               <TabsTrigger value="code" color="cyan">
                 <Code className="w-4 h-4" />
-                Code Examples ({filteredCode.length})
+                Code Examples
               </TabsTrigger>
             </TabsList>
           </div>
