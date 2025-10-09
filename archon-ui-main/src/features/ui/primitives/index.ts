@@ -17,6 +17,7 @@ export * from "./button";
 export * from "./card";
 export * from "./data-card";
 export * from "./draggable-card";
+export * from "./grouped-card";
 export * from "./selectable-card";
 export * from "./combobox";
 export * from "./dialog";

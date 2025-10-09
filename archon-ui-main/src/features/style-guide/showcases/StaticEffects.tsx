@@ -1,7 +1,16 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
+import { RotateCcw } from "lucide-react";
 import { Card } from "@/features/ui/primitives/card";
+import { Button } from "@/features/ui/primitives/button";
 
 export const StaticEffects = () => {
+  const [animationKey, setAnimationKey] = useState(0);
+
+  const replayAnimation = () => {
+    setAnimationKey(prev => prev + 1);
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -77,8 +86,19 @@ export const StaticEffects = () => {
 
       {/* Entrance Animations */}
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Stagger Entrance</h3>
-        <div className="space-y-2">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Stagger Entrance</h3>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={replayAnimation}
+            className="flex items-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Replay
+          </Button>
+        </div>
+        <div className="space-y-2" key={animationKey}>
           {[1, 2, 3, 4].map((i) => (
             <motion.div
               key={i}

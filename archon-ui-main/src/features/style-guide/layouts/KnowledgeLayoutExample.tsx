@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Grid, List, Asterisk, Terminal, FileCode, Globe, FileText, Calendar } from "lucide-react";
+import { Grid, List, Asterisk, Terminal, FileCode, Globe, FileText, Calendar, Code } from "lucide-react";
 import { Button } from "@/features/ui/primitives/button";
 import { DataCard, DataCardHeader, DataCardContent, DataCardFooter } from "@/features/ui/primitives/data-card";
+import { GroupedCard } from "@/features/ui/primitives/grouped-card";
 import { StatPill } from "@/features/ui/primitives/pill";
 import { Input } from "@/features/ui/primitives/input";
 import { ToggleGroup, ToggleGroupItem } from "@/features/ui/primitives/toggle-group";
@@ -15,6 +16,7 @@ const MOCK_KNOWLEDGE_ITEMS = [
     url: "https://react.dev",
     date: "2024-01-15",
     chunks: 145,
+    codeExamples: 23,
   },
   {
     id: "2",
@@ -23,6 +25,7 @@ const MOCK_KNOWLEDGE_ITEMS = [
     url: null,
     date: "2024-01-20",
     chunks: 23,
+    codeExamples: 0,
   },
   {
     id: "3",
@@ -31,6 +34,7 @@ const MOCK_KNOWLEDGE_ITEMS = [
     url: "https://fastapi.tiangolo.com",
     date: "2024-01-18",
     chunks: 89,
+    codeExamples: 15,
   },
   {
     id: "4",
@@ -39,6 +43,7 @@ const MOCK_KNOWLEDGE_ITEMS = [
     url: "https://tailwindcss.com",
     date: "2024-01-22",
     chunks: 112,
+    codeExamples: 31,
   },
   {
     id: "5",
@@ -47,6 +52,7 @@ const MOCK_KNOWLEDGE_ITEMS = [
     url: null,
     date: "2024-01-10",
     chunks: 15,
+    codeExamples: 0,
   },
   {
     id: "6",
@@ -55,6 +61,7 @@ const MOCK_KNOWLEDGE_ITEMS = [
     url: "https://www.typescriptlang.org/docs",
     date: "2024-01-25",
     chunks: 203,
+    codeExamples: 47,
   },
 ];
 
@@ -125,36 +132,61 @@ export const KnowledgeLayoutExample = () => {
           ))}
         </div>
       ) : (
-        // Table View - Overflow-x-auto wrapper
+        // Table View - matching TaskView standard pattern
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-b-2 border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
                   Title
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
                   Type
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
                   Source
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
                   Chunks
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
                   Date
                 </th>
               </tr>
             </thead>
             <tbody>
-              {MOCK_KNOWLEDGE_ITEMS.map((item) => (
-                <KnowledgeTableRow key={item.id} item={item} />
+              {MOCK_KNOWLEDGE_ITEMS.map((item, index) => (
+                <KnowledgeTableRow key={item.id} item={item} index={index} />
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      {/* Grouped Card Example */}
+      <div className="mt-8 space-y-4">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Grouped Knowledge Cards</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Multiple related items stacked together with progressive scaling and fading edge lights
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <GroupedCard
+            cards={[
+              { id: "1", title: "React Hooks Guide", edgeColor: "cyan" },
+              { id: "2", title: "React Components", edgeColor: "cyan" },
+              { id: "3", title: "React Patterns", edgeColor: "cyan" },
+            ]}
+            className="h-[280px]"
+          />
+          <GroupedCard
+            cards={[
+              { id: "4", title: "API Documentation", edgeColor: "purple" },
+              { id: "5", title: "API Examples", edgeColor: "purple" },
+            ]}
+            className="h-[280px]"
+          />
+        </div>
+      </div>
     </div>
   );
 };
@@ -173,6 +205,7 @@ const KnowledgeCard = ({ item }: { item: typeof MOCK_KNOWLEDGE_ITEMS[0] }) => {
     <DataCard
       edgePosition="top"
       edgeColor={getEdgeColor()}
+      blur="lg"
       className="cursor-pointer hover:shadow-[0_0_30px_rgba(6,182,212,0.2)] transition-shadow"
     >
       <DataCardHeader>
@@ -213,51 +246,66 @@ const KnowledgeCard = ({ item }: { item: typeof MOCK_KNOWLEDGE_ITEMS[0] }) => {
             <Calendar className="w-3 h-3" />
             <span>{item.date}</span>
           </div>
-          <StatPill
-            color="orange"
-            value={item.chunks}
-            icon={<FileText className="w-3.5 h-3.5" />}
-            size="sm"
-            onClick={() => console.log('View documents')}
-            className="cursor-pointer hover:scale-105 transition-transform"
-          />
+          <div className="flex items-center gap-2">
+            <StatPill
+              color="orange"
+              value={item.chunks}
+              icon={<FileText className="w-3.5 h-3.5" />}
+              size="sm"
+              onClick={() => console.log('View documents')}
+              className="cursor-pointer hover:scale-105 transition-transform"
+            />
+            <StatPill
+              color="blue"
+              value={item.codeExamples}
+              icon={<Code className="w-3.5 h-3.5" />}
+              size="sm"
+              onClick={() => console.log('View code examples')}
+              className="cursor-pointer hover:scale-105 transition-transform"
+            />
+          </div>
         </div>
       </DataCardFooter>
     </DataCard>
   );
 };
 
-// Table Row Component
-const KnowledgeTableRow = ({ item }: { item: typeof MOCK_KNOWLEDGE_ITEMS[0] }) => {
+// Table Row Component - matching TaskView standard pattern
+const KnowledgeTableRow = ({ item, index }: { item: typeof MOCK_KNOWLEDGE_ITEMS[0]; index: number }) => {
   return (
-    <tr className="border-b border-white/5 hover:bg-white/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
-      <td className="py-3 px-4">
+    <tr className={cn(
+      "group transition-all duration-200 cursor-pointer",
+      index % 2 === 0 ? "bg-white/50 dark:bg-black/50" : "bg-gray-50/80 dark:bg-gray-900/30",
+      "hover:bg-gradient-to-r hover:from-cyan-50/70 hover:to-purple-50/70 dark:hover:from-cyan-900/20 dark:hover:to-purple-900/20",
+      "border-b border-gray-200 dark:border-gray-800",
+    )}>
+      <td className="px-4 py-2">
         <div className="flex items-center gap-2">
           {item.url ? (
             <Globe className="w-4 h-4 text-cyan-500 flex-shrink-0" />
           ) : (
             <FileText className="w-4 h-4 text-purple-500 flex-shrink-0" />
           )}
-          <span className="text-sm text-gray-900 dark:text-white">{item.title}</span>
+          <span className="font-medium text-sm text-gray-900 dark:text-white">{item.title}</span>
         </div>
       </td>
-      <td className="py-3 px-4">
+      <td className="px-4 py-2">
         <span
           className={cn(
-            "px-2 py-0.5 text-xs rounded border",
+            "px-2 py-1 text-xs rounded-md font-medium inline-block",
             item.type === "technical"
-              ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30"
-              : "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30",
+              ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400"
+              : "bg-purple-500/10 text-purple-600 dark:text-purple-400",
           )}
         >
           {item.type}
         </span>
       </td>
-      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
+      <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 max-w-xs truncate">
         {item.url || "Uploaded Document"}
       </td>
-      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{item.chunks}</td>
-      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{item.date}</td>
+      <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">{item.chunks}</td>
+      <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">{item.date}</td>
     </tr>
   );
 };

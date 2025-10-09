@@ -283,90 +283,157 @@ Based on the argument:
 Use grep/glob to find:
 
 ```bash
+# CRITICAL: Dynamic Tailwind class construction (WILL NOT WORK)
+grep -r "bg-\${.*}\|text-\${.*}\|border-\${.*}\|shadow-\${.*}" [path] --include="*.tsx"
+grep -r "\`bg-.*-.*\`\|\`text-.*-.*\`\|\`border-.*-.*\`" [path] --include="*.tsx"
+
+# CRITICAL: Unconstrained horizontal scroll (BREAKS LAYOUT)
+grep -r "overflow-x-auto" [path] --include="*.tsx" | grep -v "w-full"
+
+# CRITICAL: min-w-max without parent width constraint
+grep -r "min-w-max" [path] --include="*.tsx"
+
+# Non-responsive grids (BREAKS MOBILE)
+grep -r "grid-cols-[2-9]" [path] --include="*.tsx" | grep -v "md:\|lg:\|sm:\|xl:"
+
+# Fixed widths without max-width constraints
+grep -r "w-\[0-9\]\|w-96\|w-80\|w-72" [path] --include="*.tsx" | grep -v "max-w-"
+
 # Hardcoded edge-lit implementations (should use Card primitive)
-grep -r "absolute inset-x-0 top-0" [path]
+grep -r "absolute inset-x-0 top-0.*bg-gradient-to-b" [path] --include="*.tsx"
 
 # Native HTML form elements (should use Radix)
-grep -r "<select>\|<option>\|<input type=\"checkbox\"" [path]
+grep -r "<select>\|<option>\|<input type=\"checkbox\"\|<input type=\"radio\"" [path] --include="*.tsx"
 
 # Hardcoded pill navigation (should use PillNavigation component)
-grep -r "backdrop-blur-sm bg-white/40.*rounded-full" [path]
+grep -r "backdrop-blur-sm bg-white/40.*rounded-full.*flex gap-1" [path] --include="*.tsx"
 
-# Manual glassmorphism (should use Card primitive or styles.ts)
-grep -r "bg-gradient-to-b from-white/\|from-purple-100/" [path]
-
-# Hardcoded colors instead of semantic tokens
-grep -r "#[0-9a-fA-F]{6}" [path]
-
-# CRITICAL: Dynamic Tailwind class construction (WILL NOT WORK)
-grep -r "bg-\${.*}\|text-\${.*}\|border-\${.*}\|shadow-\${.*}" [path]
-grep -r "\.replace.*rgba\|\.replace.*VAR" [path]
-
-# CRITICAL: Template literal Tailwind classes (WILL NOT WORK)
-grep -r "\`bg-.*-.*\`\|\`text-.*-.*\`\|\`border-.*-.*\`" [path]
+# Missing text truncation on titles/headings
+grep -r "<h[1-6].*className.*{" [path] --include="*.tsx" | grep -v "truncate\|line-clamp"
 
 # Not using pre-defined classes from styles.ts
-grep -r "glassCard\.variants\|glassmorphism\." [path] --files-without-match
+grep -r "glassCard\.variants\|glassmorphism\." [path] --files-without-match --include="*.tsx"
 ```
 
 ## Critical Anti-Patterns
+
+**IMPORTANT:** Read `PRPs/ai_docs/TAILWIND_RESPONSIVE_BEST_PRACTICES.md` for complete anti-pattern reference before starting review.
 
 ### 🔴 **BREAKING: Dynamic Tailwind Class Construction**
 
 **Problem:**
 ```tsx
-// ❌ BROKEN - Tailwind processes at BUILD time, not runtime
+// BROKEN - Tailwind processes at BUILD time, not runtime
 const color = "cyan";
-className={`bg-${color}-500`}  // CSS won't be generated!
+className={`bg-${color}-500`}  // CSS won't be generated
 
-// ❌ BROKEN - String replacement at runtime
+// BROKEN - String interpolation
 const glow = `shadow-[0_0_30px_rgba(${rgba},0.4)]`;
 
-// ❌ BROKEN - Template literals with variables
+// BROKEN - Template literals with variables
 <div className={`text-${textColor}-700`} />
 ```
 
 **Why it fails:**
-- Tailwind scans code at BUILD time to generate CSS
+- Tailwind scans code as plain text at BUILD time
 - Dynamic strings aren't scanned - no CSS generated
 - Results in missing styles at runtime
 
 **Solution:**
 ```tsx
-// ✅ CORRECT - Static class lookup
+// CORRECT - Static class lookup
 const colorClasses = {
   cyan: "bg-cyan-500 text-cyan-700",
   purple: "bg-purple-500 text-purple-700",
 };
 className={colorClasses[color]}
 
-// ✅ CORRECT - Use pre-defined classes from styles.ts
+// CORRECT - Use pre-defined classes from styles.ts
 const glowVariant = glassCard.variants[glowColor];
 className={cn(glowVariant.glow, glowVariant.border)}
 
-// ✅ CORRECT - Inline arbitrary values (scanned by Tailwind)
+// CORRECT - Inline arbitrary values (scanned by Tailwind)
 className="shadow-[0_0_30px_rgba(34,211,238,0.4)]"
+```
+
+### 🔴 **BREAKING: Unconstrained Horizontal Scroll**
+
+**Problem:**
+```tsx
+// BROKEN - Forces entire page width to expand
+<div className="overflow-x-auto">
+  <div className="flex gap-4 min-w-max">
+    {/* Wide content */}
+  </div>
+</div>
+```
+
+**Why it fails:**
+- `min-w-max` forces container to expand beyond viewport
+- Parent has no width constraint
+- Entire page becomes horizontally scrollable
+- UI controls shift off-screen
+
+**Solution:**
+```tsx
+// CORRECT - Constrain parent, scroll child only
+<div className="w-full">
+  <div className="overflow-x-auto -mx-6 px-6">
+    <div className="flex gap-4 min-w-max">
+      {/* Scrolls within container only */}
+    </div>
+  </div>
+</div>
 ```
 
 ### 🔴 **Not Using styles.ts Pre-Defined Classes**
 
 **Problem:**
 ```tsx
-// ❌ WRONG - Hardcoding glassmorphism
+// WRONG - Hardcoding glassmorphism
 <div className="backdrop-blur-md bg-white/10 border border-gray-200 rounded-lg">
 
-// ❌ WRONG - Not using existing glassCard.variants
+// WRONG - Not using existing glassCard.variants
 const myCustomGlow = "shadow-[0_0_40px_rgba(34,211,238,0.4)]";
 ```
 
 **Solution:**
 ```tsx
-// ✅ CORRECT - Use glassCard from styles.ts
+// CORRECT - Use glassCard from styles.ts
 import { glassCard } from '@/features/ui/primitives/styles';
 className={cn(glassCard.base, glassCard.variants.cyan.glow)}
 
-// ✅ CORRECT - Use Card primitive with props
+// CORRECT - Use Card primitive with props
 <Card glowColor="cyan" edgePosition="top" edgeColor="purple" />
+```
+
+### 🔴 **Non-Responsive Grid Layouts**
+
+**Problem:**
+```tsx
+// BROKEN - Fixed columns break on mobile
+<div className="grid grid-cols-4 gap-4">
+```
+
+**Solution:**
+```tsx
+// CORRECT - Responsive columns
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+```
+
+### 🔴 **Missing Text Truncation**
+
+**Problem:**
+```tsx
+// WRONG - Long text breaks layout
+<h3 className="font-medium">{longTitle}</h3>
+```
+
+**Solution:**
+```tsx
+// CORRECT - Truncate or clamp
+<h3 className="font-medium truncate">{longTitle}</h3>
+<h3 className="font-medium line-clamp-2">{longTitle}</h3>
 ```
 
 ---
@@ -374,11 +441,46 @@ className={cn(glassCard.base, glassCard.variants.cyan.glow)}
 ## Key Questions to Answer
 
 1. **Does this component duplicate existing primitives?**
-2. **Should this be refactored to use Card with edgePosition/edgeColor?**
-3. **Are there native HTML elements that should be Radix?**
-4. **Is the glassmorphism consistent with the design system?**
-5. **Can multiple components be consolidated into one reusable primitive?**
+2. **Are there any dynamic Tailwind class constructions? (BREAKING)**
+3. **Is horizontal scroll properly constrained with w-full parent?**
+4. **Are grids responsive with breakpoint variants?**
+5. **Should this be refactored to use Card with edgePosition/edgeColor?**
+6. **Are there native HTML elements that should be Radix?**
+7. **Is text truncation in place for dynamic content?**
+8. **Is the glassmorphism consistent with the design system?**
+9. **Can multiple components be consolidated into one reusable primitive?**
+10. **Does the layout work at 375px, 768px, 1024px, and 1440px widths?**
 
 ---
 
-Start the review now and save the report to `ui-consistency-review-[feature].md` in the project root.
+## Execution Flow
+
+### Step 1: Perform Review
+
+Start the review and save the report to `ui-consistency-review-[feature].md` in the project root.
+
+### Step 2: Generate PRP for Fixes
+
+After completing the review report, automatically kick off PRP creation for the identified fixes:
+
+```
+/prp-claude-code:prp-claude-code-create UI Consistency Fixes - [feature-name]
+```
+
+**Context to provide to PRP:**
+- Reference the generated `ui-consistency-review-[feature].md` report
+- List all critical issues that need fixing
+- Specify exact files that need refactoring
+- Include anti-patterns found and their correct implementations
+- Reference `PRPs/ai_docs/TAILWIND_RESPONSIVE_BEST_PRACTICES.md` for patterns
+
+**PRP should include:**
+- Task for each critical issue (dynamic classes, unconstrained scroll, etc.)
+- Task for each component needing primitive refactor
+- Task for responsive breakpoint additions
+- Task for text truncation additions
+- Validation task to run UI consistency review again to verify fixes
+
+---
+
+Start the review now.

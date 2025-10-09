@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/features/ui/primitives/radio-group
 import { LivePreview } from '../shared/LivePreview';
 import { CodeDisplay } from '../shared/CodeDisplay';
 import { ConfigPanel } from '../shared/ConfigPanel';
-import { Eye, Code } from 'lucide-react';
+import { Eye, Code, Moon, Sun, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react';
 import type { LabelPosition } from '../types';
 
 interface ToggleConfig {
@@ -131,37 +131,82 @@ import { Label } from '@/features/ui/primitives/label';`;
       </div>
 
       {/* RIGHT: Preview or Code Content (3/4 width) */}
-      <div className="col-span-3">
+      <div className="col-span-3 space-y-6">
         {activeTab === 'preview' ? (
-          <LivePreview>
-            <div className={`flex ${layoutClasses[config.labelPosition]} ${gapClasses[config.labelPosition]} items-center`}>
-              {(config.labelPosition === 'top' || config.labelPosition === 'left') ? (
-                <>
-                  <Label htmlFor="preview-toggle">
-                    {config.labelText}
-                  </Label>
-                  <Switch
-                    id="preview-toggle"
-                    checked={toggleState}
-                    onCheckedChange={setToggleState}
-                    disabled={config.disabled}
-                  />
-                </>
-              ) : (
-                <>
-                  <Switch
-                    id="preview-toggle"
-                    checked={toggleState}
-                    onCheckedChange={setToggleState}
-                    disabled={config.disabled}
-                  />
-                  <Label htmlFor="preview-toggle">
-                    {config.labelText}
-                  </Label>
-                </>
-              )}
+          <>
+            <LivePreview>
+              <div className={`flex ${layoutClasses[config.labelPosition]} ${gapClasses[config.labelPosition]} items-center`}>
+                {(config.labelPosition === 'top' || config.labelPosition === 'left') ? (
+                  <>
+                    <Label htmlFor="preview-toggle">
+                      {config.labelText}
+                    </Label>
+                    <Switch
+                      id="preview-toggle"
+                      checked={toggleState}
+                      onCheckedChange={setToggleState}
+                      disabled={config.disabled}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Switch
+                      id="preview-toggle"
+                      checked={toggleState}
+                      onCheckedChange={setToggleState}
+                      disabled={config.disabled}
+                    />
+                    <Label htmlFor="preview-toggle">
+                      {config.labelText}
+                    </Label>
+                  </>
+                )}
+              </div>
+            </LivePreview>
+
+            {/* Icon Switch Examples */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Switches with Icons</h4>
+              <LivePreview>
+                <div className="space-y-6">
+                  {/* Dark Mode Toggle */}
+                  <div className="flex items-center gap-3">
+                    <Label>Dark Mode</Label>
+                    <Switch
+                      size="lg"
+                      color="purple"
+                      iconOn={<Sun className="w-5 h-5" />}
+                      iconOff={<Moon className="w-5 h-5" />}
+                      defaultChecked
+                    />
+                  </div>
+
+                  {/* Volume Toggle */}
+                  <div className="flex items-center gap-3">
+                    <Label>Audio</Label>
+                    <Switch
+                      size="md"
+                      color="blue"
+                      iconOn={<Volume2 className="w-3 h-3" />}
+                      iconOff={<VolumeX className="w-3 h-3" />}
+                    />
+                  </div>
+
+                  {/* WiFi Toggle */}
+                  <div className="flex items-center gap-3">
+                    <Label>WiFi</Label>
+                    <Switch
+                      size="md"
+                      color="cyan"
+                      iconOn={<Wifi className="w-3 h-3" />}
+                      iconOff={<WifiOff className="w-3 h-3" />}
+                      defaultChecked
+                    />
+                  </div>
+                </div>
+              </LivePreview>
             </div>
-          </LivePreview>
+          </>
         ) : (
           <CodeDisplay
             code={generateCode(config)}

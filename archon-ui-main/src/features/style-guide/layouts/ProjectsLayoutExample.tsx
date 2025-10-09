@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { LayoutGrid, List, ListTodo, Activity, CheckCircle2, FileText, Search, Table as TableIcon, Tag, User, Trash2, Pin, Copy } from "lucide-react";
+import { LayoutGrid, List, ListTodo, Activity, CheckCircle2, FileText, Search, Table as TableIcon, Tag, User, Trash2, Pin, Copy, Edit } from "lucide-react";
+import { StatPill } from "@/features/ui/primitives/pill";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/features/ui/primitives/button";
@@ -9,6 +10,7 @@ import { SelectableCard } from "@/features/ui/primitives/selectable-card";
 import { Input } from "@/features/ui/primitives/input";
 import { PillNavigation, type PillNavigationItem } from "../shared/PillNavigation";
 import { cn } from "@/features/ui/primitives/styles";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/features/ui/primitives/tooltip";
 
 const MOCK_PROJECTS = [
   {
@@ -93,17 +95,19 @@ export const ProjectsLayoutExample = () => {
 
       {layoutMode === "horizontal" ? (
         <>
-          {/* Horizontal Project Cards */}
-          <div className="overflow-x-auto overflow-y-visible py-8 px-8">
-            <div className="flex gap-4 min-w-max">
-              {MOCK_PROJECTS.map((project) => (
-                <ProjectCardExample
-                  key={project.id}
-                  project={project}
-                  isSelected={selectedId === project.id}
-                  onSelect={() => setSelectedId(project.id)}
-                />
-              ))}
+          {/* Horizontal Project Cards - ONLY cards scroll, not whole page */}
+          <div className="w-full">
+            <div className="overflow-x-auto overflow-y-visible py-8 -mx-6 px-6">
+              <div className="flex gap-4 min-w-max">
+                {MOCK_PROJECTS.map((project) => (
+                  <ProjectCardExample
+                    key={project.id}
+                    project={project}
+                    isSelected={selectedId === project.id}
+                    onSelect={() => setSelectedId(project.id)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
@@ -241,7 +245,7 @@ export const ProjectsLayoutExample = () => {
   );
 };
 
-// Sidebar Project Card with task counts
+// Sidebar Project Card - mini card style with StatPills
 const SidebarProjectCard = ({
   project,
   isSelected,
@@ -252,27 +256,56 @@ const SidebarProjectCard = ({
   onSelect: () => void;
 }) => {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <Card
+      blur="md"
+      transparency="light"
       className={cn(
-        "w-full text-left px-3 py-2 rounded-lg transition-all duration-200",
+        "cursor-pointer transition-all duration-200 p-3",
         isSelected
-          ? "bg-purple-500/10 dark:bg-purple-400/10 text-purple-700 dark:text-purple-300 border-l-2 border-purple-500"
-          : "text-gray-600 dark:text-gray-400 hover:bg-white/5 dark:hover:bg-white/5 border-l-2 border-transparent",
+          ? "border-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"
+          : "border-gray-300/20 dark:border-white/10 hover:border-purple-400/40 hover:shadow-[0_0_8px_rgba(168,85,247,0.2)]",
       )}
+      onClick={onSelect}
     >
-      <div className="font-medium text-sm line-clamp-1 mb-1">{project.title}</div>
-      {project.pinned && <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">Pinned</div>}
-      {/* Task counts */}
-      <div className="flex gap-2 text-xs">
-        <span className="text-pink-600 dark:text-pink-400">{project.taskCounts.todo} todo</span>
-        <span className="text-blue-600 dark:text-blue-400">
-          {project.taskCounts.doing + project.taskCounts.review} doing
-        </span>
-        <span className="text-green-600 dark:text-green-400">{project.taskCounts.done} done</span>
+      <div className="space-y-2">
+        {/* Title */}
+        <div className="flex items-center justify-between">
+          <h4 className={cn(
+            "font-medium text-sm line-clamp-1",
+            isSelected ? "text-purple-700 dark:text-purple-300" : "text-gray-700 dark:text-gray-300"
+          )}>
+            {project.title}
+          </h4>
+          {project.pinned && (
+            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-500 text-white text-[9px] font-bold rounded-full">
+              <Pin className="w-2.5 h-2.5" />
+            </div>
+          )}
+        </div>
+
+        {/* Status Pills - horizontal layout with icons */}
+        <div className="flex items-center gap-1.5">
+          <StatPill
+            color="pink"
+            value={project.taskCounts.todo}
+            size="sm"
+            icon={<ListTodo className="w-3 h-3" />}
+          />
+          <StatPill
+            color="blue"
+            value={project.taskCounts.doing + project.taskCounts.review}
+            size="sm"
+            icon={<Activity className="w-3 h-3" />}
+          />
+          <StatPill
+            color="emerald"
+            value={project.taskCounts.done}
+            size="sm"
+            icon={<CheckCircle2 className="w-3 h-3" />}
+          />
+        </div>
       </div>
-    </button>
+    </Card>
   );
 };
 
@@ -300,13 +333,14 @@ const ProjectCardExample = ({
       showAuroraGlow={isSelected}
       onSelect={onSelect}
       size="none"
+      blur="xl"
       className={cn(
         "w-72 min-h-[180px] flex flex-col",
         getBackgroundClass(),
       )}
     >
       {/* Main content */}
-      <div className="flex-1 p-4 pb-2">
+      <div className="flex-1 p-3 pb-2">
         {/* Title */}
         <div className="flex flex-col items-center justify-center mb-4 min-h-[48px]">
           <h3
@@ -402,11 +436,13 @@ const ProjectCardExample = ({
         </div>
       </div>
 
-      {/* Bottom bar with pin badge and action icons */}
+      {/* Bottom bar with action icons */}
       <div className="flex items-center justify-between px-3 py-2 mt-auto border-t border-gray-200/30 dark:border-gray-700/20">
+        {/* Pinned indicator with icon */}
         {project.pinned ? (
-          <div className="px-2 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-purple-500/30">
-            DEFAULT
+          <div className="flex items-center gap-1 px-2 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-purple-500/30">
+            <Pin className="w-2.5 h-2.5" />
+            <span>PINNED</span>
           </div>
         ) : (
           <div />
@@ -484,7 +520,7 @@ const KanbanBoardView = () => {
   );
 };
 
-// Task Card using DraggableCard primitive
+// Task Card using DraggableCard primitive with actions
 const TaskCardExample = ({ task, index }: { task: typeof MOCK_TASKS[0]; index: number }) => {
   const getPriorityColor = (priority: string) => {
     if (priority === "high") return { color: "bg-red-500", glow: "shadow-[0_0_10px_rgba(239,68,68,0.3)]" };
@@ -508,7 +544,7 @@ const TaskCardExample = ({ task, index }: { task: typeof MOCK_TASKS[0]; index: n
 
         {/* Content */}
         <div className="flex flex-col h-full p-3">
-          {/* Header with feature tag */}
+          {/* Header with feature tag and actions */}
           <div className="flex items-center gap-2 mb-2 pl-1.5">
             {task.feature && (
               <div className="px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1 backdrop-blur-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shadow-sm">
@@ -516,6 +552,36 @@ const TaskCardExample = ({ task, index }: { task: typeof MOCK_TASKS[0]; index: n
                 {task.feature}
               </div>
             )}
+
+            {/* Action buttons - matching TaskCard.tsx pattern */}
+            <div className="ml-auto flex items-center gap-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1 rounded hover:bg-cyan-500/10 text-gray-500 hover:text-cyan-500 transition-colors"
+                    >
+                      <Edit className="w-3 h-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Edit task</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1 rounded hover:bg-red-500/10 text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete task</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
 
           {/* Title */}
@@ -528,7 +594,7 @@ const TaskCardExample = ({ task, index }: { task: typeof MOCK_TASKS[0]; index: n
 
           {/* Footer with assignee and priority */}
           <div className="flex items-center justify-between mt-auto pt-2 pl-1.5 pr-3">
-            {/* Assignee card-style */}
+            {/* Assignee card-style - matching TaskCard.tsx */}
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/50 dark:bg-black/30 border border-gray-200 dark:border-gray-700 text-xs">
               <User className="w-3 h-3 text-gray-500 dark:text-gray-400" />
               <span className="text-gray-700 dark:text-gray-300">{task.assignee}</span>
