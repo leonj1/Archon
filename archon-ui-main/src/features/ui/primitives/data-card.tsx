@@ -18,33 +18,6 @@ interface DataCardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
 interface DataCardContentProps extends React.HTMLAttributes<HTMLDivElement> {}
 interface DataCardFooterProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-// Edge color mappings for edge-lit cards
-const edgeColors = {
-  purple: { solid: 'bg-purple-500', gradient: 'from-purple-500/40', border: 'border-purple-500/30', bg: 'bg-gradient-to-br from-purple-500/15 to-purple-600/5' },
-  blue: { solid: 'bg-blue-500', gradient: 'from-blue-500/40', border: 'border-blue-500/30', bg: 'bg-gradient-to-br from-blue-500/15 to-blue-600/5' },
-  cyan: { solid: 'bg-cyan-500', gradient: 'from-cyan-500/40', border: 'border-cyan-500/30', bg: 'bg-gradient-to-br from-cyan-500/15 to-cyan-600/5' },
-  green: { solid: 'bg-green-500', gradient: 'from-green-500/40', border: 'border-green-500/30', bg: 'bg-gradient-to-br from-green-500/15 to-green-600/5' },
-  orange: { solid: 'bg-orange-500', gradient: 'from-orange-500/40', border: 'border-orange-500/30', bg: 'bg-gradient-to-br from-orange-500/15 to-orange-600/5' },
-  pink: { solid: 'bg-pink-500', gradient: 'from-pink-500/40', border: 'border-pink-500/30', bg: 'bg-gradient-to-br from-pink-500/15 to-pink-600/5' },
-  red: { solid: 'bg-red-500', gradient: 'from-red-500/40', border: 'border-red-500/30', bg: 'bg-gradient-to-br from-red-500/15 to-red-600/5' },
-};
-
-const blurClasses = {
-  none: "backdrop-blur-none",
-  sm: "backdrop-blur-sm",
-  md: "backdrop-blur-md",
-  lg: "backdrop-blur-lg",
-  xl: "backdrop-blur-xl",
-};
-
-const transparencyClasses = {
-  clear: "bg-white/[0.02] dark:bg-white/[0.01]",
-  light: "bg-white/[0.08] dark:bg-white/[0.05]",
-  medium: "bg-white/[0.15] dark:bg-white/[0.08]",
-  frosted: "bg-white/[0.40] dark:bg-black/[0.40]",
-  solid: "bg-white/[0.90] dark:bg-black/[0.95]",
-};
-
 export const DataCard = React.forwardRef<HTMLDivElement, DataCardProps>(
   ({
     className,
@@ -57,29 +30,37 @@ export const DataCard = React.forwardRef<HTMLDivElement, DataCardProps>(
     ...props
   }, ref) => {
     const hasEdge = edgePosition !== 'none';
-    const edgeStyle = hasEdge ? edgeColors[edgeColor] : null;
 
     if (hasEdge && edgePosition === 'top') {
       return (
         <div
           ref={ref}
           className={cn(
-            "relative rounded-xl overflow-hidden min-h-[240px]",
-            edgeStyle?.border,
+            glassCard.base,
+            glassCard.edgeLit.color[edgeColor].border || "border-gray-300/20 dark:border-white/10",
+            "min-h-[240px]",
             className
           )}
           {...props}
         >
-          {/* Top edge light */}
-          <div className={cn("absolute inset-x-0 top-0 h-[2px] pointer-events-none z-10", edgeStyle?.solid)} />
+          {/* Top edge light with glow */}
+          <div className={cn(
+            "absolute inset-x-0 top-0 h-[2px] pointer-events-none z-10",
+            glassCard.edgeLit.position.top,
+            glassCard.edgeLit.color[edgeColor].line,
+            glassCard.edgeLit.color[edgeColor].glow
+          )} />
           {/* Glow bleeding down */}
-          <div className={cn("absolute inset-x-0 top-0 h-16 bg-gradient-to-b to-transparent blur-lg pointer-events-none z-10", edgeStyle?.gradient)} />
+          <div className={cn(
+            "absolute inset-x-0 top-0 h-16 bg-gradient-to-b to-transparent blur-lg pointer-events-none z-10",
+            glassCard.edgeLit.color[edgeColor].gradient.vertical
+          )} />
 
           {/* Content wrapper with flex layout */}
           <div className={cn(
             "flex flex-col min-h-[240px]",
-            blurClasses[blur],
-            edgeStyle?.bg
+            glassCard.blur[blur],
+            glassCard.tints[edgeColor]?.light || glassCard.transparency[transparency]
           )}>
             {children}
           </div>
@@ -93,8 +74,8 @@ export const DataCard = React.forwardRef<HTMLDivElement, DataCardProps>(
         ref={ref}
         className={cn(
           "relative rounded-xl overflow-hidden border border-gray-300/20 dark:border-white/10 min-h-[240px]",
-          blurClasses[blur],
-          transparencyClasses[transparency],
+          glassCard.blur[blur],
+          glassCard.transparency[transparency],
           "flex flex-col",
           className
         )}

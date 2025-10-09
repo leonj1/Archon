@@ -31,8 +31,8 @@ export const GroupedCard = React.forwardRef<HTMLDivElement, GroupedCardProps>(
         {visibleCards.map((card, index) => {
           const isTop = index === 0;
           const zIndex = cardCount - index;
-          const scale = 1 - (index * 0.05); // 5% smaller per card
-          const yOffset = index * 8; // 8px raised per card
+          const scale = 1 - (index * 0.03); // 3% smaller per card
+          const yOffset = index * 16; // 16px raised per card to show edge lights
           const opacity = 1 - (index * 0.15); // Fade background cards slightly
 
           return (
@@ -64,7 +64,7 @@ export const GroupedCard = React.forwardRef<HTMLDivElement, GroupedCardProps>(
           );
         })}
         {/* Spacer to maintain height based on bottom card */}
-        <div style={{ paddingBottom: `${(cardCount - 1) * 8}px`, opacity: 0 }}>
+        <div style={{ paddingBottom: `${(cardCount - 1) * 16}px`, opacity: 0 }}>
           <DataCard edgePosition="top" edgeColor={visibleCards[0]?.edgeColor || "cyan"}>
             <div className="p-4">
               <h4>{visibleCards[0]?.title || "Placeholder"}</h4>

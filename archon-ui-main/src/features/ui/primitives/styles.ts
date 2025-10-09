@@ -123,15 +123,15 @@ export const glassCard = {
   // Base glass card (true transparency) - NO blur here, controlled separately
   base: "relative rounded-lg overflow-hidden border transition-all duration-300",
 
-  // Blur intensity levels - EXTREMELY SUBTLE for true glass
+  // Blur intensity levels - Visible glass effect
   blur: {
     none: "backdrop-blur-none",     // No blur (0px)
-    sm: "backdrop-blur-[0.5px]",    // Barely perceptible
-    md: "backdrop-blur-[1px]",      // Very subtle hint
-    lg: "backdrop-blur-[2px]",      // Light glass effect
-    xl: "backdrop-blur-[3px]",      // Standard glass
-    "2xl": "backdrop-blur-[5px]",   // Noticeable glass
-    "3xl": "backdrop-blur-[8px]"    // Maximum (what was "standard" before)
+    sm: "backdrop-blur-sm",         // 4px - Light glass
+    md: "backdrop-blur-md",         // 12px - Medium glass (visible blur)
+    lg: "backdrop-blur-lg",         // 16px - Strong glass
+    xl: "backdrop-blur-xl",         // 24px - Very strong glass
+    "2xl": "backdrop-blur-2xl",     // 40px - Heavy glass
+    "3xl": "backdrop-blur-3xl"      // 64px - Maximum glass
   },
 
   // Glass transparency levels - Theme-aware for better color visibility
@@ -141,6 +141,17 @@ export const glassCard = {
     medium: "bg-white/[0.15] dark:bg-white/[0.08]", // Medium glass - lighter in dark mode
     frosted: "bg-white/[0.40] dark:bg-black/[0.40]", // Frosted - white in light, black in dark
     solid: "bg-white/[0.90] dark:bg-black/[0.95]" // Solid - opaque
+  },
+
+  // Edge color mappings for DataCard (edge-lit cards with colored gradients)
+  edgeColors: {
+    purple: { solid: 'bg-purple-500', gradient: 'from-purple-500/40', border: 'border-purple-500/30', bg: 'bg-gradient-to-br from-purple-500/8 to-purple-600/3' },
+    blue: { solid: 'bg-blue-500', gradient: 'from-blue-500/40', border: 'border-blue-500/30', bg: 'bg-gradient-to-br from-blue-500/8 to-blue-600/3' },
+    cyan: { solid: 'bg-cyan-500', gradient: 'from-cyan-500/40', border: 'border-cyan-500/30', bg: 'bg-gradient-to-br from-cyan-500/8 to-cyan-600/3' },
+    green: { solid: 'bg-green-500', gradient: 'from-green-500/40', border: 'border-green-500/30', bg: 'bg-gradient-to-br from-green-500/8 to-green-600/3' },
+    orange: { solid: 'bg-orange-500', gradient: 'from-orange-500/40', border: 'border-orange-500/30', bg: 'bg-gradient-to-br from-orange-500/8 to-orange-600/3' },
+    pink: { solid: 'bg-pink-500', gradient: 'from-pink-500/40', border: 'border-pink-500/30', bg: 'bg-gradient-to-br from-pink-500/8 to-pink-600/3' },
+    red: { solid: 'bg-red-500', gradient: 'from-red-500/40', border: 'border-red-500/30', bg: 'bg-gradient-to-br from-red-500/8 to-red-600/3' },
   },
 
   // Colored glass tints - BRIGHT NEON COLORS with higher opacity

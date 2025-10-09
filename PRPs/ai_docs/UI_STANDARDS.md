@@ -371,6 +371,7 @@ export function Button({ variant = "primary", className = "", ...props }) {
 - **Use PillNavigation component** for tab navigation - NEVER create custom pill navigation.
 - **Use Radix UI primitives** for all interactive elements (Select, Checkbox, RadioGroup, Dialog, Popover, etc.).
 - **Import from styles.ts** when you need pre-defined class objects - this is the design system's foundation.
+- **CRITICAL: Primitives MUST use styles.ts, not define their own blur/transparency classes**. Import `glassCard.blur` and `glassCard.transparency` instead of creating inline `const blurClasses` or hardcoding `backdrop-blur-md`.
 - **Centralize repeated patterns** - if you find yourself copying the same class strings 3+ times, create a wrapper component.
 
 ### The styles.ts Design System
@@ -765,6 +766,15 @@ grep -rn "import.*from.*primitives" [path] --include="*.tsx" -L
 ```
 **Rule**: Section 0, Section 5 - Use shared component primitives
 **Fix**: Import and use Card, PillNavigation, Radix primitives
+
+**Primitives Defining Own Blur/Transparency (Should Use styles.ts)**
+```bash
+# Find primitives with hardcoded blur/transparency definitions
+grep -rn "const blurClasses\|const transparencyClasses" [path]/features/ui/primitives --include="*.tsx"
+grep -rn "backdrop-blur-sm\|backdrop-blur-md\|backdrop-blur-lg" [path]/features/ui/primitives --include="*.tsx"
+```
+**Rule**: Section 5 - Primitives MUST use glassCard.blur and glassCard.transparency from styles.ts
+**Fix**: Import `glassCard` from styles.ts and use `glassCard.blur[blur]` and `glassCard.transparency[transparency]`
 
 **Missing min-w-0 on Flex Children (CRITICAL for scroll containers)**
 ```bash
