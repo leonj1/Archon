@@ -1,7 +1,7 @@
 import { Layout, Palette } from "lucide-react";
 import { useState } from "react";
+import { PillNavigation, type PillNavigationItem } from "@/features/ui/primitives/pill-navigation";
 import { ThemeToggle } from "../../../components/ui/ThemeToggle";
-import { PillNavigation, type PillNavigationItem } from "../shared/PillNavigation";
 import { LayoutsTab } from "../tabs/LayoutsTab";
 import { StyleGuideTab } from "../tabs/StyleGuideTab";
 

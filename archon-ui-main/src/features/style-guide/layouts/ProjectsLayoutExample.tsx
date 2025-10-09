@@ -21,10 +21,10 @@ import { Button } from "@/features/ui/primitives/button";
 import { DraggableCard } from "@/features/ui/primitives/draggable-card";
 import { Input } from "@/features/ui/primitives/input";
 import { StatPill } from "@/features/ui/primitives/pill";
+import { PillNavigation, type PillNavigationItem } from "@/features/ui/primitives/pill-navigation";
 import { SelectableCard } from "@/features/ui/primitives/selectable-card";
 import { cn } from "@/features/ui/primitives/styles";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/features/ui/primitives/tooltip";
-import { PillNavigation, type PillNavigationItem } from "../shared/PillNavigation";
 
 const MOCK_PROJECTS = [
   {
@@ -731,7 +731,7 @@ const TaskCardExample = ({ task, index }: { task: (typeof MOCK_TASKS)[0]; index:
 const TaskTableView = () => {
   return (
     <div className="w-full">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto scrollbar-hide">
         <table className="w-full">
           <thead>
             <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-b-2 border-gray-200 dark:border-gray-700">

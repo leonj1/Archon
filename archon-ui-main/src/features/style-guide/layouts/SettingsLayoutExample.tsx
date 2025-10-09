@@ -1,4 +1,5 @@
 import { Code, Database, FileText, Flame, Globe, Key, Monitor, Moon, Palette, Settings } from "lucide-react";
+import { useId } from "react";
 import { CollapsibleSettingsCard } from "@/components/ui/CollapsibleSettingsCard";
 import { Card } from "@/features/ui/primitives/card";
 import { Input } from "@/features/ui/primitives/input";
@@ -6,6 +7,17 @@ import { Label } from "@/features/ui/primitives/label";
 import { Switch } from "@/features/ui/primitives/switch";
 
 export const SettingsLayoutExample = () => {
+  const openaiKeyId = useId();
+  const googleKeyId = useId();
+  const dbUrlId = useId();
+  const autoBackupId = useId();
+  const extractCodeId = useId();
+  const maxExamplesId = useId();
+  const matchCountId = useId();
+  const rerankId = useId();
+  const maxDepthId = useId();
+  const followLinksId = useId();
+
   return (
     <div className="space-y-4">
       {/* Explanation Text */}
@@ -84,11 +96,11 @@ export const SettingsLayoutExample = () => {
             </p>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="openai-key" className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                <Label htmlFor={openaiKeyId} className="text-xs font-medium text-gray-600 dark:text-gray-400">
                   OPENAI_API_KEY
                 </Label>
                 <Input
-                  id="openai-key"
+                  id={openaiKeyId}
                   type="password"
                   placeholder="Enter new value (encrypted)"
                   className="mt-2"
@@ -96,11 +108,11 @@ export const SettingsLayoutExample = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="google-key" className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                <Label htmlFor={googleKeyId} className="text-xs font-medium text-gray-600 dark:text-gray-400">
                   GOOGLE_API_KEY
                 </Label>
                 <Input
-                  id="google-key"
+                  id={googleKeyId}
                   type="password"
                   placeholder="Enter new value (encrypted)"
                   className="mt-2"
@@ -115,21 +127,21 @@ export const SettingsLayoutExample = () => {
         <CollapsibleSettingsCard title="Database Settings" icon={Database} accentColor="blue" defaultExpanded={false}>
           <Card edgePosition="top" edgeColor="blue">
             <div>
-              <Label htmlFor="db-url" className="text-sm font-medium">
+              <Label htmlFor={dbUrlId} className="text-sm font-medium">
                 Database URL
               </Label>
               <Input
-                id="db-url"
+                id={dbUrlId}
                 placeholder="postgresql://..."
                 className="mt-2"
                 defaultValue="postgresql://localhost:5432/archon"
               />
             </div>
             <div className="flex items-center justify-between mt-4">
-              <Label htmlFor="auto-backup" className="text-sm font-medium">
+              <Label htmlFor={autoBackupId} className="text-sm font-medium">
                 Auto Backup
               </Label>
-              <Switch id="auto-backup" />
+              <Switch id={autoBackupId} />
             </div>
           </Card>
         </CollapsibleSettingsCard>
@@ -141,16 +153,16 @@ export const SettingsLayoutExample = () => {
               Configure how code blocks are extracted from crawled documents.
             </p>
             <div className="flex items-center justify-between mb-4">
-              <Label htmlFor="extract-code" className="text-sm font-medium">
+              <Label htmlFor={extractCodeId} className="text-sm font-medium">
                 Extract Code Examples
               </Label>
-              <Switch id="extract-code" defaultChecked />
+              <Switch id={extractCodeId} defaultChecked />
             </div>
             <div>
-              <Label htmlFor="max-examples" className="text-sm font-medium">
+              <Label htmlFor={maxExamplesId} className="text-sm font-medium">
                 Max Examples per Source
               </Label>
-              <Input id="max-examples" type="number" placeholder="50" className="mt-2" defaultValue="50" />
+              <Input id={maxExamplesId} type="number" placeholder="50" className="mt-2" defaultValue="50" />
             </div>
           </Card>
         </CollapsibleSettingsCard>
@@ -159,16 +171,16 @@ export const SettingsLayoutExample = () => {
         <CollapsibleSettingsCard title="RAG Configuration" icon={Settings} accentColor="orange" defaultExpanded={true}>
           <Card edgePosition="top" edgeColor="orange">
             <div>
-              <Label htmlFor="match-count" className="text-sm font-medium">
+              <Label htmlFor={matchCountId} className="text-sm font-medium">
                 Match Count
               </Label>
-              <Input id="match-count" type="number" placeholder="5" className="mt-2" defaultValue="5" />
+              <Input id={matchCountId} type="number" placeholder="5" className="mt-2" defaultValue="5" />
             </div>
             <div className="flex items-center justify-between mt-4">
-              <Label htmlFor="rerank" className="text-sm font-medium">
+              <Label htmlFor={rerankId} className="text-sm font-medium">
                 Enable Reranking
               </Label>
-              <Switch id="rerank" defaultChecked />
+              <Switch id={rerankId} defaultChecked />
             </div>
           </Card>
         </CollapsibleSettingsCard>
@@ -177,16 +189,16 @@ export const SettingsLayoutExample = () => {
         <CollapsibleSettingsCard title="Crawling Settings" icon={Globe} accentColor="pink" defaultExpanded={false}>
           <Card edgePosition="top" edgeColor="pink">
             <div>
-              <Label htmlFor="max-depth" className="text-sm font-medium">
+              <Label htmlFor={maxDepthId} className="text-sm font-medium">
                 Max Crawl Depth
               </Label>
-              <Input id="max-depth" type="number" placeholder="3" className="mt-2" defaultValue="3" />
+              <Input id={maxDepthId} type="number" placeholder="3" className="mt-2" defaultValue="3" />
             </div>
             <div className="flex items-center justify-between mt-4">
-              <Label htmlFor="follow-links" className="text-sm font-medium">
+              <Label htmlFor={followLinksId} className="text-sm font-medium">
                 Follow External Links
               </Label>
-              <Switch id="follow-links" />
+              <Switch id={followLinksId} />
             </div>
           </Card>
         </CollapsibleSettingsCard>

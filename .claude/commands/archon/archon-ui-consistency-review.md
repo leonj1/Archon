@@ -234,6 +234,36 @@ Save to `PRPs/reviews/ui-consistency-review-[feature].md`.
 
 **Note**: The PRPs/reviews/ directory is gitignored and won't be committed.
 
+### Step 7: Create Implementation PRP
+
+After completing the review report, **immediately create a PRP** for implementing the fixes using the review findings.
+
+**CRITICAL**: Do not stop after generating the report. The review is only the first phase - the PRP creation is required.
+
+**Use**: `/prp-claude-code:prp-claude-code-create` command with argument: `ui-consistency-fixes-[feature]`
+
+**PRP Should Include**:
+1. **Feature Goal**: Fix all UI consistency violations identified in the review
+2. **Context**: Reference the review report and specific violations with file:line numbers
+3. **Implementation Tasks**: Ordered by priority (Critical → High → Medium → Low)
+   - Each task should reference specific violations from the review
+   - Include exact code snippets for fixes (from review report)
+   - Use dependency ordering (e.g., fix unconstrained scrolls before testing)
+4. **Validation Gates**:
+   - Re-run automated scans from Step 3
+   - Verify all violations are fixed
+   - Test responsive behavior at all breakpoints (375px, 768px, 1024px, 1440px)
+5. **Success Metrics**:
+   - Zero violations in automated scans
+   - All scores improved to 10/10
+   - Overall grade improved to A or A+
+
+**PRP Template Sections to Emphasize**:
+- **codebase_patterns**: Link to review report and UI_STANDARDS.md sections violated
+- **existing_code**: Include specific file:line references from violation findings
+- **implementation_notes**: Include "why this matters" context from review report
+- **edge_cases**: Include responsive testing requirements and dark mode validation
+
 ---
 
-Start the review now.
+Start the review now and create the PRP when complete.

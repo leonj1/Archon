@@ -133,23 +133,25 @@ export const KnowledgeLayoutExample = () => {
         </div>
       ) : (
         // Table View - matching TaskView standard pattern
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-b-2 border-gray-200 dark:border-gray-700">
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Title</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Type</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Source</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Chunks</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_KNOWLEDGE_ITEMS.map((item, index) => (
-                <KnowledgeTableRow key={item.id} item={item} index={index} />
-              ))}
-            </tbody>
-          </table>
+        <div className="w-full">
+          <div className="overflow-x-auto scrollbar-hide">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-b-2 border-gray-200 dark:border-gray-700">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Title</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Type</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Source</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Chunks</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MOCK_KNOWLEDGE_ITEMS.map((item, index) => (
+                  <KnowledgeTableRow key={item.id} item={item} index={index} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

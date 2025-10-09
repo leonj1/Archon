@@ -1,9 +1,8 @@
-import { Code, File, FileText, Globe, Search } from "lucide-react";
+import { Code, FileText, Globe, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/features/ui/primitives/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/features/ui/primitives/dialog";
+import { Dialog, DialogContent } from "@/features/ui/primitives/dialog";
 import { Input } from "@/features/ui/primitives/input";
-import { StatPill } from "@/features/ui/primitives/pill";
 import { cn } from "@/features/ui/primitives/styles";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/primitives/tabs";
 
@@ -75,7 +74,6 @@ const DocumentBrowserModal = ({ open, onOpenChange }: { open: boolean; onOpenCha
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(MOCK_DOCUMENTS[0]);
   const [selectedCode, setSelectedCode] = useState(MOCK_CODE[0]);
-  const [sourceType, setSourceType] = useState<"web" | "document">("web");
 
   const filteredDocuments = MOCK_DOCUMENTS.filter((doc) => doc.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -231,7 +229,7 @@ const DocumentBrowserModal = ({ open, onOpenChange }: { open: boolean; onOpenCha
                 <h3 className="text-lg font-semibold text-white">{selectedCode.summary}</h3>
                 <span className="px-2 py-1 text-xs bg-cyan-500/20 text-cyan-400 rounded">{selectedCode.language}</span>
               </div>
-              <pre className="bg-black/30 rounded-lg p-4 overflow-x-auto">
+              <pre className="bg-black/30 rounded-lg p-4 overflow-x-auto scrollbar-hide">
                 <code className="text-gray-300 text-sm">{selectedCode.code}</code>
               </pre>
             </div>

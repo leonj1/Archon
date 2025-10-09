@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { PowerButton } from "@/components/ui/PowerButton";
 import { Card } from "@/features/ui/primitives/card";
 import { Label } from "@/features/ui/primitives/label";
 import { Switch } from "@/features/ui/primitives/switch";
 
 export const StaticToggles = () => {
+  const toggle1Id = useId();
+  const toggle2Id = useId();
+
   const [powerStates, setPowerStates] = useState({
     purple: true,
     cyan: false,
@@ -74,12 +77,12 @@ export const StaticToggles = () => {
         </p>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label htmlFor="toggle-1">Enable Feature</Label>
-            <Switch id="toggle-1" defaultChecked />
+            <Label htmlFor={toggle1Id}>Enable Feature</Label>
+            <Switch id={toggle1Id} defaultChecked />
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="toggle-2">Auto Save</Label>
-            <Switch id="toggle-2" />
+            <Label htmlFor={toggle2Id}>Auto Save</Label>
+            <Switch id={toggle2Id} />
           </div>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 font-mono">{"<Switch />"}</p>
