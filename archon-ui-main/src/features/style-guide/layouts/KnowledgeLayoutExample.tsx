@@ -205,7 +205,7 @@ const KnowledgeCard = ({ item }: { item: typeof MOCK_KNOWLEDGE_ITEMS[0] }) => {
     <DataCard
       edgePosition="top"
       edgeColor={getEdgeColor()}
-      blur="lg"
+      blur="md"
       className="cursor-pointer hover:shadow-[0_0_30px_rgba(6,182,212,0.2)] transition-shadow"
     >
       <DataCardHeader>

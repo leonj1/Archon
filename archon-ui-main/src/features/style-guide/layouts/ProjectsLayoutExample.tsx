@@ -97,7 +97,7 @@ export const ProjectsLayoutExample = () => {
         <>
           {/* Horizontal Project Cards - ONLY cards scroll, not whole page */}
           <div className="w-full">
-            <div className="overflow-x-auto overflow-y-visible py-8 -mx-6 px-6">
+            <div className="overflow-x-auto overflow-y-visible py-8 -mx-6 px-6 scrollbar-hide">
               <div className="flex gap-4 min-w-max">
                 {MOCK_PROJECTS.map((project) => (
                   <ProjectCardExample
@@ -255,17 +255,24 @@ const SidebarProjectCard = ({
   isSelected: boolean;
   onSelect: () => void;
 }) => {
+  const getBackgroundClass = () => {
+    if (project.pinned) return "bg-gradient-to-b from-purple-100/80 via-purple-50/30 to-purple-100/50 dark:from-purple-900/30 dark:via-purple-900/20 dark:to-purple-900/10";
+    if (isSelected) return "bg-gradient-to-b from-white/70 via-purple-50/20 to-white/50 dark:from-white/5 dark:via-purple-900/5 dark:to-black/20";
+    return "bg-gradient-to-b from-white/80 to-white/60 dark:from-white/10 dark:to-black/30";
+  };
+
   return (
-    <Card
+    <SelectableCard
+      isSelected={isSelected}
+      isPinned={project.pinned}
+      showAuroraGlow={isSelected}
+      onSelect={onSelect}
+      size="none"
       blur="md"
-      transparency="light"
       className={cn(
-        "cursor-pointer transition-all duration-200 p-3",
-        isSelected
-          ? "border-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]"
-          : "border-gray-300/20 dark:border-white/10 hover:border-purple-400/40 hover:shadow-[0_0_8px_rgba(168,85,247,0.2)]",
+        "p-2",
+        getBackgroundClass(),
       )}
-      onClick={onSelect}
     >
       <div className="space-y-2">
         {/* Title */}
@@ -305,7 +312,7 @@ const SidebarProjectCard = ({
           />
         </div>
       </div>
-    </Card>
+    </SelectableCard>
   );
 };
 
@@ -335,7 +342,7 @@ const ProjectCardExample = ({
       size="none"
       blur="xl"
       className={cn(
-        "w-72 min-h-[180px] flex flex-col",
+        "w-72 min-h-[180px] flex flex-col shrink-0",
         getBackgroundClass(),
       )}
     >
@@ -497,7 +504,7 @@ const KanbanBoardView = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="grid grid-cols-4 gap-2 min-h-[500px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 min-h-[500px]">
         {columns.map(({ status, title, color, glow }) => (
           <div key={status} className="flex flex-col">
             {/* Column Header - transparent */}

@@ -100,7 +100,7 @@ export const LayoutsTab = () => {
       />
 
       {/* Main Content */}
-      <div className="flex-1 max-w-6xl">{renderContent()}</div>
+      <div className="flex-1 min-w-0 max-w-6xl">{renderContent()}</div>
     </div>
   );
 };

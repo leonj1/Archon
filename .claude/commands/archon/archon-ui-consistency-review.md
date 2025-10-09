@@ -11,139 +11,51 @@ thinking: auto
 
 I'll analyze the UI components and generate a detailed report on consistency, reusability, and adherence to the Archon design system.
 
-## Analysis Framework
-
-### Design System Standards
-
-**Archon uses:**
-- **Primitives**: `/src/features/ui/primitives/` - Reusable Radix components with glassmorphism styling
-- **Card Variants**:
-  - Base glass card
-  - Edge-lit cards: `<Card edgePosition="top" edgeColor="cyan|pink|blue|...">`
-  - Outer glow cards
-  - Inner glow cards
-- **Navigation**: PillNavigation component for all pill-style navigation
-- **Glassmorphism**: `backdrop-blur-sm` (minimal), frosted glass backgrounds
-- **Colors**: Semantic colors (Primary blue #3b82f6, Success, Warning, Error) + accents
-
-### Scoring Criteria
-
-**1. Reusability (1-10)**
-- 10: Uses shared primitives, no hardcoded styles
-- 7-9: Mostly reusable, minor hardcoding
-- 4-6: Mix of primitives and custom code
-- 1-3: Completely custom, duplicates existing patterns
-
-**2. Radix Component Usage (1-10)**
-- 10: Uses Radix primitives for ALL interactive elements (Select, Checkbox, Switch, Tabs, Dialog, etc.)
-- 7-9: Mostly Radix, few native HTML elements
-- 4-6: Mix of Radix and native elements
-- 1-3: Primarily native HTML elements
-
-**3. Primitives Usage (1-10)**
-- 10: Uses Card, Button, Input primitives with proper props
-- 7-9: Uses most primitives, some custom styling
-- 4-6: Mix of primitives and manual styling
-- 1-3: Hardcoded styling, doesn't use primitives
-
-**4. Styling Consistency (1-10)**
-- 10: Matches design system exactly (colors, blur, edge-lit patterns)
-- 7-9: Close match, minor deviations
-- 4-6: Significant inconsistencies
-- 1-3: Completely different styling approach
-
 ## Review Process
 
-### Step 1: Identify Components
+### Step 1: Load UI Standards
+
+**CRITICAL: First, read the UI standards document:**
+
+```
+/Users/sean/Software/Archon/Archon/PRPs/ai_docs/UI_STANDARDS.md
+```
+
+This document contains ALL rules, patterns, anti-patterns, and examples. Use it as the single source of truth for the review.
+
+### Step 2: Scan Components
 
 Scan the provided path for:
 - React components (`.tsx` files)
 - Component usage patterns
 - Imports from primitives vs manual styling
 
-### Step 2: Analyze Each Component
+### Step 3: Compare Against Standards
 
-For each component, check:
+For each component, compare against UI_STANDARDS.md:
+- Check all rules from each section (0-7)
+- Identify violations of anti-patterns
+- Score based on adherence to standards
+- Note missing patterns that should be used
 
-**Primitives Usage:**
-```tsx
-// GOOD - Uses Card primitive with props
-<Card edgePosition="top" edgeColor="cyan">...</Card>
+### Step 4: Automated Scans
 
-// BAD - Hardcoded edge glow
-<div className="relative overflow-hidden rounded-xl">
-  <div className="absolute inset-x-0 top-0 h-[2px] bg-cyan-500..." />
-  <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b..." />
-  ...
-</div>
+Run automated pattern detection to find common violations:
+
+```bash
+# Scan for violations (grep patterns will be in UI_STANDARDS.md)
+# Examples: dynamic class construction, unconstrained scroll, non-responsive grids, etc.
 ```
 
-**Radix Usage:**
-```tsx
-// GOOD - Radix Select primitive
-import { Select, SelectTrigger, SelectContent, SelectItem } from '@/features/ui/primitives/select';
+Use the patterns and anti-patterns documented in UI_STANDARDS.md to guide the automated scans.
 
-// BAD - Native HTML
-<select><option>...</option></select>
-```
+### Step 5: Generate Report
 
-**Reusable Patterns:**
-```tsx
-// GOOD - Shared PillNavigation component
-<PillNavigation items={...} colorVariant="orange" />
-
-// BAD - Custom hardcoded pill navigation
-<div className="backdrop-blur-sm bg-white/40...">
-  {items.map(item => <button className="px-6 py-3...">...)}
-</div>
-```
-
-### Step 3: Generate Scores
-
-Calculate scores for each component based on:
-- Count of primitive vs hardcoded elements
-- Radix usage vs native HTML
-- Styling duplication vs reuse
-- Pattern consistency
-
-### Step 4: Identify Issues
-
-Common anti-patterns to flag:
-
-**Hardcoded Edge-Lit Cards:**
-```tsx
-// BAD - Manual implementation (like KnowledgeCard currently)
-<div className="pointer-events-none absolute inset-x-0 top-0">
-  <div className="h-[2px] bg-cyan-500..." />
-  <div className="h-8 bg-gradient-to-b..." />
-</div>
-
-// GOOD - Use Card primitive
-<Card edgePosition="top" edgeColor="cyan">
-```
-
-**Native HTML Form Elements:**
-```tsx
-// BAD
-<select>, <input type="checkbox">, <input type="radio">
-
-// GOOD
-<Select />, <Checkbox />, <RadioGroup />
-```
-
-**Duplicated Pill Navigation:**
-```tsx
-// BAD - Creating custom pill nav each time
-// GOOD - Use PillNavigation component
-```
-
-### Step 5: Write Resolution Steps
-
-For each issue, provide:
-- What to change
-- Why it matters
-- Specific code example of the fix
-- Impact on consistency
+Create a detailed report showing:
+- Overall compliance scores
+- Component-by-component analysis
+- Specific violations with references to UI_STANDARDS.md sections
+- Recommended fixes with examples from UI_STANDARDS.md
 
 ## Report Format
 
@@ -155,6 +67,7 @@ Generate `ui-consistency-review-[feature].md`:
 **Date**: [Today's date]
 **Scope**: [Path reviewed]
 **Components Analyzed**: [Count]
+**Standards Reference**: PRPs/ai_docs/UI_STANDARDS.md
 
 ---
 
@@ -162,10 +75,11 @@ Generate `ui-consistency-review-[feature].md`:
 
 | Category | Score | Assessment |
 |----------|-------|------------|
-| Reusability | X/10 | [Good/Needs Work/Poor] |
-| Radix Usage | X/10 | [Good/Needs Work/Poor] |
-| Primitives Usage | X/10 | [Good/Needs Work/Poor] |
-| Styling Consistency | X/10 | [Good/Needs Work/Poor] |
+| Tailwind v4 Compliance | X/10 | [Good/Needs Work/Poor] |
+| Responsive Layout | X/10 | [Good/Needs Work/Poor] |
+| Component Reusability | X/10 | [Good/Needs Work/Poor] |
+| Radix Primitives Usage | X/10 | [Good/Needs Work/Poor] |
+| Dark Mode Support | X/10 | [Good/Needs Work/Poor] |
 
 **Overall Grade**: [A-F] - [Summary]
 
@@ -175,102 +89,76 @@ Generate `ui-consistency-review-[feature].md`:
 
 ### [ComponentName.tsx]
 
-**Scores:**
-- Reusability: X/10
-- Radix Usage: X/10
-- Primitives Usage: X/10
-- Styling Consistency: X/10
+**Scores:** [Individual scores]
 
-**Issues Found:**
+**Violations Found:**
 
-1. **[Issue Type]** - [Description]
-   - Location: `[file:line]`
-   - Current: `[code snippet]`
-   - Should be: `[corrected code]`
-   - Impact: [Why this matters]
-
-**Standalone vs Primitive:**
-[This component SHOULD/SHOULD NOT be standalone because...]
+1. **[Violation Type]** - [Description]
+   - **Standards Reference**: UI_STANDARDS.md Section [X]
+   - **Location**: `[file:line]`
+   - **Current Code**: `[snippet]`
+   - **Required Fix**: `[corrected code from UI_STANDARDS.md]`
+   - **Why**: [Reference reason from UI_STANDARDS.md]
 
 ---
 
-## Critical Issues (Must Fix)
+## Critical Violations (Must Fix)
 
-### 1. [Issue Title]
+### 1. [Violation Title]
 - **File**: `[path:line]`
-- **Problem**: [Description]
-- **Why**: [Impact on consistency/maintainability]
-- **Fix**:
-  ```tsx
-  // Current
-  [bad code]
-
-  // Should be
-  [good code]
-  ```
+- **Standards Section**: UI_STANDARDS.md Section [X]
+- **Rule Violated**: [Exact rule from standards]
+- **Fix**: [Example from UI_STANDARDS.md Good Examples]
 
 ---
 
 ## Recommendations
 
-### Immediate Actions
+All recommendations are based on PRPs/ai_docs/UI_STANDARDS.md Section 7 (Pre-Flight Checklist).
 
-1. **[Action]** - [Why]
-2. **[Action]** - [Why]
+### High Priority
+[List items failing critical checklist items]
 
-### Pattern Improvements
+### Medium Priority
+[List items failing non-critical checklist items]
 
-1. **[Pattern]** - [Benefit]
-2. **[Pattern]** - [Benefit]
-
-### Refactoring Priorities
-
-1. **High Priority**: [Components that break consistency]
-2. **Medium Priority**: [Components that could use primitives]
-3. **Low Priority**: [Minor inconsistencies]
+### Low Priority
+[List minor deviations]
 
 ---
 
 ## Design System Compliance
 
-**Primitives Used Correctly:**
-- [List of components using primitives properly]
-
-**Missing Primitive Usage:**
-- [List of components that should use primitives]
-
-**Radix Compliance:**
-- [List of components using Radix properly]
-- [List of components using native HTML instead of Radix]
-
-**Styling Patterns:**
-- Edge-lit cards: [X using primitive, Y hardcoded]
-- Pill navigation: [X using component, Y custom]
-- Glass effects: [X using blur tokens, Y custom values]
+**Standards Adherence Summary:**
+- Tailwind v4 Rules: [X/Y passing]
+- Responsive Layout Rules: [X/Y passing]
+- Component Reusability Rules: [X/Y passing]
+- Radix Primitives Rules: [X/Y passing]
+- Dark Mode Rules: [X/Y passing]
 
 ---
 
 ## Next Steps
 
-1. [Most important fix]
-2. [Second priority]
-3. [Third priority]
+1. [Most important fix - reference UI_STANDARDS.md section]
+2. [Second priority - reference UI_STANDARDS.md section]
+3. [Third priority - reference UI_STANDARDS.md section]
 
 **Estimated Effort**: [X hours for full refactor]
 ```
 
-## What to Scan
+## Scanning Strategy
 
 Based on the argument:
 
 **If directory path** (e.g., `src/features/knowledge`):
 - Scan all `.tsx` files recursively
-- Analyze each component
+- Analyze each component against UI_STANDARDS.md
 - Aggregate scores
 
 **If single file** (e.g., `KnowledgeCard.tsx`):
 - Deep analysis of that component
-- Check all its dependencies
+- Check all sections of UI_STANDARDS.md
 - Compare to similar components
 
 **If feature name** (e.g., `projects`):
@@ -278,208 +166,40 @@ Based on the argument:
 - Scan all components
 - Check consistency within feature
 
-## Red Flags to Auto-Detect
-
-Use grep/glob to find:
-
-```bash
-# CRITICAL: Dynamic Tailwind class construction (WILL NOT WORK)
-grep -r "bg-\${.*}\|text-\${.*}\|border-\${.*}\|shadow-\${.*}" [path] --include="*.tsx"
-grep -r "\`bg-.*-.*\`\|\`text-.*-.*\`\|\`border-.*-.*\`" [path] --include="*.tsx"
-
-# CRITICAL: Unconstrained horizontal scroll (BREAKS LAYOUT)
-grep -r "overflow-x-auto" [path] --include="*.tsx" | grep -v "w-full"
-
-# CRITICAL: min-w-max without parent width constraint
-grep -r "min-w-max" [path] --include="*.tsx"
-
-# Non-responsive grids (BREAKS MOBILE)
-grep -r "grid-cols-[2-9]" [path] --include="*.tsx" | grep -v "md:\|lg:\|sm:\|xl:"
-
-# Fixed widths without max-width constraints
-grep -r "w-\[0-9\]\|w-96\|w-80\|w-72" [path] --include="*.tsx" | grep -v "max-w-"
-
-# Hardcoded edge-lit implementations (should use Card primitive)
-grep -r "absolute inset-x-0 top-0.*bg-gradient-to-b" [path] --include="*.tsx"
-
-# Native HTML form elements (should use Radix)
-grep -r "<select>\|<option>\|<input type=\"checkbox\"\|<input type=\"radio\"" [path] --include="*.tsx"
-
-# Hardcoded pill navigation (should use PillNavigation component)
-grep -r "backdrop-blur-sm bg-white/40.*rounded-full.*flex gap-1" [path] --include="*.tsx"
-
-# Missing text truncation on titles/headings
-grep -r "<h[1-6].*className.*{" [path] --include="*.tsx" | grep -v "truncate\|line-clamp"
-
-# Not using pre-defined classes from styles.ts
-grep -r "glassCard\.variants\|glassmorphism\." [path] --files-without-match --include="*.tsx"
-```
-
-## Critical Anti-Patterns
-
-**IMPORTANT:** Read `PRPs/ai_docs/TAILWIND_RESPONSIVE_BEST_PRACTICES.md` for complete anti-pattern reference before starting review.
-
-### 🔴 **BREAKING: Dynamic Tailwind Class Construction**
-
-**Problem:**
-```tsx
-// BROKEN - Tailwind processes at BUILD time, not runtime
-const color = "cyan";
-className={`bg-${color}-500`}  // CSS won't be generated
-
-// BROKEN - String interpolation
-const glow = `shadow-[0_0_30px_rgba(${rgba},0.4)]`;
-
-// BROKEN - Template literals with variables
-<div className={`text-${textColor}-700`} />
-```
-
-**Why it fails:**
-- Tailwind scans code as plain text at BUILD time
-- Dynamic strings aren't scanned - no CSS generated
-- Results in missing styles at runtime
-
-**Solution:**
-```tsx
-// CORRECT - Static class lookup
-const colorClasses = {
-  cyan: "bg-cyan-500 text-cyan-700",
-  purple: "bg-purple-500 text-purple-700",
-};
-className={colorClasses[color]}
-
-// CORRECT - Use pre-defined classes from styles.ts
-const glowVariant = glassCard.variants[glowColor];
-className={cn(glowVariant.glow, glowVariant.border)}
-
-// CORRECT - Inline arbitrary values (scanned by Tailwind)
-className="shadow-[0_0_30px_rgba(34,211,238,0.4)]"
-```
-
-### 🔴 **BREAKING: Unconstrained Horizontal Scroll**
-
-**Problem:**
-```tsx
-// BROKEN - Forces entire page width to expand
-<div className="overflow-x-auto">
-  <div className="flex gap-4 min-w-max">
-    {/* Wide content */}
-  </div>
-</div>
-```
-
-**Why it fails:**
-- `min-w-max` forces container to expand beyond viewport
-- Parent has no width constraint
-- Entire page becomes horizontally scrollable
-- UI controls shift off-screen
-
-**Solution:**
-```tsx
-// CORRECT - Constrain parent, scroll child only
-<div className="w-full">
-  <div className="overflow-x-auto -mx-6 px-6">
-    <div className="flex gap-4 min-w-max">
-      {/* Scrolls within container only */}
-    </div>
-  </div>
-</div>
-```
-
-### 🔴 **Not Using styles.ts Pre-Defined Classes**
-
-**Problem:**
-```tsx
-// WRONG - Hardcoding glassmorphism
-<div className="backdrop-blur-md bg-white/10 border border-gray-200 rounded-lg">
-
-// WRONG - Not using existing glassCard.variants
-const myCustomGlow = "shadow-[0_0_40px_rgba(34,211,238,0.4)]";
-```
-
-**Solution:**
-```tsx
-// CORRECT - Use glassCard from styles.ts
-import { glassCard } from '@/features/ui/primitives/styles';
-className={cn(glassCard.base, glassCard.variants.cyan.glow)}
-
-// CORRECT - Use Card primitive with props
-<Card glowColor="cyan" edgePosition="top" edgeColor="purple" />
-```
-
-### 🔴 **Non-Responsive Grid Layouts**
-
-**Problem:**
-```tsx
-// BROKEN - Fixed columns break on mobile
-<div className="grid grid-cols-4 gap-4">
-```
-
-**Solution:**
-```tsx
-// CORRECT - Responsive columns
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-```
-
-### 🔴 **Missing Text Truncation**
-
-**Problem:**
-```tsx
-// WRONG - Long text breaks layout
-<h3 className="font-medium">{longTitle}</h3>
-```
-
-**Solution:**
-```tsx
-// CORRECT - Truncate or clamp
-<h3 className="font-medium truncate">{longTitle}</h3>
-<h3 className="font-medium line-clamp-2">{longTitle}</h3>
-```
-
----
-
-## Key Questions to Answer
-
-1. **Does this component duplicate existing primitives?**
-2. **Are there any dynamic Tailwind class constructions? (BREAKING)**
-3. **Is horizontal scroll properly constrained with w-full parent?**
-4. **Are grids responsive with breakpoint variants?**
-5. **Should this be refactored to use Card with edgePosition/edgeColor?**
-6. **Are there native HTML elements that should be Radix?**
-7. **Is text truncation in place for dynamic content?**
-8. **Is the glassmorphism consistent with the design system?**
-9. **Can multiple components be consolidated into one reusable primitive?**
-10. **Does the layout work at 375px, 768px, 1024px, and 1440px widths?**
-
 ---
 
 ## Execution Flow
 
-### Step 1: Perform Review
+### Step 1: Read UI Standards
 
-Start the review and save the report to `ui-consistency-review-[feature].md` in the project root.
+Load `/Users/sean/Software/Archon/Archon/PRPs/ai_docs/UI_STANDARDS.md` completely.
 
-### Step 2: Generate PRP for Fixes
+### Step 2: Scan Target
 
-After completing the review report, automatically kick off PRP creation for the identified fixes:
+Find all `.tsx` files in the target path.
 
-```
-/prp-claude-code:prp-claude-code-create UI Consistency Fixes - [feature-name]
-```
+### Step 3: Analyze Each File
 
-**Context to provide to PRP:**
-- Reference the generated `ui-consistency-review-[feature].md` report
-- List all critical issues that need fixing
-- Specify exact files that need refactoring
-- Include anti-patterns found and their correct implementations
-- Reference `PRPs/ai_docs/TAILWIND_RESPONSIVE_BEST_PRACTICES.md` for patterns
+For each file, check against ALL sections of UI_STANDARDS.md:
+- Section 0: Project-wide Conventions
+- Section 1: Radix Primitives
+- Section 2: Tailwind CSS (v4)
+- Section 3: Responsive Layout
+- Section 4: Light/Dark Themes
+- Section 5: Component Reusability
+- Section 6: Tailwind Tokens
+- Section 7: Pre-Flight Checklist
 
-**PRP should include:**
-- Task for each critical issue (dynamic classes, unconstrained scroll, etc.)
-- Task for each component needing primitive refactor
-- Task for responsive breakpoint additions
-- Task for text truncation additions
-- Validation task to run UI consistency review again to verify fixes
+### Step 4: Generate Report
+
+Create detailed report with:
+- Violations mapped to UI_STANDARDS.md sections
+- Examples from UI_STANDARDS.md Good Examples
+- References to specific rules violated
+
+### Step 5: Save Report
+
+Save to `ui-consistency-review-[feature].md` in project root.
 
 ---
 

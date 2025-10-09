@@ -1,5 +1,5 @@
 import React from "react";
-import { cn } from "./styles";
+import { cn, glassCard } from "./styles";
 
 interface DataCardProps extends React.HTMLAttributes<HTMLDivElement> {
   // Edge-lit properties

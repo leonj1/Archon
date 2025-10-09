@@ -23,7 +23,7 @@ export const SettingsLayoutExample = () => {
           accentColor="purple"
           defaultExpanded={true}
         >
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Dark Mode */}
             <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 backdrop-blur-sm border border-purple-500/20 shadow-lg">
               <div className="flex-1 min-w-0">
