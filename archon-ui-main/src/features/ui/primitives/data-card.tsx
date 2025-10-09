@@ -33,6 +33,8 @@ export const DataCard = React.forwardRef<HTMLDivElement, DataCardProps>(
     ref,
   ) => {
     const hasEdge = edgePosition !== "none";
+    const hasGlow = glowColor !== "none";
+    const glowVariant = glowColor !== "none" ? glassCard.variants[glowColor] : glassCard.variants.none;
 
     if (hasEdge && edgePosition === "top") {
       return (
@@ -82,10 +84,13 @@ export const DataCard = React.forwardRef<HTMLDivElement, DataCardProps>(
       <div
         ref={ref}
         className={cn(
-          "relative rounded-xl overflow-hidden border border-gray-300/20 dark:border-white/10 min-h-[240px]",
+          "relative rounded-xl overflow-hidden border min-h-[240px]",
           glassCard.blur[blur],
           glassCard.transparency[transparency],
           "flex flex-col",
+          hasGlow ? glowVariant.border : "border-gray-300/20 dark:border-white/10",
+          hasGlow && glowVariant.glow,
+          hasGlow && glowVariant.hover,
           className,
         )}
         {...props}

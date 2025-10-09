@@ -15,31 +15,37 @@ const checkboxVariants = {
     checked: "data-[state=checked]:bg-purple-500/20 data-[state=checked]:border-purple-500",
     glow: "data-[state=checked]:shadow-[0_0_15px_rgba(168,85,247,0.5)]",
     indicator: "text-purple-400 drop-shadow-[0_0_3px_rgba(168,85,247,0.7)]",
+    focusRing: "focus-visible:ring-purple-500",
   },
   blue: {
     checked: "data-[state=checked]:bg-blue-500/20 data-[state=checked]:border-blue-500",
     glow: "data-[state=checked]:shadow-[0_0_15px_rgba(59,130,246,0.5)]",
     indicator: "text-blue-400 drop-shadow-[0_0_3px_rgba(59,130,246,0.7)]",
+    focusRing: "focus-visible:ring-blue-500",
   },
   green: {
     checked: "data-[state=checked]:bg-emerald-500/20 data-[state=checked]:border-emerald-500",
     glow: "data-[state=checked]:shadow-[0_0_15px_rgba(16,185,129,0.5)]",
     indicator: "text-emerald-400 drop-shadow-[0_0_3px_rgba(16,185,129,0.7)]",
+    focusRing: "focus-visible:ring-emerald-500",
   },
   pink: {
     checked: "data-[state=checked]:bg-pink-500/20 data-[state=checked]:border-pink-500",
     glow: "data-[state=checked]:shadow-[0_0_15px_rgba(236,72,153,0.5)]",
     indicator: "text-pink-400 drop-shadow-[0_0_3px_rgba(236,72,153,0.7)]",
+    focusRing: "focus-visible:ring-pink-500",
   },
   orange: {
     checked: "data-[state=checked]:bg-orange-500/20 data-[state=checked]:border-orange-500",
     glow: "data-[state=checked]:shadow-[0_0_15px_rgba(249,115,22,0.5)]",
     indicator: "text-orange-400 drop-shadow-[0_0_3px_rgba(249,115,22,0.7)]",
+    focusRing: "focus-visible:ring-orange-500",
   },
   cyan: {
     checked: "data-[state=checked]:bg-cyan-500/20 data-[state=checked]:border-cyan-500",
     glow: "data-[state=checked]:shadow-[0_0_15px_rgba(34,211,238,0.5)]",
     indicator: "text-cyan-400 drop-shadow-[0_0_3px_rgba(34,211,238,0.7)]",
+    focusRing: "focus-visible:ring-cyan-500",
   },
 };
 
@@ -77,7 +83,7 @@ const Checkbox = React.forwardRef<React.ElementRef<typeof CheckboxPrimitives.Roo
           "border-2 border-gray-300/30 dark:border-white/10",
           "transition-all duration-300",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-          `focus-visible:ring-${color}-500`,
+          colorStyles.focusRing,
           "disabled:cursor-not-allowed disabled:opacity-50",
           "hover:border-gray-400/50 dark:hover:border-white/20",
           colorStyles.checked,

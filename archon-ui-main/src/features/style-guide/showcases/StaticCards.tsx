@@ -194,6 +194,24 @@ const EdgeLitCardShowcase = () => {
 
 export const StaticCards = () => {
   const [selectedCardId, setSelectedCardId] = useState("card-2");
+  const [draggableCards, setDraggableCards] = useState([
+    { id: "drag-1", label: "Draggable 1" },
+    { id: "drag-2", label: "Draggable 2" },
+    { id: "drag-3", label: "Draggable 3" },
+  ]);
+
+  const handleCardDrop = (draggedId: string, targetIndex: number) => {
+    setDraggableCards((cards) => {
+      const currentIndex = cards.findIndex((card) => card.id === draggedId);
+      if (currentIndex === -1 || currentIndex === targetIndex) {
+        return cards;
+      }
+      const updated = [...cards];
+      const [moved] = updated.splice(currentIndex, 1);
+      updated.splice(targetIndex, 0, moved);
+      return updated;
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -262,16 +280,17 @@ export const StaticCards = () => {
           </p>
           <DndProvider backend={HTML5Backend}>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {[1, 2, 3].map((num) => (
+              {draggableCards.map((card, index) => (
                 <DraggableCard
-                  key={num}
+                  key={card.id}
                   itemType="example-card"
-                  itemId={`drag-${num}`}
-                  index={num}
+                  itemId={card.id}
+                  index={index}
+                  onDrop={handleCardDrop}
                   size="sm"
                   className="min-h-[120px] cursor-move"
                 >
-                  <h5 className="font-medium text-gray-900 dark:text-white mb-2">Draggable {num}</h5>
+                  <h5 className="font-medium text-gray-900 dark:text-white mb-2">{card.label}</h5>
                   <p className="text-xs text-gray-600 dark:text-gray-400">Drag me to reorder</p>
                 </DraggableCard>
               ))}

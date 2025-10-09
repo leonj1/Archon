@@ -1,7 +1,7 @@
 ---
 description: Analyze UI components for reusability, Radix usage, primitives, and styling consistency
 argument-hint: <feature path, component path, or directory>
-allowed-tools: Read, Grep, Glob, Write
+allowed-tools: Read, Grep, Glob, Write, Bash
 thinking: auto
 ---
 
@@ -9,261 +9,51 @@ thinking: auto
 
 **Review scope**: $ARGUMENTS
 
-I'll analyze the UI components and generate a detailed report on consistency, reusability, and adherence to the Archon design system.
+## Process
 
-## Review Process
+### Step 1: Load Standards
+Read `PRPs/ai_docs/UI_STANDARDS.md` - This is the single source of truth for all rules, patterns, and scans.
 
-### Step 1: Load Archon Design System Standards
-
-Read the following documentation for design system standards:
-- `PRPs/ai_docs/UI_STANDARDS.md` - Complete UI design standards (Tailwind v4, Radix, responsive patterns)
-- `CLAUDE.md` - General development standards and patterns
-- `archon-ui-main/src/features/ui/primitives/` - Available primitive components
-- Existing codebase patterns as reference
-
-The UI_STANDARDS.md document contains:
-- Section 0: Project-wide Conventions
-- Section 1: Radix Primitives
-- Section 2: Tailwind CSS (v4) - includes anti-patterns for dynamic classes
-- Section 3: Responsive Layout - includes horizontal scroll patterns
-- Section 4: Light/Dark Themes
-- Section 5: Component Reusability & Shared Primitives
-- Section 6: Tailwind Tokens
-- Section 7: Pre-Flight Checklist
-- Section 8: Automated Scanning Patterns
-- Section 9: Quick Reference
-
-### Step 2: Scan Components
-
-Scan the provided path for:
-- React components (`.tsx` files)
-- Component usage patterns
-- Imports from primitives vs manual styling
-
-### Step 3: Compare Against Standards
-
-For each component, check against Archon design standards:
-- Radix primitive usage (vs native HTML)
-- Tailwind class patterns (no dynamic class construction)
-- Responsive layout patterns (mobile-first with breakpoints)
-- Component reusability (primitives vs custom implementations)
-- Dark mode support
-- Glassmorphism styling consistency
-
-### Step 4: Automated Scans
-
-Run automated pattern detection to find common violations:
-
-```bash
-# Dynamic Tailwind class construction (BREAKING)
-grep -r "\`bg-\${.*}\|\`text-\${.*}\|\`border-\${.*}" [path] --include="*.tsx"
-
-# Unconstrained horizontal scroll (BREAKING)
-grep -r "overflow-x-auto" [path] --include="*.tsx" | grep -v "w-full"
-
-# Non-responsive grids (BREAKING)
-grep -r "grid-cols-[2-9]" [path] --include="*.tsx" | grep -v "md:\|lg:\|sm:\|xl:"
-
-# Native HTML form elements (should use Radix)
-grep -r "<select>\|<option>\|<input type=\"checkbox\"\|<input type=\"radio\"" [path] --include="*.tsx"
-```
-
-### Step 5: Generate Report
-
-Create a detailed report showing:
-- Overall compliance scores
-- Component-by-component analysis
-- Specific violations with file locations and line numbers
-- Recommended fixes with code examples
-
-## Report Format
-
-Generate `PRPs/reviews/ui-consistency-review-[feature].md`:
-
-```markdown
-# UI Consistency Review
-
-**Date**: [Today's date]
-**Scope**: [Path reviewed]
-**Components Analyzed**: [Count]
-
----
-
-## Overall Scores
-
-| Category | Score | Assessment |
-|----------|-------|------------|
-| Tailwind v4 Compliance | X/10 | [Good/Needs Work/Poor] |
-| Responsive Layout | X/10 | [Good/Needs Work/Poor] |
-| Component Reusability | X/10 | [Good/Needs Work/Poor] |
-| Radix Primitives Usage | X/10 | [Good/Needs Work/Poor] |
-| Dark Mode Support | X/10 | [Good/Needs Work/Poor] |
-
-**Overall Grade**: [A-F] - [Summary]
-
----
-
-## Component-by-Component Analysis
-
-### [ComponentName.tsx]
-
-**Scores:** [Individual scores]
-
-**Violations Found:**
-
-1. **[Violation Type]** - [Description]
-   - **Location**: `[file:line]`
-   - **Current Code**: `[snippet]`
-   - **Required Fix**: `[corrected code]`
-   - **Why**: [Explanation of why this violates standards]
-   - **Impact**: [What breaks or degrades]
-
----
-
-## Critical Violations (Must Fix)
-
-### 1. [Violation Title]
-- **File**: `[path:line]`
-- **Severity**: CRITICAL/HIGH/MEDIUM/LOW
-- **Rule Violated**: [Description of violated pattern]
-- **Fix**: [Concrete fix with code example]
-
----
-
-## Recommendations
-
-### Immediate Actions (Priority 1 - CRITICAL)
-[List breaking issues that must be fixed before production]
-
-### High Priority Actions (Priority 2)
-[List issues that should be fixed soon]
-
-### Medium Priority Actions (Priority 3)
-[List improvements and minor issues]
-
----
-
-## Design System Compliance
-
-**Standards Adherence Summary:**
-- Primitives Usage: [Components using primitives vs custom]
-- Radix Compliance: [Radix vs native HTML form elements]
-- Responsive Patterns: [Grids with breakpoints vs fixed columns]
-- Tailwind Best Practices: [Static vs dynamic class construction]
-- Styling Consistency: [Following glassmorphism patterns]
-
----
-
-## Next Steps
-
-1. [Most important fix with estimated time]
-2. [Second priority with estimated time]
-3. [Third priority with estimated time]
-
-**Estimated Effort**: [X hours for full refactor]
-
----
-
-**Generated by**: Claude Code Automated UI Consistency Review
-**Review Version**: 1.0
-**Review Date**: [Today's date]
-```
-
-## Scanning Strategy
-
-Based on the argument:
-
-**If directory path** (e.g., `src/features/knowledge`):
-- Scan all `.tsx` files recursively
-- Analyze each component against UI_STANDARDS.md
-- Aggregate scores
-
-**If single file** (e.g., `KnowledgeCard.tsx`):
-- Deep analysis of that component
-- Check all sections of UI_STANDARDS.md
-- Compare to similar components
-
-**If feature name** (e.g., `projects`):
-- Find feature directory
-- Scan all components
-- Check consistency within feature
-
----
-
-## Execution Flow
-
-### Step 1: Load Design Standards
-
-Read the UI standards documentation:
-- `PRPs/ai_docs/UI_STANDARDS.md` - Complete UI design standards (CRITICAL - read this first)
-- `CLAUDE.md` - General development patterns
-- `archon-ui-main/src/features/ui/primitives/` - Available primitive components
-
-### Step 2: Scan Target
-
-Find all `.tsx` files in the target path using Glob.
+### Step 2: Find Files
+Glob all `.tsx` files in the provided path.
 
 ### Step 3: Run Automated Scans
+Execute ALL scans from **UI_STANDARDS.md - AUTOMATED SCAN REFERENCE** section:
+- Critical scans (dynamic classes, non-responsive grids, native HTML, unconstrained scroll)
+- High priority scans (keyboard support, dark mode, hardcoded patterns, min-w-0)
+- Medium priority scans (TypeScript, color mismatches, props validation)
 
-Execute grep patterns to detect common anti-patterns:
-- Dynamic Tailwind class construction
-- Unconstrained horizontal scroll
-- Non-responsive grids
-- Native HTML form elements
+### Step 4: Deep Analysis
+For each file, check against ALL rules from **UI_STANDARDS.md sections 1-8**:
+1. TAILWIND V4 - Static classes, tokens
+2. LAYOUT & RESPONSIVE - Grids, scroll, truncation
+3. THEMING - Dark mode variants
+4. RADIX UI - Primitives usage
+5. PRIMITIVES LIBRARY - Card, PillNavigation, styles.ts
+6. ACCESSIBILITY - Keyboard, ARIA, focus
+7. TYPESCRIPT & API CONTRACTS - Types, props, consistency
+8. FUNCTIONAL LOGIC - UI actually works
 
-### Step 4: Analyze Each File
-
-For each file found, check against design standards:
-- Primitives vs custom implementations
-- Radix vs native HTML
-- Responsive layout patterns
-- Tailwind best practices
-- Styling consistency
+**For primitives** (files in `/features/ui/primitives/`):
+- Verify all props affect rendering
+- Check color variant objects have: checked, glow, focusRing, hover
+- Validate prop implementations match interface
 
 ### Step 5: Generate Report
-
-Create detailed report with:
-- Overall scores and grades
+Save to `PRPs/reviews/ui-consistency-review-[feature].md` with:
+- Overall scores (use **UI_STANDARDS.md - SCORING VIOLATIONS**)
 - Component-by-component analysis
-- Critical violations with fixes
-- Prioritized recommendations
+- Violations with file:line, current code, required fix
+- Prioritized action items
 
-### Step 6: Save Report
+### Step 6: Create PRP
+Use `/prp-claude-code:prp-claude-code-create ui-consistency-fixes-[feature]` if violations found.
 
-Save to `PRPs/reviews/ui-consistency-review-[feature].md`.
-
-**Note**: The PRPs/reviews/ directory is gitignored and won't be committed.
-
-### Step 7: Create Implementation PRP
-
-After completing the review report, **immediately create a PRP** for implementing the fixes using the review findings.
-
-**CRITICAL**: Do not stop after generating the report. The review is only the first phase - the PRP creation is required.
-
-**Use**: `/prp-claude-code:prp-claude-code-create` command with argument: `ui-consistency-fixes-[feature]`
-
-**PRP Should Include**:
-1. **Feature Goal**: Fix all UI consistency violations identified in the review
-2. **Context**: Reference the review report and specific violations with file:line numbers
-3. **Implementation Tasks**: Ordered by priority (Critical → High → Medium → Low)
-   - Each task should reference specific violations from the review
-   - Include exact code snippets for fixes (from review report)
-   - Use dependency ordering (e.g., fix unconstrained scrolls before testing)
-4. **Validation Gates**:
-   - Re-run automated scans from Step 3
-   - Verify all violations are fixed
-   - Test responsive behavior at all breakpoints (375px, 768px, 1024px, 1440px)
-5. **Success Metrics**:
-   - Zero violations in automated scans
-   - All scores improved to 10/10
-   - Overall grade improved to A or A+
-
-**PRP Template Sections to Emphasize**:
-- **codebase_patterns**: Link to review report and UI_STANDARDS.md sections violated
-- **existing_code**: Include specific file:line references from violation findings
-- **implementation_notes**: Include "why this matters" context from review report
-- **edge_cases**: Include responsive testing requirements and dark mode validation
+**PRP should reference:**
+- The review report
+- Specific UI_STANDARDS.md sections violated
+- Automated scan commands to re-run for validation
 
 ---
 
-Start the review now and create the PRP when complete.
+**Note**: Do NOT duplicate rules/patterns from UI_STANDARDS.md. Just reference section numbers.

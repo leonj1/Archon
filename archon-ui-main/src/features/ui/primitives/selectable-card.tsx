@@ -36,9 +36,21 @@ export const SelectableCard = React.forwardRef<HTMLDivElement, SelectableCardPro
     },
     ref,
   ) => {
+    const handleKeyDown = (event: React.KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onSelect?.();
+      }
+    };
+
     return (
+      // biome-ignore lint/a11y/useSemanticElements: motion.div required for framer-motion animations - semantic button would break animation behavior
       <motion.div
+        role="button"
+        tabIndex={0}
         onClick={onSelect}
+        onKeyDown={handleKeyDown}
+        aria-selected={isSelected}
         className={cn(
           "cursor-pointer transition-all duration-300 overflow-visible",
           isSelected ? "scale-[1.02]" : "hover:scale-[1.01]",
@@ -48,7 +60,10 @@ export const SelectableCard = React.forwardRef<HTMLDivElement, SelectableCardPro
         <div className="relative">
           {/* Aurora glow effect for selected state */}
           {isSelected && showAuroraGlow && (
-            <div className="absolute inset-0 rounded-xl overflow-hidden opacity-30 dark:opacity-40 pointer-events-none">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 rounded-xl overflow-hidden opacity-30 dark:opacity-40 pointer-events-none"
+            >
               <div className="absolute -inset-[100px] bg-[radial-gradient(circle,rgba(168,85,247,0.8)_0%,rgba(147,51,234,0.6)_40%,transparent_70%)] blur-3xl animate-[pulse_8s_ease-in-out_infinite]" />
             </div>
           )}

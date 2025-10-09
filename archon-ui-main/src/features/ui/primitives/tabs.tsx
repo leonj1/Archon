@@ -29,39 +29,6 @@ export const TabsTrigger = React.forwardRef<
     color?: "blue" | "purple" | "pink" | "orange" | "cyan" | "green";
   }
 >(({ className, color = "blue", ...props }, ref) => {
-  const colorMap = {
-    blue: {
-      text: "data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400",
-      glow: "data-[state=active]:bg-blue-500 data-[state=active]:shadow-[0_0_10px_2px_rgba(59,130,246,0.4)] dark:data-[state=active]:shadow-[0_0_20px_5px_rgba(59,130,246,0.7)]",
-      hover: "hover:text-blue-500 dark:hover:text-blue-400/70",
-    },
-    purple: {
-      text: "data-[state=active]:text-purple-600 dark:data-[state=active]:text-purple-400",
-      glow: "data-[state=active]:bg-purple-500 data-[state=active]:shadow-[0_0_10px_2px_rgba(168,85,247,0.4)] dark:data-[state=active]:shadow-[0_0_20px_5px_rgba(168,85,247,0.7)]",
-      hover: "hover:text-purple-500 dark:hover:text-purple-400/70",
-    },
-    pink: {
-      text: "data-[state=active]:text-pink-600 dark:data-[state=active]:text-pink-400",
-      glow: "data-[state=active]:bg-pink-500 data-[state=active]:shadow-[0_0_10px_2px_rgba(236,72,153,0.4)] dark:data-[state=active]:shadow-[0_0_20px_5px_rgba(236,72,153,0.7)]",
-      hover: "hover:text-pink-500 dark:hover:text-pink-400/70",
-    },
-    orange: {
-      text: "data-[state=active]:text-orange-600 dark:data-[state=active]:text-orange-400",
-      glow: "data-[state=active]:bg-orange-500 data-[state=active]:shadow-[0_0_10px_2px_rgba(249,115,22,0.4)] dark:data-[state=active]:shadow-[0_0_20px_5px_rgba(249,115,22,0.7)]",
-      hover: "hover:text-orange-500 dark:hover:text-orange-400/70",
-    },
-    cyan: {
-      text: "data-[state=active]:text-cyan-600 dark:data-[state=active]:text-cyan-400",
-      glow: "data-[state=active]:bg-cyan-500 data-[state=active]:shadow-[0_0_10px_2px_rgba(34,211,238,0.4)] dark:data-[state=active]:shadow-[0_0_20px_5px_rgba(34,211,238,0.7)]",
-      hover: "hover:text-cyan-500 dark:hover:text-cyan-400/70",
-    },
-    green: {
-      text: "data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400",
-      glow: "data-[state=active]:bg-emerald-500 data-[state=active]:shadow-[0_0_10px_2px_rgba(16,185,129,0.4)] dark:data-[state=active]:shadow-[0_0_20px_5px_rgba(16,185,129,0.7)]",
-      hover: "hover:text-emerald-500 dark:hover:text-emerald-400/70",
-    },
-  };
-
   const activeClasses = {
     blue: "data-[state=active]:bg-blue-500/20 dark:data-[state=active]:bg-blue-400/20 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300 data-[state=active]:border data-[state=active]:border-blue-400/50 data-[state=active]:shadow-[0_0_10px_rgba(59,130,246,0.5)]",
     purple:
@@ -74,6 +41,15 @@ export const TabsTrigger = React.forwardRef<
       "data-[state=active]:bg-green-500/20 dark:data-[state=active]:bg-green-400/20 data-[state=active]:text-green-700 dark:data-[state=active]:text-green-300 data-[state=active]:border data-[state=active]:border-green-400/50 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.5)]",
   };
 
+  const focusRingClasses = {
+    blue: "focus-visible:ring-blue-500",
+    purple: "focus-visible:ring-purple-500",
+    pink: "focus-visible:ring-pink-500",
+    orange: "focus-visible:ring-orange-500",
+    cyan: "focus-visible:ring-cyan-500",
+    green: "focus-visible:ring-emerald-500",
+  };
+
   return (
     <TabsPrimitive.Trigger
       ref={ref}
@@ -82,6 +58,7 @@ export const TabsTrigger = React.forwardRef<
         "text-xs font-medium whitespace-nowrap",
         "text-gray-700 dark:text-gray-300 hover:bg-white/10 dark:hover:bg-white/5",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+        focusRingClasses[color],
         "disabled:pointer-events-none disabled:opacity-50",
         activeClasses[color],
         className,

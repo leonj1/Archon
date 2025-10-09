@@ -3,9 +3,9 @@ import { credentialsService } from '../services/credentialsService';
 
 interface SettingsContextType {
   projectsEnabled: boolean;
-  setProjectsEnabled: (enabled: boolean) => void;
+  setProjectsEnabled: (enabled: boolean) => Promise<void>;
   styleGuideEnabled: boolean;
-  setStyleGuideEnabled: (enabled: boolean) => void;
+  setStyleGuideEnabled: (enabled: boolean) => Promise<void>;
   loading: boolean;
   refreshSettings: () => Promise<void>;
 }

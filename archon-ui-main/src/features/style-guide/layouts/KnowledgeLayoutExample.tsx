@@ -1,5 +1,5 @@
 import { Asterisk, Calendar, Code, FileCode, FileText, Globe, Grid, List, Terminal } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/features/ui/primitives/button";
 import { DataCard, DataCardContent, DataCardFooter, DataCardHeader } from "@/features/ui/primitives/data-card";
 import { GroupedCard } from "@/features/ui/primitives/grouped-card";
@@ -69,6 +69,11 @@ export const KnowledgeLayoutExample = () => {
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [typeFilter, setTypeFilter] = useState("all");
 
+  const filteredItems = useMemo(() => {
+    if (typeFilter === "all") return MOCK_KNOWLEDGE_ITEMS;
+    return MOCK_KNOWLEDGE_ITEMS.filter((item) => item.type === typeFilter);
+  }, [typeFilter]);
+
   return (
     <div className="space-y-4">
       {/* Explanation Text */}
@@ -127,7 +132,7 @@ export const KnowledgeLayoutExample = () => {
       {viewMode === "grid" ? (
         // Grid View - Responsive columns
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {MOCK_KNOWLEDGE_ITEMS.map((item) => (
+          {filteredItems.map((item) => (
             <KnowledgeCard key={item.id} item={item} />
           ))}
         </div>
@@ -146,7 +151,7 @@ export const KnowledgeLayoutExample = () => {
                 </tr>
               </thead>
               <tbody>
-                {MOCK_KNOWLEDGE_ITEMS.map((item, index) => (
+                {filteredItems.map((item, index) => (
                   <KnowledgeTableRow key={item.id} item={item} index={index} />
                 ))}
               </tbody>

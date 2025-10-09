@@ -49,12 +49,10 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       if (!hasGlow || hasEdge) return "";
 
       if (glowType === "inner") {
-        // @ts-expect-error - accessing dynamic object safely
         return glassCard.innerGlowSizes?.[glowColor]?.[glowSize] || "";
       }
 
       // Outer glow
-      // @ts-expect-error - accessing dynamic object safely
       return glassCard.outerGlowSizes?.[glowColor]?.[glowSize] || glowVariant.glow;
     };
 
@@ -63,12 +61,10 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       if (!hasGlow || hasEdge) return "";
 
       if (glowType === "inner") {
-        // @ts-expect-error - accessing dynamic object safely
         return glassCard.innerGlowHover?.[glowColor]?.[glowSize] || "";
       }
 
       // Outer glow hover
-      // @ts-expect-error - accessing dynamic object safely
       return glassCard.outerGlowHover?.[glowColor]?.[glowSize] || glowVariant.hover;
     };
 
@@ -96,7 +92,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       red: "bg-gradient-to-br from-red-500/15 to-red-600/5",
     };
 
-    if (hasEdge && edgePosition === "top") {
+    if (hasEdge) {
       // Edge-lit card with actual div elements (not pseudo-elements)
       // Extract flex/layout classes from className to apply to inner content div
       const flexClasses =
@@ -104,17 +100,34 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       const otherClasses =
         className?.replace(/(flex|flex-col|flex-row|flex-1|items-\S+|justify-\S+|gap-\S+)/g, "").trim() || "";
 
+      // Edge line and glow configuration per position
+      const edgeConfig = {
+        top: {
+          line: "absolute inset-x-0 top-0 h-[2px]",
+          glow: "absolute inset-x-0 top-0 h-16 bg-gradient-to-b to-transparent",
+        },
+        bottom: {
+          line: "absolute inset-x-0 bottom-0 h-[2px]",
+          glow: "absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t to-transparent",
+        },
+        left: {
+          line: "absolute inset-y-0 left-0 w-[2px]",
+          glow: "absolute inset-y-0 left-0 w-16 bg-gradient-to-r to-transparent",
+        },
+        right: {
+          line: "absolute inset-y-0 right-0 w-[2px]",
+          glow: "absolute inset-y-0 right-0 w-16 bg-gradient-to-l to-transparent",
+        },
+      };
+
+      const config = edgeConfig[edgePosition];
+
       return (
         <div ref={ref} className={cn("relative rounded-xl overflow-hidden", edgeStyle.border, otherClasses)} {...props}>
-          {/* Top edge light bar - thinner */}
-          <div className={cn("absolute inset-x-0 top-0 h-[2px] pointer-events-none z-10", edgeStyle.solid)} />
+          {/* Edge light bar */}
+          <div className={cn(config.line, "pointer-events-none z-10", edgeStyle.solid)} />
           {/* Glow bleeding into card */}
-          <div
-            className={cn(
-              "absolute inset-x-0 top-0 h-16 bg-gradient-to-b to-transparent blur-lg pointer-events-none z-10",
-              edgeStyle.gradient,
-            )}
-          />
+          <div className={cn(config.glow, "blur-lg pointer-events-none z-10", edgeStyle.gradient)} />
           {/* Content with tinted background - INHERIT flex classes */}
           <div className={cn("backdrop-blur-sm", tintBackgrounds[edgeColor], glassCard.sizes[size], flexClasses)}>
             {children}

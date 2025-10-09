@@ -16,7 +16,7 @@ interface PillNavigationProps {
   activeItem?: string;
   onSectionClick: (sectionId: string) => void;
   onItemClick?: (item: string) => void;
-  colorVariant?: "blue" | "orange" | "cyan" | "purple" | "emerald";
+  colorVariant?: "blue" | "orange" | "cyan" | "purple" | "green";
   size?: "small" | "default" | "large";
   showIcons?: boolean;
   showText?: boolean;
@@ -51,8 +51,8 @@ export const PillNavigation = ({
       purple: isSelected
         ? "bg-purple-500/20 dark:bg-purple-400/20 text-purple-700 dark:text-purple-300 border border-purple-400/50 shadow-[0_0_10px_rgba(147,51,234,0.5)]"
         : "text-gray-700 dark:text-gray-300 hover:bg-white/10 dark:hover:bg-white/5",
-      emerald: isSelected
-        ? "bg-emerald-500/20 dark:bg-emerald-400/20 text-emerald-700 dark:text-emerald-300 border border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+      green: isSelected
+        ? "bg-green-500/20 dark:bg-green-400/20 text-green-700 dark:text-green-300 border border-green-400/50 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
         : "text-gray-700 dark:text-gray-300 hover:bg-white/10 dark:hover:bg-white/5",
     };
     return colors[variant as keyof typeof colors] || colors.cyan;

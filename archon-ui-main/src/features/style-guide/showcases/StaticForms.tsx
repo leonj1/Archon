@@ -123,7 +123,7 @@ export const StaticForms = () => {
                 <SelectTrigger id={selectPurpleId} color="purple" className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent color="purple">
                   <SelectItem value="option1">Option 1</SelectItem>
                   <SelectItem value="option2">Option 2</SelectItem>
                   <SelectItem value="option3">Option 3</SelectItem>
