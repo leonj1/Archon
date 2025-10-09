@@ -13,15 +13,25 @@ I'll analyze the UI components and generate a detailed report on consistency, re
 
 ## Review Process
 
-### Step 1: Load UI Standards
+### Step 1: Load Archon Design System Standards
 
-**CRITICAL: First, read the UI standards document:**
+Read the following documentation for design system standards:
+- `PRPs/ai_docs/UI_STANDARDS.md` - Complete UI design standards (Tailwind v4, Radix, responsive patterns)
+- `CLAUDE.md` - General development standards and patterns
+- `archon-ui-main/src/features/ui/primitives/` - Available primitive components
+- Existing codebase patterns as reference
 
-```
-/Users/sean/Software/Archon/Archon/PRPs/ai_docs/UI_STANDARDS.md
-```
-
-This document contains ALL rules, patterns, anti-patterns, and examples. Use it as the single source of truth for the review.
+The UI_STANDARDS.md document contains:
+- Section 0: Project-wide Conventions
+- Section 1: Radix Primitives
+- Section 2: Tailwind CSS (v4) - includes anti-patterns for dynamic classes
+- Section 3: Responsive Layout - includes horizontal scroll patterns
+- Section 4: Light/Dark Themes
+- Section 5: Component Reusability & Shared Primitives
+- Section 6: Tailwind Tokens
+- Section 7: Pre-Flight Checklist
+- Section 8: Automated Scanning Patterns
+- Section 9: Quick Reference
 
 ### Step 2: Scan Components
 
@@ -32,34 +42,43 @@ Scan the provided path for:
 
 ### Step 3: Compare Against Standards
 
-For each component, compare against UI_STANDARDS.md:
-- Check all rules from each section (0-7)
-- Identify violations of anti-patterns
-- Score based on adherence to standards
-- Note missing patterns that should be used
+For each component, check against Archon design standards:
+- Radix primitive usage (vs native HTML)
+- Tailwind class patterns (no dynamic class construction)
+- Responsive layout patterns (mobile-first with breakpoints)
+- Component reusability (primitives vs custom implementations)
+- Dark mode support
+- Glassmorphism styling consistency
 
 ### Step 4: Automated Scans
 
 Run automated pattern detection to find common violations:
 
 ```bash
-# Scan for violations (grep patterns will be in UI_STANDARDS.md)
-# Examples: dynamic class construction, unconstrained scroll, non-responsive grids, etc.
-```
+# Dynamic Tailwind class construction (BREAKING)
+grep -r "\`bg-\${.*}\|\`text-\${.*}\|\`border-\${.*}" [path] --include="*.tsx"
 
-Use the patterns and anti-patterns documented in UI_STANDARDS.md to guide the automated scans.
+# Unconstrained horizontal scroll (BREAKING)
+grep -r "overflow-x-auto" [path] --include="*.tsx" | grep -v "w-full"
+
+# Non-responsive grids (BREAKING)
+grep -r "grid-cols-[2-9]" [path] --include="*.tsx" | grep -v "md:\|lg:\|sm:\|xl:"
+
+# Native HTML form elements (should use Radix)
+grep -r "<select>\|<option>\|<input type=\"checkbox\"\|<input type=\"radio\"" [path] --include="*.tsx"
+```
 
 ### Step 5: Generate Report
 
 Create a detailed report showing:
 - Overall compliance scores
 - Component-by-component analysis
-- Specific violations with references to UI_STANDARDS.md sections
-- Recommended fixes with examples from UI_STANDARDS.md
+- Specific violations with file locations and line numbers
+- Recommended fixes with code examples
 
 ## Report Format
 
-Generate `ui-consistency-review-[feature].md`:
+Generate `PRPs/reviews/ui-consistency-review-[feature].md`:
 
 ```markdown
 # UI Consistency Review
@@ -67,7 +86,6 @@ Generate `ui-consistency-review-[feature].md`:
 **Date**: [Today's date]
 **Scope**: [Path reviewed]
 **Components Analyzed**: [Count]
-**Standards Reference**: PRPs/ai_docs/UI_STANDARDS.md
 
 ---
 
@@ -94,11 +112,11 @@ Generate `ui-consistency-review-[feature].md`:
 **Violations Found:**
 
 1. **[Violation Type]** - [Description]
-   - **Standards Reference**: UI_STANDARDS.md Section [X]
    - **Location**: `[file:line]`
    - **Current Code**: `[snippet]`
-   - **Required Fix**: `[corrected code from UI_STANDARDS.md]`
-   - **Why**: [Reference reason from UI_STANDARDS.md]
+   - **Required Fix**: `[corrected code]`
+   - **Why**: [Explanation of why this violates standards]
+   - **Impact**: [What breaks or degrades]
 
 ---
 
@@ -106,45 +124,49 @@ Generate `ui-consistency-review-[feature].md`:
 
 ### 1. [Violation Title]
 - **File**: `[path:line]`
-- **Standards Section**: UI_STANDARDS.md Section [X]
-- **Rule Violated**: [Exact rule from standards]
-- **Fix**: [Example from UI_STANDARDS.md Good Examples]
+- **Severity**: CRITICAL/HIGH/MEDIUM/LOW
+- **Rule Violated**: [Description of violated pattern]
+- **Fix**: [Concrete fix with code example]
 
 ---
 
 ## Recommendations
 
-All recommendations are based on PRPs/ai_docs/UI_STANDARDS.md Section 7 (Pre-Flight Checklist).
+### Immediate Actions (Priority 1 - CRITICAL)
+[List breaking issues that must be fixed before production]
 
-### High Priority
-[List items failing critical checklist items]
+### High Priority Actions (Priority 2)
+[List issues that should be fixed soon]
 
-### Medium Priority
-[List items failing non-critical checklist items]
-
-### Low Priority
-[List minor deviations]
+### Medium Priority Actions (Priority 3)
+[List improvements and minor issues]
 
 ---
 
 ## Design System Compliance
 
 **Standards Adherence Summary:**
-- Tailwind v4 Rules: [X/Y passing]
-- Responsive Layout Rules: [X/Y passing]
-- Component Reusability Rules: [X/Y passing]
-- Radix Primitives Rules: [X/Y passing]
-- Dark Mode Rules: [X/Y passing]
+- Primitives Usage: [Components using primitives vs custom]
+- Radix Compliance: [Radix vs native HTML form elements]
+- Responsive Patterns: [Grids with breakpoints vs fixed columns]
+- Tailwind Best Practices: [Static vs dynamic class construction]
+- Styling Consistency: [Following glassmorphism patterns]
 
 ---
 
 ## Next Steps
 
-1. [Most important fix - reference UI_STANDARDS.md section]
-2. [Second priority - reference UI_STANDARDS.md section]
-3. [Third priority - reference UI_STANDARDS.md section]
+1. [Most important fix with estimated time]
+2. [Second priority with estimated time]
+3. [Third priority with estimated time]
 
 **Estimated Effort**: [X hours for full refactor]
+
+---
+
+**Generated by**: Claude Code Automated UI Consistency Review
+**Review Version**: 1.0
+**Review Date**: [Today's date]
 ```
 
 ## Scanning Strategy
@@ -170,36 +192,47 @@ Based on the argument:
 
 ## Execution Flow
 
-### Step 1: Read UI Standards
+### Step 1: Load Design Standards
 
-Load `/Users/sean/Software/Archon/Archon/PRPs/ai_docs/UI_STANDARDS.md` completely.
+Read the UI standards documentation:
+- `PRPs/ai_docs/UI_STANDARDS.md` - Complete UI design standards (CRITICAL - read this first)
+- `CLAUDE.md` - General development patterns
+- `archon-ui-main/src/features/ui/primitives/` - Available primitive components
 
 ### Step 2: Scan Target
 
-Find all `.tsx` files in the target path.
+Find all `.tsx` files in the target path using Glob.
 
-### Step 3: Analyze Each File
+### Step 3: Run Automated Scans
 
-For each file, check against ALL sections of UI_STANDARDS.md:
-- Section 0: Project-wide Conventions
-- Section 1: Radix Primitives
-- Section 2: Tailwind CSS (v4)
-- Section 3: Responsive Layout
-- Section 4: Light/Dark Themes
-- Section 5: Component Reusability
-- Section 6: Tailwind Tokens
-- Section 7: Pre-Flight Checklist
+Execute grep patterns to detect common anti-patterns:
+- Dynamic Tailwind class construction
+- Unconstrained horizontal scroll
+- Non-responsive grids
+- Native HTML form elements
 
-### Step 4: Generate Report
+### Step 4: Analyze Each File
+
+For each file found, check against design standards:
+- Primitives vs custom implementations
+- Radix vs native HTML
+- Responsive layout patterns
+- Tailwind best practices
+- Styling consistency
+
+### Step 5: Generate Report
 
 Create detailed report with:
-- Violations mapped to UI_STANDARDS.md sections
-- Examples from UI_STANDARDS.md Good Examples
-- References to specific rules violated
+- Overall scores and grades
+- Component-by-component analysis
+- Critical violations with fixes
+- Prioritized recommendations
 
-### Step 5: Save Report
+### Step 6: Save Report
 
-Save to `ui-consistency-review-[feature].md` in project root.
+Save to `PRPs/reviews/ui-consistency-review-[feature].md`.
+
+**Note**: The PRPs/reviews/ directory is gitignored and won't be committed.
 
 ---
 
