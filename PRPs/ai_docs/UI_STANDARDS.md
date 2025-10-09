@@ -77,22 +77,27 @@
 ## 2) Tailwind CSS (v4)
 
 **Rules**
-- **Define tokens properly**: Variables in `:root` and `.dark`, then map to Tailwind with `@theme inline`.
+- **CRITICAL: Define custom dark variant FIRST** - Required for `dark:` utilities to work in v4.
+- **Define tokens properly**: Variables in `:root` and `.dark` with **bare HSL values** (NO hsl() wrapper), then map to Tailwind with `@theme inline`.
 ```css
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));  /* REQUIRED for dark: utilities */
+
 :root {
-  --background: hsl(0 0% 98%);
-  --foreground: hsl(240 10% 3.9%);
-  --border: hsl(240 5.9% 90%);
+  /* Bare HSL values - Tailwind adds hsl() wrapper automatically */
+  --background: 0 0% 98%;
+  --foreground: 240 10% 3.9%;
+  --border: 240 5.9% 90%;
   --radius: 0.5rem;
   color-scheme: light;
 }
 
 .dark {
-  --background: hsl(0 0% 0%);
-  --foreground: hsl(0 0% 100%);
-  --border: hsl(240 3.7% 15.9%);
+  /* Bare HSL values - redefine same variables */
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --border: 240 3.7% 15.9%;
   color-scheme: dark;
 }
 
@@ -593,6 +598,7 @@ Then use generated utilities (e.g., `bg-brand-500`, `border-border`) or token re
 Before committing any UI component, verify ALL of these:
 
 ### Tailwind v4 Rules
+- [ ] **@custom-variant dark defined** (`@custom-variant dark (&:where(.dark, .dark *));` in index.css)
 - [ ] **No dynamic class construction** (`bg-${color}-500`, template literals with variables)
 - [ ] **CSS variables allowed in arbitrary values** (static utility names: `bg-[var(--accent)]`)
 - [ ] **Static class lookup objects** for discrete variants (e.g., `const colorClasses = { cyan: "...", ... }`)
@@ -600,7 +606,8 @@ Before committing any UI component, verify ALL of these:
 - [ ] **Conditional classes are complete strings** (use `cn()` with full class names)
 - [ ] **Arbitrary values are static** (written as complete strings in source code)
 - [ ] **Inline style ONLY for CSS variables** (`style={{ "--accent": token }}`), never direct visual CSS
-- [ ] **Variables in `:root` and `.dark`**, mapped with `@theme inline`
+- [ ] **Variables in `:root` and `.dark` with bare HSL values** (NO hsl() wrapper)
+- [ ] **Variables mapped with `@theme inline`**
 - [ ] **`@layer` and `@apply` used properly** (base styles and component classes)
 
 ### Responsive Layout Rules
@@ -666,6 +673,14 @@ Before committing any UI component, verify ALL of these:
 Use these patterns to programmatically detect violations in `.tsx` files.
 
 ### Critical Violations (Breaking Changes)
+
+**Missing @custom-variant dark (DARK MODE WON'T WORK)**
+```bash
+grep -n "@custom-variant dark" [path]/index.css
+```
+**Rule**: Section 2 - @custom-variant dark REQUIRED for Tailwind v4
+**Symptom**: dark: utilities don't apply, theme toggle appears to work but nothing changes visually
+**Fix**: Add `@custom-variant dark (&:where(.dark, .dark *));` immediately after `@import "tailwindcss";`
 
 **Dynamic Tailwind Class Construction (NO CSS GENERATED)**
 ```bash
@@ -932,14 +947,17 @@ export function GlassCard({ color = "cyan", customAccent }: Props) {
 
 ### Critical Reminders
 
-1. **NO dynamic class construction** - `bg-${color}-500` will NOT generate CSS
-2. **CSS variables ARE allowed** - `bg-[var(--accent)]` works (utility name is static)
-3. **Inline style ONLY for CSS variables** - `style={{ "--accent": token }}`, never direct visual CSS
-4. **Proper @theme pattern** - Variables in `:root`/`.dark`, map with `@theme inline`
-5. **`@layer` and `@apply` still work** - Valid in v4 for base/component styles
-6. **Constrain scroll containers** - `overflow-x-auto` parent needs `w-full`
-7. **Responsive grids always** - Never fixed `grid-cols-4` without breakpoints
-8. **Use primitives** - Card, PillNavigation, Radix UI components
-9. **Desktop-primary** - Optimize for desktop, add responsive breakpoints for smaller screens
-10. **Text truncation** - Always handle long text explicitly
-11. **Dark mode** - Every visible color needs `dark:` variant
+1. **@custom-variant dark REQUIRED** - First line after `@import "tailwindcss";` or dark: won't work!
+2. **Bare HSL values** - Variables must be `0 0% 98%` NOT `hsl(0 0% 98%)`
+3. **NO dynamic class construction** - `bg-${color}-500` will NOT generate CSS
+4. **CSS variables ARE allowed** - `bg-[var(--accent)]` works (utility name is static)
+5. **Inline style ONLY for CSS variables** - `style={{ "--accent": token }}`, never direct visual CSS
+6. **Proper @theme pattern** - Variables in `:root`/`.dark`, map with `@theme inline`
+7. **`@layer` and `@apply` still work** - Valid in v4 for base/component styles
+8. **Constrain scroll containers** - `overflow-x-auto` parent needs `w-full`
+9. **Flex parent with scroll needs min-w-0** - Prevents page expansion
+10. **Responsive grids always** - Never fixed `grid-cols-4` without breakpoints
+11. **Use primitives** - Card, PillNavigation, Radix UI components
+12. **Desktop-primary** - Optimize for desktop, add responsive breakpoints for smaller screens
+13. **Text truncation** - Always handle long text explicitly
+14. **Dark mode** - Every visible color needs `dark:` variant
