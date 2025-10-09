@@ -136,11 +136,11 @@ export const glassCard = {
 
   // Glass transparency levels - Theme-aware for better color visibility
   transparency: {
-    clear: "bg-white/[0.01] dark:bg-black/[0.01]", // 1% - almost invisible
-    light: "bg-white/[0.03] dark:bg-black/[0.05]", // 3-5% - very subtle glass
-    medium: "bg-white/[0.05] dark:bg-black/[0.08]", // 5-8% - standard glass
-    frosted: "bg-white/[0.08] dark:bg-black/[0.12]", // 8-12% - frosted glass
-    solid: "bg-white/[0.12] dark:bg-black/[0.20]" // 12-20% - more visible
+    clear: "bg-white/[0.02] dark:bg-white/[0.01]", // Very transparent - see through
+    light: "bg-white/[0.08] dark:bg-white/[0.05]", // Light glass - see through clearly
+    medium: "bg-white/[0.15] dark:bg-white/[0.08]", // Medium glass - lighter in dark mode
+    frosted: "bg-white/[0.40] dark:bg-black/[0.40]", // Frosted - white in light, black in dark
+    solid: "bg-white/[0.90] dark:bg-black/[0.95]" // Solid - opaque
   },
 
   // Colored glass tints - BRIGHT NEON COLORS with higher opacity
@@ -197,7 +197,7 @@ export const glassCard = {
     }
   },
 
-  // Neon glow effects - BRIGHTER & MORE INTENSE
+  // Neon glow effects - BRIGHTER & MORE INTENSE (default = md size)
   variants: {
     none: {
       border: "border-gray-300/20 dark:border-white/10",
@@ -241,8 +241,192 @@ export const glassCard = {
     }
   },
 
+  // Outer glow size variants (static classes for each color)
+  outerGlowSizes: {
+    cyan: {
+      sm: "shadow-[0_0_20px_rgba(34,211,238,0.3)]",
+      md: "shadow-[0_0_40px_rgba(34,211,238,0.4)]",
+      lg: "shadow-[0_0_70px_rgba(34,211,238,0.5)]",
+      xl: "shadow-[0_0_100px_rgba(34,211,238,0.6)]"
+    },
+    purple: {
+      sm: "shadow-[0_0_20px_rgba(168,85,247,0.3)]",
+      md: "shadow-[0_0_40px_rgba(168,85,247,0.4)]",
+      lg: "shadow-[0_0_70px_rgba(168,85,247,0.5)]",
+      xl: "shadow-[0_0_100px_rgba(168,85,247,0.6)]"
+    },
+    blue: {
+      sm: "shadow-[0_0_20px_rgba(59,130,246,0.3)]",
+      md: "shadow-[0_0_40px_rgba(59,130,246,0.4)]",
+      lg: "shadow-[0_0_70px_rgba(59,130,246,0.5)]",
+      xl: "shadow-[0_0_100px_rgba(59,130,246,0.6)]"
+    },
+    pink: {
+      sm: "shadow-[0_0_20px_rgba(236,72,153,0.3)]",
+      md: "shadow-[0_0_40px_rgba(236,72,153,0.4)]",
+      lg: "shadow-[0_0_70px_rgba(236,72,153,0.5)]",
+      xl: "shadow-[0_0_100px_rgba(236,72,153,0.6)]"
+    },
+    green: {
+      sm: "shadow-[0_0_20px_rgba(16,185,129,0.3)]",
+      md: "shadow-[0_0_40px_rgba(16,185,129,0.4)]",
+      lg: "shadow-[0_0_70px_rgba(16,185,129,0.5)]",
+      xl: "shadow-[0_0_100px_rgba(16,185,129,0.6)]"
+    },
+    orange: {
+      sm: "shadow-[0_0_20px_rgba(251,146,60,0.3)]",
+      md: "shadow-[0_0_40px_rgba(251,146,60,0.4)]",
+      lg: "shadow-[0_0_70px_rgba(251,146,60,0.5)]",
+      xl: "shadow-[0_0_100px_rgba(251,146,60,0.6)]"
+    },
+    red: {
+      sm: "shadow-[0_0_20px_rgba(239,68,68,0.3)]",
+      md: "shadow-[0_0_40px_rgba(239,68,68,0.4)]",
+      lg: "shadow-[0_0_70px_rgba(239,68,68,0.5)]",
+      xl: "shadow-[0_0_100px_rgba(239,68,68,0.6)]"
+    }
+  },
+
+  // Inner glow variants (static classes for each color) - WIDER range than outer
+  innerGlowSizes: {
+    cyan: {
+      sm: "shadow-[inset_0_0_15px_rgba(34,211,238,0.2)]",
+      md: "shadow-[inset_0_0_40px_rgba(34,211,238,0.3)]",
+      lg: "shadow-[inset_0_0_80px_rgba(34,211,238,0.4)]",
+      xl: "shadow-[inset_0_0_120px_rgba(34,211,238,0.5)]"
+    },
+    purple: {
+      sm: "shadow-[inset_0_0_15px_rgba(168,85,247,0.2)]",
+      md: "shadow-[inset_0_0_40px_rgba(168,85,247,0.3)]",
+      lg: "shadow-[inset_0_0_80px_rgba(168,85,247,0.4)]",
+      xl: "shadow-[inset_0_0_120px_rgba(168,85,247,0.5)]"
+    },
+    blue: {
+      sm: "shadow-[inset_0_0_15px_rgba(59,130,246,0.2)]",
+      md: "shadow-[inset_0_0_40px_rgba(59,130,246,0.3)]",
+      lg: "shadow-[inset_0_0_80px_rgba(59,130,246,0.4)]",
+      xl: "shadow-[inset_0_0_120px_rgba(59,130,246,0.5)]"
+    },
+    pink: {
+      sm: "shadow-[inset_0_0_15px_rgba(236,72,153,0.2)]",
+      md: "shadow-[inset_0_0_40px_rgba(236,72,153,0.3)]",
+      lg: "shadow-[inset_0_0_80px_rgba(236,72,153,0.4)]",
+      xl: "shadow-[inset_0_0_120px_rgba(236,72,153,0.5)]"
+    },
+    green: {
+      sm: "shadow-[inset_0_0_15px_rgba(16,185,129,0.2)]",
+      md: "shadow-[inset_0_0_40px_rgba(16,185,129,0.3)]",
+      lg: "shadow-[inset_0_0_80px_rgba(16,185,129,0.4)]",
+      xl: "shadow-[inset_0_0_120px_rgba(16,185,129,0.5)]"
+    },
+    orange: {
+      sm: "shadow-[inset_0_0_15px_rgba(251,146,60,0.2)]",
+      md: "shadow-[inset_0_0_40px_rgba(251,146,60,0.3)]",
+      lg: "shadow-[inset_0_0_80px_rgba(251,146,60,0.4)]",
+      xl: "shadow-[inset_0_0_120px_rgba(251,146,60,0.5)]"
+    },
+    red: {
+      sm: "shadow-[inset_0_0_15px_rgba(239,68,68,0.2)]",
+      md: "shadow-[inset_0_0_40px_rgba(239,68,68,0.3)]",
+      lg: "shadow-[inset_0_0_80px_rgba(239,68,68,0.4)]",
+      xl: "shadow-[inset_0_0_120px_rgba(239,68,68,0.5)]"
+    }
+  },
+
+  // Hover glow variants - size-matched (brighter, same size)
+  outerGlowHover: {
+    cyan: {
+      sm: "hover:shadow-[0_0_20px_rgba(34,211,238,0.5)]",
+      md: "hover:shadow-[0_0_40px_rgba(34,211,238,0.6)]",
+      lg: "hover:shadow-[0_0_70px_rgba(34,211,238,0.7)]",
+      xl: "hover:shadow-[0_0_100px_rgba(34,211,238,0.8)]"
+    },
+    purple: {
+      sm: "hover:shadow-[0_0_20px_rgba(168,85,247,0.5)]",
+      md: "hover:shadow-[0_0_40px_rgba(168,85,247,0.6)]",
+      lg: "hover:shadow-[0_0_70px_rgba(168,85,247,0.7)]",
+      xl: "hover:shadow-[0_0_100px_rgba(168,85,247,0.8)]"
+    },
+    blue: {
+      sm: "hover:shadow-[0_0_20px_rgba(59,130,246,0.5)]",
+      md: "hover:shadow-[0_0_40px_rgba(59,130,246,0.6)]",
+      lg: "hover:shadow-[0_0_70px_rgba(59,130,246,0.7)]",
+      xl: "hover:shadow-[0_0_100px_rgba(59,130,246,0.8)]"
+    },
+    pink: {
+      sm: "hover:shadow-[0_0_20px_rgba(236,72,153,0.5)]",
+      md: "hover:shadow-[0_0_40px_rgba(236,72,153,0.6)]",
+      lg: "hover:shadow-[0_0_70px_rgba(236,72,153,0.7)]",
+      xl: "hover:shadow-[0_0_100px_rgba(236,72,153,0.8)]"
+    },
+    green: {
+      sm: "hover:shadow-[0_0_20px_rgba(16,185,129,0.5)]",
+      md: "hover:shadow-[0_0_40px_rgba(16,185,129,0.6)]",
+      lg: "hover:shadow-[0_0_70px_rgba(16,185,129,0.7)]",
+      xl: "hover:shadow-[0_0_100px_rgba(16,185,129,0.8)]"
+    },
+    orange: {
+      sm: "hover:shadow-[0_0_20px_rgba(251,146,60,0.5)]",
+      md: "hover:shadow-[0_0_40px_rgba(251,146,60,0.6)]",
+      lg: "hover:shadow-[0_0_70px_rgba(251,146,60,0.7)]",
+      xl: "hover:shadow-[0_0_100px_rgba(251,146,60,0.8)]"
+    },
+    red: {
+      sm: "hover:shadow-[0_0_20px_rgba(239,68,68,0.5)]",
+      md: "hover:shadow-[0_0_40px_rgba(239,68,68,0.6)]",
+      lg: "hover:shadow-[0_0_70px_rgba(239,68,68,0.7)]",
+      xl: "hover:shadow-[0_0_100px_rgba(239,68,68,0.8)]"
+    }
+  },
+
+  innerGlowHover: {
+    cyan: {
+      sm: "hover:shadow-[inset_0_0_15px_rgba(34,211,238,0.4)]",
+      md: "hover:shadow-[inset_0_0_40px_rgba(34,211,238,0.5)]",
+      lg: "hover:shadow-[inset_0_0_80px_rgba(34,211,238,0.6)]",
+      xl: "hover:shadow-[inset_0_0_120px_rgba(34,211,238,0.7)]"
+    },
+    purple: {
+      sm: "hover:shadow-[inset_0_0_15px_rgba(168,85,247,0.4)]",
+      md: "hover:shadow-[inset_0_0_40px_rgba(168,85,247,0.5)]",
+      lg: "hover:shadow-[inset_0_0_80px_rgba(168,85,247,0.6)]",
+      xl: "hover:shadow-[inset_0_0_120px_rgba(168,85,247,0.7)]"
+    },
+    blue: {
+      sm: "hover:shadow-[inset_0_0_15px_rgba(59,130,246,0.4)]",
+      md: "hover:shadow-[inset_0_0_40px_rgba(59,130,246,0.5)]",
+      lg: "hover:shadow-[inset_0_0_80px_rgba(59,130,246,0.6)]",
+      xl: "hover:shadow-[inset_0_0_120px_rgba(59,130,246,0.7)]"
+    },
+    pink: {
+      sm: "hover:shadow-[inset_0_0_15px_rgba(236,72,153,0.4)]",
+      md: "hover:shadow-[inset_0_0_40px_rgba(236,72,153,0.5)]",
+      lg: "hover:shadow-[inset_0_0_80px_rgba(236,72,153,0.6)]",
+      xl: "hover:shadow-[inset_0_0_120px_rgba(236,72,153,0.7)]"
+    },
+    green: {
+      sm: "hover:shadow-[inset_0_0_15px_rgba(16,185,129,0.4)]",
+      md: "hover:shadow-[inset_0_0_40px_rgba(16,185,129,0.5)]",
+      lg: "hover:shadow-[inset_0_0_80px_rgba(16,185,129,0.6)]",
+      xl: "hover:shadow-[inset_0_0_120px_rgba(16,185,129,0.7)]"
+    },
+    orange: {
+      sm: "hover:shadow-[inset_0_0_15px_rgba(251,146,60,0.4)]",
+      md: "hover:shadow-[inset_0_0_40px_rgba(251,146,60,0.5)]",
+      lg: "hover:shadow-[inset_0_0_80px_rgba(251,146,60,0.6)]",
+      xl: "hover:shadow-[inset_0_0_120px_rgba(251,146,60,0.7)]"
+    },
+    red: {
+      sm: "hover:shadow-[inset_0_0_15px_rgba(239,68,68,0.4)]",
+      md: "hover:shadow-[inset_0_0_40px_rgba(239,68,68,0.5)]",
+      lg: "hover:shadow-[inset_0_0_80px_rgba(239,68,68,0.6)]",
+      xl: "hover:shadow-[inset_0_0_120px_rgba(239,68,68,0.7)]"
+    }
+  },
+
   // Size variants
   sizes: {
+    none: "p-0",
     sm: "p-4",
     md: "p-6",
     lg: "p-8",

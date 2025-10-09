@@ -283,20 +283,90 @@ Based on the argument:
 Use grep/glob to find:
 
 ```bash
-# Hardcoded edge-lit implementations
+# Hardcoded edge-lit implementations (should use Card primitive)
 grep -r "absolute inset-x-0 top-0" [path]
 
-# Native HTML form elements
+# Native HTML form elements (should use Radix)
 grep -r "<select>\|<option>\|<input type=\"checkbox\"" [path]
 
-# Hardcoded pill navigation
+# Hardcoded pill navigation (should use PillNavigation component)
 grep -r "backdrop-blur-sm bg-white/40.*rounded-full" [path]
 
-# Manual glassmorphism
+# Manual glassmorphism (should use Card primitive or styles.ts)
 grep -r "bg-gradient-to-b from-white/\|from-purple-100/" [path]
 
 # Hardcoded colors instead of semantic tokens
 grep -r "#[0-9a-fA-F]{6}" [path]
+
+# CRITICAL: Dynamic Tailwind class construction (WILL NOT WORK)
+grep -r "bg-\${.*}\|text-\${.*}\|border-\${.*}\|shadow-\${.*}" [path]
+grep -r "\.replace.*rgba\|\.replace.*VAR" [path]
+
+# CRITICAL: Template literal Tailwind classes (WILL NOT WORK)
+grep -r "\`bg-.*-.*\`\|\`text-.*-.*\`\|\`border-.*-.*\`" [path]
+
+# Not using pre-defined classes from styles.ts
+grep -r "glassCard\.variants\|glassmorphism\." [path] --files-without-match
+```
+
+## Critical Anti-Patterns
+
+### 🔴 **BREAKING: Dynamic Tailwind Class Construction**
+
+**Problem:**
+```tsx
+// ❌ BROKEN - Tailwind processes at BUILD time, not runtime
+const color = "cyan";
+className={`bg-${color}-500`}  // CSS won't be generated!
+
+// ❌ BROKEN - String replacement at runtime
+const glow = `shadow-[0_0_30px_rgba(${rgba},0.4)]`;
+
+// ❌ BROKEN - Template literals with variables
+<div className={`text-${textColor}-700`} />
+```
+
+**Why it fails:**
+- Tailwind scans code at BUILD time to generate CSS
+- Dynamic strings aren't scanned - no CSS generated
+- Results in missing styles at runtime
+
+**Solution:**
+```tsx
+// ✅ CORRECT - Static class lookup
+const colorClasses = {
+  cyan: "bg-cyan-500 text-cyan-700",
+  purple: "bg-purple-500 text-purple-700",
+};
+className={colorClasses[color]}
+
+// ✅ CORRECT - Use pre-defined classes from styles.ts
+const glowVariant = glassCard.variants[glowColor];
+className={cn(glowVariant.glow, glowVariant.border)}
+
+// ✅ CORRECT - Inline arbitrary values (scanned by Tailwind)
+className="shadow-[0_0_30px_rgba(34,211,238,0.4)]"
+```
+
+### 🔴 **Not Using styles.ts Pre-Defined Classes**
+
+**Problem:**
+```tsx
+// ❌ WRONG - Hardcoding glassmorphism
+<div className="backdrop-blur-md bg-white/10 border border-gray-200 rounded-lg">
+
+// ❌ WRONG - Not using existing glassCard.variants
+const myCustomGlow = "shadow-[0_0_40px_rgba(34,211,238,0.4)]";
+```
+
+**Solution:**
+```tsx
+// ✅ CORRECT - Use glassCard from styles.ts
+import { glassCard } from '@/features/ui/primitives/styles';
+className={cn(glassCard.base, glassCard.variants.cyan.glow)}
+
+// ✅ CORRECT - Use Card primitive with props
+<Card glowColor="cyan" edgePosition="top" edgeColor="purple" />
 ```
 
 ---

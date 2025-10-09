@@ -5,16 +5,20 @@ import { cn } from "./styles";
 // Root
 export const Tabs = TabsPrimitive.Root;
 
-// List
+// List - styled like pill navigation
 export const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
-  <TabsPrimitive.List ref={ref} className={cn("relative", className)} role="tablist" {...props}>
-    {/* Subtle neon glow effect */}
-    <div className="absolute inset-0 rounded-lg opacity-30 blur-[1px] bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 pointer-events-none" />
-    {props.children}
-  </TabsPrimitive.List>
+  <TabsPrimitive.List
+    ref={ref}
+    className={cn(
+      "backdrop-blur-sm bg-white/40 dark:bg-white/5 border border-white/30 dark:border-white/15 rounded-full p-1 shadow-lg inline-flex gap-1",
+      className
+    )}
+    role="tablist"
+    {...props}
+  />
 ));
 TabsList.displayName = TabsPrimitive.List.displayName;
 
@@ -58,29 +62,30 @@ export const TabsTrigger = React.forwardRef<
     },
   };
 
+  const activeClasses = {
+    blue: "data-[state=active]:bg-blue-500/20 dark:data-[state=active]:bg-blue-400/20 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300 data-[state=active]:border data-[state=active]:border-blue-400/50 data-[state=active]:shadow-[0_0_10px_rgba(59,130,246,0.5)]",
+    purple: "data-[state=active]:bg-purple-500/20 dark:data-[state=active]:bg-purple-400/20 data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-300 data-[state=active]:border data-[state=active]:border-purple-400/50 data-[state=active]:shadow-[0_0_10px_rgba(168,85,247,0.5)]",
+    pink: "data-[state=active]:bg-pink-500/20 dark:data-[state=active]:bg-pink-400/20 data-[state=active]:text-pink-700 dark:data-[state=active]:text-pink-300 data-[state=active]:border data-[state=active]:border-pink-400/50 data-[state=active]:shadow-[0_0_10px_rgba(236,72,153,0.5)]",
+    orange: "data-[state=active]:bg-orange-500/20 dark:data-[state=active]:bg-orange-400/20 data-[state=active]:text-orange-700 dark:data-[state=active]:text-orange-300 data-[state=active]:border data-[state=active]:border-orange-400/50 data-[state=active]:shadow-[0_0_10px_rgba(251,146,60,0.5)]",
+    cyan: "data-[state=active]:bg-cyan-500/20 dark:data-[state=active]:bg-cyan-400/20 data-[state=active]:text-cyan-700 dark:data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-400/50 data-[state=active]:shadow-[0_0_10px_rgba(34,211,238,0.5)]",
+    green: "data-[state=active]:bg-green-500/20 dark:data-[state=active]:bg-green-400/20 data-[state=active]:text-green-700 dark:data-[state=active]:text-green-300 data-[state=active]:border data-[state=active]:border-green-400/50 data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.5)]",
+  };
+
   return (
     <TabsPrimitive.Trigger
       ref={ref}
       className={cn(
-        "relative px-24 py-10 font-mono transition-all duration-300 z-10",
-        "text-gray-600 dark:text-gray-400",
+        "flex items-center gap-2 px-6 py-2.5 rounded-full transition-all duration-200",
+        "text-sm font-medium whitespace-nowrap",
+        "text-gray-700 dark:text-gray-300 hover:bg-white/10 dark:hover:bg-white/5",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
         "disabled:pointer-events-none disabled:opacity-50",
-        colorMap[color].text,
-        colorMap[color].hover,
+        activeClasses[color],
         className,
       )}
       {...props}
     >
       {props.children}
-      {/* Active state neon indicator - only show when active */}
-      <span
-        className={cn(
-          "absolute bottom-0 left-0 right-0 w-full h-[2px]",
-          "data-[state=active]:block hidden",
-          colorMap[color].glow,
-        )}
-      />
     </TabsPrimitive.Trigger>
   );
 });

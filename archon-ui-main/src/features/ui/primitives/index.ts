@@ -14,6 +14,10 @@ export * from "./alert-dialog";
 
 // Export all primitives
 export * from "./button";
+export * from "./card";
+export * from "./data-card";
+export * from "./draggable-card";
+export * from "./selectable-card";
 export * from "./combobox";
 export * from "./dialog";
 export * from "./dropdown-menu";

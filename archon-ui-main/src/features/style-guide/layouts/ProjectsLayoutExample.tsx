@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { LayoutGrid, List, ListTodo, Activity, CheckCircle2, FileText, Search, Table as TableIcon, Tag, User, Trash2, Pin, Copy } from "lucide-react";
-import { motion } from "framer-motion";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/features/ui/primitives/button";
 import { Card } from "@/features/ui/primitives/card";
+import { DraggableCard } from "@/features/ui/primitives/draggable-card";
+import { SelectableCard } from "@/features/ui/primitives/selectable-card";
 import { Input } from "@/features/ui/primitives/input";
 import { PillNavigation, type PillNavigationItem } from "../shared/PillNavigation";
 import { cn } from "@/features/ui/primitives/styles";
@@ -273,7 +276,7 @@ const SidebarProjectCard = ({
   );
 };
 
-// Project Card matching REAL ProjectCard exactly
+// Project Card using SelectableCard primitive
 const ProjectCardExample = ({
   project,
   isSelected,
@@ -283,36 +286,25 @@ const ProjectCardExample = ({
   isSelected: boolean;
   onSelect: () => void;
 }) => {
+  // Custom gradients for pinned vs selected vs default
+  const getBackgroundClass = () => {
+    if (project.pinned) return "bg-gradient-to-b from-purple-100/80 via-purple-50/30 to-purple-100/50 dark:from-purple-900/30 dark:via-purple-900/20 dark:to-purple-900/10";
+    if (isSelected) return "bg-gradient-to-b from-white/70 via-purple-50/20 to-white/50 dark:from-white/5 dark:via-purple-900/5 dark:to-black/20";
+    return "bg-gradient-to-b from-white/80 to-white/60 dark:from-white/10 dark:to-black/30";
+  };
+
   return (
-    <motion.div
-      onClick={onSelect}
+    <SelectableCard
+      isSelected={isSelected}
+      isPinned={project.pinned}
+      showAuroraGlow={isSelected}
+      onSelect={onSelect}
+      size="none"
       className={cn(
-        "relative rounded-xl backdrop-blur-md w-72 min-h-[180px] cursor-pointer overflow-visible group flex flex-col",
-        "transition-all duration-300",
-        project.pinned
-          ? "bg-gradient-to-b from-purple-100/80 via-purple-50/30 to-purple-100/50 dark:from-purple-900/30 dark:via-purple-900/20 dark:to-purple-900/10"
-          : isSelected
-            ? "bg-gradient-to-b from-white/70 via-purple-50/20 to-white/50 dark:from-white/5 dark:via-purple-900/5 dark:to-black/20"
-            : "bg-gradient-to-b from-white/80 to-white/60 dark:from-white/10 dark:to-black/30",
-        "border",
-        project.pinned
-          ? "border-purple-500/80 dark:border-purple-500/80 shadow-[0_0_15px_rgba(168,85,247,0.3)]"
-          : isSelected
-            ? "border-purple-400/60 dark:border-purple-500/60"
-            : "border-gray-200 dark:border-zinc-800/50",
-        isSelected
-          ? "shadow-[0_0_15px_rgba(168,85,247,0.4),0_0_10px_rgba(147,51,234,0.3)] dark:shadow-[0_0_20px_rgba(168,85,247,0.5),0_0_15px_rgba(147,51,234,0.4)]"
-          : "shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_30px_-15px_rgba(0,0,0,0.7)]",
-        isSelected ? "scale-[1.02]" : "hover:scale-[1.01]",
+        "w-72 min-h-[180px] flex flex-col",
+        getBackgroundClass(),
       )}
     >
-      {/* Aurora glow effect for selected card */}
-      {isSelected && (
-        <div className="absolute inset-0 rounded-xl overflow-hidden opacity-30 dark:opacity-40 pointer-events-none">
-          <div className="absolute -inset-[100px] bg-[radial-gradient(circle,rgba(168,85,247,0.8)_0%,rgba(147,51,234,0.6)_40%,transparent_70%)] blur-3xl animate-[pulse_8s_ease-in-out_infinite]" />
-        </div>
-      )}
-
       {/* Main content */}
       <div className="flex-1 p-4 pb-2">
         {/* Title */}
@@ -450,11 +442,11 @@ const ProjectCardExample = ({
           </button>
         </div>
       </div>
-    </motion.div>
+    </SelectableCard>
   );
 };
 
-// Kanban Board - NO BACKGROUNDS
+// Kanban Board - NO BACKGROUNDS, wrapped in DndProvider
 const KanbanBoardView = () => {
   const columns = [
     { status: "todo" as const, title: "Todo", color: "text-pink-500", glow: "bg-pink-500" },
@@ -468,30 +460,32 @@ const KanbanBoardView = () => {
   };
 
   return (
-    <div className="grid grid-cols-4 gap-2 min-h-[500px]">
-      {columns.map(({ status, title, color, glow }) => (
-        <div key={status} className="flex flex-col">
-          {/* Column Header - transparent */}
-          <div className="text-center py-3 relative">
-            <h3 className={cn("font-mono text-sm font-medium", color)}>{title}</h3>
-            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{getTasksByStatus(status).length}</div>
-            <div className={cn("absolute bottom-0 left-[15%] right-[15%] w-[70%] mx-auto h-[1px]", glow, "shadow-md")} />
-          </div>
+    <DndProvider backend={HTML5Backend}>
+      <div className="grid grid-cols-4 gap-2 min-h-[500px]">
+        {columns.map(({ status, title, color, glow }) => (
+          <div key={status} className="flex flex-col">
+            {/* Column Header - transparent */}
+            <div className="text-center py-3 relative">
+              <h3 className={cn("font-mono text-sm font-medium", color)}>{title}</h3>
+              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{getTasksByStatus(status).length}</div>
+              <div className={cn("absolute bottom-0 left-[15%] right-[15%] w-[70%] mx-auto h-[1px]", glow, "shadow-md")} />
+            </div>
 
-          {/* Tasks */}
-          <div className="flex-1 p-2 space-y-2">
-            {getTasksByStatus(status).map((task) => (
-              <TaskCardExample key={task.id} task={task} />
-            ))}
+            {/* Tasks */}
+            <div className="flex-1 p-2 space-y-2">
+              {getTasksByStatus(status).map((task, idx) => (
+                <TaskCardExample key={task.id} task={task} index={idx} />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </DndProvider>
   );
 };
 
-// Task Card matching REAL TaskCard exactly
-const TaskCardExample = ({ task }: { task: typeof MOCK_TASKS[0] }) => {
+// Task Card using DraggableCard primitive
+const TaskCardExample = ({ task, index }: { task: typeof MOCK_TASKS[0]; index: number }) => {
   const getPriorityColor = (priority: string) => {
     if (priority === "high") return { color: "bg-red-500", glow: "shadow-[0_0_10px_rgba(239,68,68,0.3)]" };
     if (priority === "medium") return { color: "bg-yellow-500", glow: "shadow-[0_0_10px_rgba(234,179,8,0.3)]" };
@@ -501,9 +495,15 @@ const TaskCardExample = ({ task }: { task: typeof MOCK_TASKS[0] }) => {
   const priorityStyle = getPriorityColor(task.priority);
 
   return (
-    <div className="w-full min-h-[140px] group cursor-move relative">
-      <div className="bg-gradient-to-b from-white/80 to-white/60 dark:from-white/10 dark:to-black/30 border border-gray-200 dark:border-gray-700 rounded-lg backdrop-blur-md transition-all duration-200 group-hover:border-cyan-400/70 dark:group-hover:border-cyan-500/50 group-hover:shadow-[0_0_15px_rgba(34,211,238,0.4)] dark:group-hover:shadow-[0_0_15px_rgba(34,211,238,0.6)] w-full min-h-[140px] h-full relative">
-        {/* Priority indicator glow on left */}
+    <div className="relative group">
+      <DraggableCard
+        itemType="task"
+        itemId={task.id}
+        index={index}
+        size="none"
+        className="min-h-[140px]"
+      >
+        {/* Priority indicator on left edge */}
         <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg opacity-80 group-hover:w-[4px] group-hover:opacity-100 transition-all duration-300", priorityStyle.color, priorityStyle.glow)} />
 
         {/* Content */}
@@ -538,7 +538,7 @@ const TaskCardExample = ({ task }: { task: typeof MOCK_TASKS[0] }) => {
             <div className={cn("w-2 h-2 rounded-full", priorityStyle.color)} />
           </div>
         </div>
-      </div>
+      </DraggableCard>
     </div>
   );
 };

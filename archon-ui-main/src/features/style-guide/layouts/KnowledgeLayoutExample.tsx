@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Grid, List, Asterisk, Terminal, FileCode, Globe, FileText, Calendar } from "lucide-react";
 import { Button } from "@/features/ui/primitives/button";
-import { Card } from "@/features/ui/primitives/card";
+import { DataCard, DataCardHeader, DataCardContent, DataCardFooter } from "@/features/ui/primitives/data-card";
+import { StatPill } from "@/features/ui/primitives/pill";
 import { Input } from "@/features/ui/primitives/input";
 import { ToggleGroup, ToggleGroupItem } from "@/features/ui/primitives/toggle-group";
 import { cn } from "@/features/ui/primitives/styles";
@@ -158,114 +159,71 @@ export const KnowledgeLayoutExample = () => {
   );
 };
 
-// Grid Card Component - matches real KnowledgeCard structure
+// Grid Card Component - using DataCard primitive
 const KnowledgeCard = ({ item }: { item: typeof MOCK_KNOWLEDGE_ITEMS[0] }) => {
   const isUrl = !!item.url;
   const isTechnical = item.type === "technical";
 
-  const getCardGradient = () => {
-    if (isTechnical) {
-      return isUrl
-        ? "from-cyan-100/50 via-cyan-50/25 to-white/60 dark:from-cyan-900/20 dark:via-cyan-900/10 dark:to-black/30"
-        : "from-purple-100/50 via-purple-50/25 to-white/60 dark:from-purple-900/20 dark:via-purple-900/10 dark:to-black/30";
-    }
-    return isUrl
-      ? "from-blue-100/50 via-blue-50/25 to-white/60 dark:from-blue-900/20 dark:via-blue-900/10 dark:to-black/30"
-      : "from-pink-100/50 via-pink-50/25 to-white/60 dark:from-pink-900/20 dark:via-pink-900/10 dark:to-black/30";
+  const getEdgeColor = (): "cyan" | "purple" | "blue" | "pink" => {
+    if (isTechnical) return isUrl ? "cyan" : "purple";
+    return isUrl ? "blue" : "pink";
   };
-
-  const getBorderColor = () => {
-    if (isTechnical) {
-      return isUrl
-        ? "border-cyan-600/30 dark:border-cyan-500/30"
-        : "border-purple-600/30 dark:border-purple-500/30";
-    }
-    return isUrl
-      ? "border-blue-600/30 dark:border-blue-500/30"
-      : "border-pink-600/30 dark:border-pink-500/30";
-  };
-
-  const getAccent = () => {
-    if (isTechnical) {
-      return isUrl
-        ? { bar: "bg-cyan-500", smear: "from-cyan-500/25" }
-        : { bar: "bg-purple-500", smear: "from-purple-500/25" };
-    }
-    return isUrl
-      ? { bar: "bg-blue-500", smear: "from-blue-500/25" }
-      : { bar: "bg-pink-500", smear: "from-pink-500/25" };
-  };
-
-  const accent = getAccent();
 
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden transition-all duration-300 rounded-xl cursor-pointer",
-        "bg-gradient-to-b backdrop-blur-md border",
-        getCardGradient(),
-        getBorderColor(),
-        "hover:shadow-[0_0_30px_rgba(6,182,212,0.2)]",
-        "min-h-[240px] flex flex-col",
-      )}
+    <DataCard
+      edgePosition="top"
+      edgeColor={getEdgeColor()}
+      className="cursor-pointer hover:shadow-[0_0_30px_rgba(6,182,212,0.2)] transition-shadow"
     >
-      {/* Top accent glow */}
-      <div className="pointer-events-none absolute inset-x-0 top-0">
-        <div className={cn("mx-1 mt-0.5 h-[2px] rounded-full", accent.bar)} />
-        <div className={cn("-mt-1 h-8 w-full bg-gradient-to-b to-transparent blur-md", accent.smear)} />
-      </div>
-
-      {/* Content */}
-      <div className="relative p-4">
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <div
-              className={cn(
-                "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium",
-                isUrl
-                  ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400"
-                  : "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400",
-              )}
-            >
-              {isUrl ? <Globe className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
-              <span>{isUrl ? "Web Page" : "Document"}</span>
-            </div>
-            <span
-              className={cn(
-                "px-2 py-1 text-xs rounded-md font-medium",
-                item.type === "technical"
-                  ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400"
-                  : "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-              )}
-            >
-              {item.type}
-            </span>
+      <DataCardHeader>
+        <div className="flex items-center gap-2 mb-3">
+          <div
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium",
+              isUrl
+                ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400"
+                : "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400",
+            )}
+          >
+            {isUrl ? <Globe className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
+            <span>{isUrl ? "Web Page" : "Document"}</span>
           </div>
+          <span
+            className={cn(
+              "px-2 py-1 text-xs rounded-md font-medium",
+              item.type === "technical"
+                ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400"
+                : "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+            )}
+          >
+            {item.type}
+          </span>
         </div>
 
         <h4 className="font-medium text-gray-900 dark:text-white mb-2 line-clamp-2">{item.title}</h4>
 
-        {item.url && (
-          <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{item.url}</div>
-        )}
-      </div>
+        {item.url && <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{item.url}</div>}
+      </DataCardHeader>
 
-      {/* Footer with stats */}
-      <div className="mt-auto px-4 py-3 bg-gray-100/50 dark:bg-black/30 border-t border-gray-200/50 dark:border-white/10">
+      <DataCardContent />
+
+      <DataCardFooter>
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
             <Calendar className="w-3 h-3" />
             <span>{item.date}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400">
-              <FileText className="w-3.5 h-3.5" />
-              <span>{item.chunks}</span>
-            </div>
-          </div>
+          <StatPill
+            color="orange"
+            value={item.chunks}
+            icon={<FileText className="w-3.5 h-3.5" />}
+            size="sm"
+            onClick={() => console.log('View documents')}
+            className="cursor-pointer hover:scale-105 transition-transform"
+          />
         </div>
-      </div>
-    </div>
+      </DataCardFooter>
+    </DataCard>
   );
 };
 
