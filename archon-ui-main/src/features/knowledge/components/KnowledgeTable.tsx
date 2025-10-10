@@ -73,6 +73,15 @@ export const KnowledgeTable: React.FC<KnowledgeTableProps> = ({ items, onViewDoc
     }
   };
 
+  const isSafeProtocol = (url: string): boolean => {
+    try {
+      const protocol = new URL(url).protocol;
+      return protocol === "http:" || protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
   const formatCreatedDate = (dateString: string): string => {
     try {
       const date = new Date(dateString);
@@ -138,15 +147,22 @@ export const KnowledgeTable: React.FC<KnowledgeTableProps> = ({ items, onViewDoc
 
                   {/* Source URL */}
                   <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 max-w-xs truncate">
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span className="truncate inline-block">{getHostname(item.url)}</span>
-                    </a>
+                    {isSafeProtocol(item.url) ? (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span className="truncate inline-block">{getHostname(item.url)}</span>
+                      </a>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span className="truncate inline-block">{getHostname(item.url)}</span>
+                      </span>
+                    )}
                   </td>
 
                   {/* Document Count */}
