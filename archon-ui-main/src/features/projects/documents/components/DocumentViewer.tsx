@@ -72,12 +72,8 @@ export const DocumentViewer = ({ document, onSave }: DocumentViewerProps) => {
   // Extract content for display
   const renderContent = () => {
     if (!document.content) {
-      console.log("DocumentViewer - No content field found");
       return <p className="text-gray-500 dark:text-gray-400 italic">No content available</p>;
     }
-
-    console.log("DocumentViewer - Content type:", typeof document.content);
-    console.log("DocumentViewer - Content keys:", Object.keys(document.content));
 
     // Handle string content
     if (typeof document.content === "string") {

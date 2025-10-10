@@ -9,8 +9,12 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "../../../ui/primitives";
-import { cn } from "../../../ui/primitives/styles";
 
 interface AddDocumentModalProps {
   open: boolean;
@@ -48,7 +52,13 @@ export const AddDocumentModal = ({ open, onOpenChange, onAdd }: AddDocumentModal
       setError(null);
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create document");
+      setError(
+        typeof err === "string"
+          ? err
+          : err instanceof Error
+            ? err.message
+            : "Failed to create document"
+      );
     } finally {
       setIsAdding(false);
     }
@@ -89,25 +99,18 @@ export const AddDocumentModal = ({ open, onOpenChange, onAdd }: AddDocumentModal
               <label htmlFor="document-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Document Type
               </label>
-              <select
-                id="document-type"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                disabled={isAdding}
-                className={cn(
-                  "w-full px-3 py-2 rounded-md",
-                  "bg-white/50 dark:bg-black/30",
-                  "border border-gray-300 dark:border-gray-700",
-                  "text-gray-900 dark:text-white",
-                  "focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                )}
-              >
-                <option value="spec">Specification</option>
-                <option value="api">API Documentation</option>
-                <option value="guide">Guide</option>
-                <option value="note">Note</option>
-                <option value="design">Design</option>
-              </select>
+              <Select value={type} onValueChange={setType} disabled={isAdding}>
+                <SelectTrigger className="w-full" color="cyan">
+                  <SelectValue placeholder="Select a document type" />
+                </SelectTrigger>
+                <SelectContent color="cyan">
+                  <SelectItem value="spec" color="cyan">Specification</SelectItem>
+                  <SelectItem value="api" color="cyan">API Documentation</SelectItem>
+                  <SelectItem value="guide" color="cyan">Guide</SelectItem>
+                  <SelectItem value="note" color="cyan">Note</SelectItem>
+                  <SelectItem value="design" color="cyan">Design</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

@@ -3,8 +3,9 @@ import type React from "react";
 import { useCallback } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { isOptimistic } from "@/features/shared/utils/optimistic";
+import { Card } from "../../../ui/primitives";
 import { OptimisticIndicator } from "../../../ui/primitives/OptimisticIndicator";
-import { cn, glassmorphism } from "../../../ui/primitives/styles";
+import { cn } from "../../../ui/primitives/styles";
 import { useTaskActions } from "../hooks";
 import type { Assignee, Task, TaskPriority } from "../types";
 import { getOrderColor, getOrderGlow, ItemTypes } from "../utils/task-styles";
@@ -125,8 +126,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     // biome-ignore lint/a11y/useSemanticElements: Drag-and-drop card with react-dnd - requires div for drag handle
     <div
       ref={(node) => drag(drop(node))}
-      role="button"
-      tabIndex={0}
+      role="group"
       className={cn(
         "w-full min-h-[140px] cursor-move relative group",
         "transition-all duration-200 ease-in-out",
@@ -135,24 +135,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleTaskClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          if (onEdit) {
-            onEdit(task);
-          }
-        }
-      }}
     >
-      <div
+      <Card
+        blur="md"
+        transparency="light"
+        size="none"
         className={cn(
-          glassmorphism.background.card,
-          glassmorphism.border.default,
-          "rounded-lg backdrop-blur-md",
           "transition-all duration-200 ease-in-out",
           "w-full min-h-[140px] h-full",
           isHighlighted && "border-cyan-400/50 shadow-[0_0_8px_rgba(34,211,238,0.2)]",
-          isSelected && "border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)] bg-blue-50/30 dark:bg-blue-900/20",
+          isSelected && "border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]",
           "group-hover:border-cyan-400/70 dark:group-hover:border-cyan-500/50 group-hover:shadow-[0_0_15px_rgba(34,211,238,0.4)] dark:group-hover:shadow-[0_0_15px_rgba(34,211,238,0.6)]",
           optimistic && "opacity-80 ring-1 ring-cyan-400/30",
         )}
@@ -234,7 +226,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             />
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { Activity, CheckCircle2, Eye, ListTodo } from "lucide-react";
 import { useRef } from "react";
 import { useDrop } from "react-dnd";
 import { cn } from "../../../ui/primitives/styles";
@@ -43,12 +44,60 @@ export const KanbanColumn = ({
 
   drop(ref);
 
+  // Get icon and label based on status
+  const getStatusInfo = () => {
+    switch (status) {
+      case "todo":
+        return {
+          icon: <ListTodo className="w-3 h-3" />,
+          label: "Todo",
+          color: "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/30",
+        };
+      case "doing":
+        return {
+          icon: <Activity className="w-3 h-3" />,
+          label: "Doing",
+          color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
+        };
+      case "review":
+        return {
+          icon: <Eye className="w-3 h-3" />,
+          label: "Review",
+          color: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30",
+        };
+      case "done":
+        return {
+          icon: <CheckCircle2 className="w-3 h-3" />,
+          label: "Done",
+          color: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30",
+        };
+      default:
+        return {
+          icon: <ListTodo className="w-3 h-3" />,
+          label: "Todo",
+          color: "bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/30",
+        };
+    }
+  };
+
+  const statusInfo = getStatusInfo();
+
   return (
     <div ref={ref} className="flex flex-col h-full">
-      {/* Column Header - transparent with colored underline */}
+      {/* Column Header - pill badge only */}
       <div className="text-center py-3 relative">
-        <h3 className={cn("font-mono text-sm font-medium", getColumnColor(status))}>{title}</h3>
-        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{tasks.length}</div>
+        <div className="flex items-center justify-center">
+          <div
+            className={cn(
+              "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border backdrop-blur-md",
+              statusInfo.color
+            )}
+          >
+            {statusInfo.icon}
+            <span className="font-medium">{statusInfo.label}</span>
+            <span className="font-bold">{tasks.length}</span>
+          </div>
+        </div>
         {/* Colored underline */}
         <div
           className={cn(
@@ -69,7 +118,7 @@ export const KanbanColumn = ({
             projectId={projectId}
             onTaskReorder={onTaskReorder}
             onEdit={onTaskEdit}
-            onTaskDelete={onTaskDelete}
+            onDelete={onTaskDelete}
             hoveredTaskId={hoveredTaskId}
             onTaskHover={onTaskHover}
           />

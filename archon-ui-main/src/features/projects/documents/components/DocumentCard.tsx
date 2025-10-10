@@ -102,7 +102,13 @@ export const DocumentCard = memo(({ document, isActive, onSelect, onDelete }: Do
   };
 
   return (
-    <div
+    <Card
+      blur="none"
+      transparency="light"
+      glowColor={isActive ? (typeColors.glow as any) : "none"}
+      glowType="inner"
+      glowSize="md"
+      size="sm"
       role="button"
       tabIndex={0}
       onKeyDown={handleKeyDown}
@@ -110,17 +116,8 @@ export const DocumentCard = memo(({ document, isActive, onSelect, onDelete }: Do
       onMouseEnter={() => setShowDelete(true)}
       onMouseLeave={() => setShowDelete(false)}
       aria-label={`${isActive ? "Selected: " : ""}${document.title}`}
-      className="w-full"
+      className={cn("relative w-full cursor-pointer transition-all duration-300 group", isActive && "scale-[1.02]")}
     >
-      <Card
-        blur="none"
-        transparency="light"
-        glowColor={isActive ? (typeColors.glow as any) : "none"}
-        glowType="inner"
-        glowSize="md"
-        size="sm"
-        className={cn("relative w-full cursor-pointer transition-all duration-300 group", isActive && "scale-[1.02]")}
-      >
         <div>
         {/* Document Type Badge */}
         <div
@@ -181,8 +178,7 @@ export const DocumentCard = memo(({ document, isActive, onSelect, onDelete }: Do
           </Button>
         )}
         </div>
-      </Card>
-    </div>
+    </Card>
   );
 });
 

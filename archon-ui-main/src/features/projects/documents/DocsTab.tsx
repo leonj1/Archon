@@ -84,6 +84,12 @@ export const DocsTab = ({ project }: DocsTabProps) => {
     setDocumentToDelete(null);
   };
 
+  // Reset state when project changes
+  useEffect(() => {
+    setSelectedDocument(null);
+    setSearchQuery("");
+  }, [projectId]);
+
   // Auto-select first document when documents load
   useEffect(() => {
     if (documents.length > 0 && !selectedDocument) {
