@@ -360,8 +360,11 @@ const SidebarProjectCard = ({
             {project.title}
           </h4>
           {project.pinned && (
-            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-500 text-white text-[9px] font-bold rounded-full">
-              <Pin className="w-2.5 h-2.5" />
+            <div
+              className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-500 text-white text-[9px] font-bold rounded-full"
+              aria-label="Pinned"
+            >
+              <Pin className="w-2.5 h-2.5" aria-hidden="true" />
             </div>
           )}
         </div>
