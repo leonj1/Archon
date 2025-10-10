@@ -357,7 +357,7 @@ const SidebarProjectCard = ({
             icon={<Activity className="w-3 h-3" />}
           />
           <StatPill
-            color="emerald"
+            color="green"
             value={project.taskCounts.done}
             size="sm"
             icon={<CheckCircle2 className="w-3 h-3" />}

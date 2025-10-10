@@ -112,13 +112,24 @@ export const PillNavigation = ({
                     </div>
                   )}
 
-                  <ChevronRight
+                  <button
+                    type="button"
                     className={cn(
-                      "w-4 h-4 transition-transform duration-300 ml-2 cursor-pointer",
+                      "ml-2 flex h-6 w-6 items-center justify-center rounded-full transition-transform duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent focus:ring-current",
                       isThisExpanded ? "-rotate-90" : "rotate-0",
                     )}
+                    aria-label={isThisExpanded ? `Collapse ${item.label}` : `Expand ${item.label}`}
+                    aria-expanded={isThisExpanded}
                     onClick={() => onSectionClick(item.id)}
-                  />
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onSectionClick(item.id);
+                      }
+                    }}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
               ) : (
                 /* Regular pill for non-selected items */

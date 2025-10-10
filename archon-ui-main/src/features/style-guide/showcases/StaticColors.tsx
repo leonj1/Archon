@@ -5,7 +5,7 @@ export const StaticColors = () => {
   const semanticColors = [
     { name: "Primary", hex: "#3b82f6", tailwind: "blue-500", usage: "Primary actions, links, focus states" },
     { name: "Secondary", hex: "#6b7280", tailwind: "gray-500", usage: "Secondary actions, neutral elements" },
-    { name: "Success", hex: "#10b981", tailwind: "emerald-500", usage: "Success states, confirmations" },
+    { name: "Success", hex: "#22c55e", tailwind: "green-500", usage: "Success states, confirmations" },
     { name: "Warning", hex: "#f97316", tailwind: "orange-500", usage: "Warnings, cautions" },
     { name: "Error", hex: "#ef4444", tailwind: "red-500", usage: "Errors, destructive actions" },
   ];

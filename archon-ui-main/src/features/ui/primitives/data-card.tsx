@@ -42,7 +42,7 @@ export const DataCard = React.forwardRef<HTMLDivElement, DataCardProps>(
           ref={ref}
           className={cn(
             glassCard.base,
-            glassCard.edgeLit.color[edgeColor].border || "border-gray-300/20 dark:border-white/10",
+            glassCard.edgeColors[edgeColor].border || "border-gray-300/20 dark:border-white/10",
             "min-h-[240px]",
             className,
           )}
@@ -80,17 +80,18 @@ export const DataCard = React.forwardRef<HTMLDivElement, DataCardProps>(
     }
 
     // Standard card (no edge-lit)
+    const glowClasses = !hasEdge && hasGlow ? [glowVariant.border, glowVariant.glow, glowVariant.hover] : [];
+
     return (
       <div
         ref={ref}
         className={cn(
-          "relative rounded-xl overflow-hidden border min-h-[240px]",
+          "relative rounded-xl overflow-hidden min-h-[240px]",
           glassCard.blur[blur],
           glassCard.transparency[transparency],
           "flex flex-col",
-          hasGlow ? glowVariant.border : "border-gray-300/20 dark:border-white/10",
-          hasGlow && glowVariant.glow,
-          hasGlow && glowVariant.hover,
+          hasGlow ? "" : "border border-gray-300/20 dark:border-white/10",
+          ...glowClasses,
           className,
         )}
         {...props}

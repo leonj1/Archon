@@ -22,8 +22,8 @@ const selectColorVariants = {
   },
   green: {
     trigger:
-      "hover:border-emerald-400/50 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] focus:border-emerald-500 focus:shadow-[0_0_20px_rgba(16,185,129,0.4)]",
-    item: "hover:bg-emerald-500/20 dark:hover:bg-emerald-400/20 data-[state=checked]:bg-emerald-500/30 dark:data-[state=checked]:bg-emerald-400/30 data-[state=checked]:text-emerald-700 dark:data-[state=checked]:text-emerald-300",
+      "hover:border-green-400/50 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] focus:border-green-500 focus:shadow-[0_0_20px_rgba(34,197,94,0.4)]",
+    item: "hover:bg-green-500/20 dark:hover:bg-green-400/20 data-[state=checked]:bg-green-500/30 dark:data-[state=checked]:bg-green-400/30 data-[state=checked]:text-green-700 dark:data-[state=checked]:text-green-300",
   },
   pink: {
     trigger:
@@ -107,7 +107,7 @@ export const SelectContent = React.forwardRef<
   const glowColor = {
     purple: "shadow-purple-500/20 dark:shadow-purple-500/30",
     blue: "shadow-blue-500/20 dark:shadow-blue-500/30",
-    green: "shadow-emerald-500/20 dark:shadow-emerald-500/30",
+    green: "shadow-green-500/20 dark:shadow-green-500/30",
     pink: "shadow-pink-500/20 dark:shadow-pink-500/30",
     orange: "shadow-orange-500/20 dark:shadow-orange-500/30",
     cyan: "shadow-cyan-500/20 dark:shadow-cyan-500/30",

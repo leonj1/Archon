@@ -197,18 +197,96 @@ grep -rn "type=\"checkbox\"\|type=\"radio\"" [path] --include="*.tsx"
 
 ---
 
-## 5. PRIMITIVES LIBRARY
+## 5. CENTRALIZED STYLING (styles.ts)
+
+### CRITICAL RULE: Use glassCard & glassmorphism from styles.ts
+
+**Location**: `@/features/ui/primitives/styles.ts`
+
+All styling definitions MUST come from the centralized `glassCard` and `glassmorphism` objects in styles.ts. Do NOT duplicate style objects in components.
+
+### Anti-Patterns
+```tsx
+// ❌ WRONG - Duplicating style definitions
+const edgeColors = {
+  cyan: { solid: "bg-cyan-500", gradient: "from-cyan-500/40", border: "border-cyan-500/30" },
+  // ... more colors
+};
+
+// ❌ WRONG - Local variant objects
+const colorVariants = {
+  cyan: "shadow-cyan-500/20",
+  blue: "shadow-blue-500/20",
+};
+```
+
+### Good Examples
+```tsx
+// ✅ CORRECT - Use centralized definitions
+const edgeStyle = glassCard.edgeColors[edgeColor];
+<div className={edgeStyle.border}>
+  <div className={edgeStyle.solid} />
+  <div className={edgeStyle.gradient} />
+</div>
+
+// ✅ CORRECT - Use glassCard variants
+const glowVariant = glassCard.variants[glowColor];
+<div className={cn(glowVariant.border, glowVariant.glow, glowVariant.hover)} />
+
+// ✅ CORRECT - Use glassmorphism tokens
+<div className={cn(glassmorphism.background.card, glassmorphism.border.default)} />
+```
+
+### What's in styles.ts
+
+**glassCard object:**
+- `blur` - Blur intensity levels (sm, md, lg, xl, 2xl, 3xl)
+- `transparency` - Glass transparency (clear, light, medium, frosted, solid)
+- `variants` - Color variants with border, glow, hover (purple, blue, cyan, green, orange, pink, red)
+- `edgeColors` - Edge-lit styling with solid, gradient, border, bg
+- `tints` - Colored glass tints
+- `sizes` - Padding variants (none, sm, md, lg, xl)
+- `outerGlowSizes` - Glow size variants per color
+- `innerGlowSizes` - Inner glow size variants per color
+- `edgeLit` - Edge-lit effects (position, color with line/glow/gradient)
+
+**glassmorphism object:**
+- `background` - Background variations
+- `border` - Border styles
+- `interactive` - Interactive states
+- `animation` - Animation presets
+- `shadow` - Shadow effects with neon glow
+
+### Automated Scans
+```bash
+# Check for duplicate edge color definitions
+grep -rn "const edgeColors = {" [path]/primitives --include="*.tsx"
+
+# Check for duplicate variant objects (should use glassCard.variants)
+grep -rn "const.*Variants = {" [path]/primitives --include="*.tsx" -A 3 | grep "cyan:\|blue:\|purple:"
+
+# Check imports - all primitives should import from styles.ts
+grep -rn "from \"./styles\"" [path]/primitives --include="*.tsx" --files-without-match
+```
+
+**Fix Pattern**: Import glassCard/glassmorphism from styles.ts, use object properties instead of duplicating
+
+---
+
+## 6. PRIMITIVES LIBRARY
 
 ### Archon Components
 - **Card** - For all glassmorphism effects
 - **DataCard** - Cards with header/content/footer slots
 - **PillNavigation** - Tab navigation (NEVER create custom)
-- **styles.ts** - Import `glassCard`, `glassmorphism` for styling
+- **styles.ts** - Central styling definitions (ALWAYS import)
 
 ### Rules
 - **Use Card props** - blur, transparency, edgePosition, glowColor (don't hardcode)
 - **Import from styles.ts** - Don't duplicate blur/glow classes
 - **All primitive props must affect rendering** - No unused props
+- **Use glassCard for card styling** - edgeColors, variants, tints, sizes
+- **Use glassmorphism for general styling** - background, border, shadow, animation
 
 ### Anti-Patterns
 ```tsx
@@ -269,11 +347,14 @@ grep -rn "const blurClasses\|backdrop-blur-md" [path]/primitives --include="*.ts
 
 // ❌ role="button" without keyboard
 <div onClick={handler} role="button">  // Missing onKeyDown!
+
+// ❌ Clickable icon without button wrapper
+<ChevronRight onClick={handler} className="cursor-pointer" />
 ```
 
 ### Good Examples
 ```tsx
-// ✅ Full keyboard support
+// ✅ Full keyboard support on div
 <div
   role="button"
   tabIndex={0}
@@ -286,6 +367,23 @@ grep -rn "const blurClasses\|backdrop-blur-md" [path]/primitives --include="*.ts
   }}
   aria-selected={isSelected}
 >
+
+// ✅ Clickable icon wrapped in button
+<button
+  type="button"
+  aria-label="Expand menu"
+  aria-expanded={isExpanded}
+  onClick={handler}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handler();
+    }
+  }}
+  className="focus:outline-none focus:ring-2"
+>
+  <ChevronRight className="h-4 w-4" />
+</button>
 ```
 
 ### Automated Scans
@@ -293,9 +391,14 @@ grep -rn "const blurClasses\|backdrop-blur-md" [path]/primitives --include="*.ts
 # Interactive divs without keyboard
 grep -rn "onClick.*role=\"button\"" [path] --include="*.tsx"
 # Then manually verify onKeyDown exists
+
+# Icons with onClick (should be wrapped in button)
+grep -rn "<[A-Z].*onClick={" [path] --include="*.tsx" | grep -v "<button\|<Button"
 ```
 
-**Fix Pattern**: Add onKeyDown handler with Enter/Space, add tabIndex={0}, add ARIA
+**Fix Pattern**:
+- Add onKeyDown handler with Enter/Space, add tabIndex={0}, add ARIA
+- Wrap clickable icons in `<button type="button">` with proper ARIA attributes
 
 ---
 
@@ -304,8 +407,10 @@ grep -rn "onClick.*role=\"button\"" [path] --include="*.tsx"
 ### Rules
 - **Async functions return Promise<void>** - Not just `void` if awaited
 - **All props must be used** - If prop in interface, must affect rendering
-- **Color types consistent** - Use "green" not "emerald" across components
+- **Color types consistent** - Use "green" not "emerald" across components (avoid emerald entirely)
 - **Run `tsc --noEmit`** to catch type errors
+- **Use `satisfies` for lookup objects** - Enforce type coverage on color variants
+- **120 character line limit** - Split long class strings into arrays with `.join(" ")`
 
 ### Anti-Patterns
 ```tsx
@@ -319,6 +424,18 @@ return <div>  {/* glowColor never used! */}
 // ❌ Color type mismatch
 // PillNavigation: colorVariant?: "emerald"
 // Select: color?: "green"  // Should match!
+
+// ❌ Long class strings (exceeds 120 chars)
+const activeClasses = {
+  blue: "data-[state=active]:bg-blue-500/20 dark:data-[state=active]:bg-blue-400/20 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300 data-[state=active]:border data-[state=active]:border-blue-400/50",
+};
+
+// ❌ Lookup objects without type safety
+const colorClasses = {
+  cyan: "bg-cyan-500",
+  blue: "bg-blue-500",
+  // What if we forget purple? No compile error!
+};
 ```
 
 ### Good Examples
@@ -331,8 +448,28 @@ interface CardProps { glowColor?: string }
 const glow = glassCard.variants[glowColor];
 return <div className={glow.border} />
 
-// ✅ Consistent color types
+// ✅ Consistent color types (always use "green", never "emerald")
 type Color = "purple" | "blue" | "cyan" | "green" | "orange" | "pink";
+
+// ✅ Split long class strings (under 120 chars per line)
+const activeClasses = {
+  blue: [
+    "data-[state=active]:bg-blue-500/20 dark:data-[state=active]:bg-blue-400/20",
+    "data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300",
+    "data-[state=active]:border data-[state=active]:border-blue-400/50",
+  ].join(" "),
+};
+
+// ✅ Type-safe lookup objects with satisfies
+type Color = "purple" | "blue" | "cyan" | "green" | "orange" | "pink";
+const colorClasses = {
+  purple: "bg-purple-500",
+  blue: "bg-blue-500",
+  cyan: "bg-cyan-500",
+  green: "bg-green-500",
+  orange: "bg-orange-500",
+  pink: "bg-pink-500",
+} satisfies Record<Color, string>;  // TypeScript enforces all colors present!
 ```
 
 ### Automated Scans
@@ -340,16 +477,25 @@ type Color = "purple" | "blue" | "cyan" | "green" | "orange" | "pink";
 # TypeScript errors
 npx tsc --noEmit [path] 2>&1 | grep "error TS"
 
-# Color type inconsistencies
-grep -rn "emerald.*type.*Color" [path] --include="*.tsx"
-grep -rn "green.*type.*Color" [path] --include="*.tsx"
+# Color type inconsistencies (must use "green" not "emerald")
+grep -rn "emerald" [path] --include="*.tsx" --include="*.ts"
+
+# Line length violations (over 120 chars)
+grep -rn ".\{121,\}" [path] --include="*.tsx" | grep className
+
+# Lookup objects without satisfies
+grep -rn "const.*Classes = {" [path]/primitives --include="*.tsx" -A 5 | grep -v "satisfies"
 
 # Unused props (manual)
 grep -rn "interface.*Props" [path]/primitives --include="*.tsx" -A 10
 # Then verify each prop name appears in return statement
 ```
 
-**Fix Pattern**: Update types to match implementation, wire props to rendering, use consistent names
+**Fix Pattern**:
+- Split long strings into arrays: `["class1", "class2"].join(" ")`
+- Add `satisfies Record<ColorType, string>` to lookup objects
+- Replace all "emerald" with "green" + update RGB to green-500 (34,197,94)
+- Wire all props to rendering
 
 ---
 
@@ -418,16 +564,20 @@ Run ALL these scans during review:
 - Non-responsive grids: `grep -rn "grid-cols-[2-9]" [path] | grep -v "md:\|lg:"`
 - Unconstrained scroll: `grep -rn "overflow-x-auto" [path]` (verify w-full parent)
 - Native HTML: `grep -rn "<select>\|type=\"checkbox\"" [path]`
+- Emerald usage: `grep -rn "emerald" [path] --include="*.tsx" --include="*.ts"` (must use "green")
 
 ### High Priority
 - Missing keyboard: `grep -rn "onClick.*role=\"button\"" [path]` (verify onKeyDown)
+- Clickable icons: `grep -rn "<[A-Z].*onClick={" [path] --include="*.tsx" | grep -v "<button\|<Button"`
 - Missing dark mode: `grep -rn "bg-.*-[0-9]" [path] | grep -v "dark:"`
 - Hardcoded glass: `grep -rn "backdrop-blur.*bg-white/.*border" [path]`
 - Missing min-w-0: `grep -rn "flex-1" [path] | grep -v "min-w-0"`
+- Duplicate styling: `grep -rn "const edgeColors = {\|const.*Variants = {" [path]/primitives`
 
 ### Medium Priority
 - TypeScript: `npx tsc --noEmit [path] 2>&1 | grep "error TS"`
-- Color mismatches: `grep -rn "emerald\|green" [path] | grep "type.*Color"`
+- Line length: `grep -rn ".\{121,\}" [path] --include="*.tsx" | grep className`
+- Missing satisfies: `grep -rn "const.*Classes = {" [path]/primitives -A 5 | grep -v "satisfies"`
 - Props unused: Manual check interfaces vs usage
 
 ---
