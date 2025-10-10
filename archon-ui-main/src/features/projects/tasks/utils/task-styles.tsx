@@ -39,7 +39,7 @@ export const getOrderColor = (order: number) => {
   if (order <= 3) return "bg-rose-500";
   if (order <= 6) return "bg-orange-500";
   if (order <= 10) return "bg-blue-500";
-  return "bg-emerald-500";
+  return "bg-green-500";
 };
 
 // Get glow effect based on task priority/order
@@ -47,7 +47,7 @@ export const getOrderGlow = (order: number) => {
   if (order <= 3) return "shadow-[0_0_10px_rgba(244,63,94,0.7)]";
   if (order <= 6) return "shadow-[0_0_10px_rgba(249,115,22,0.7)]";
   if (order <= 10) return "shadow-[0_0_10px_rgba(59,130,246,0.7)]";
-  return "shadow-[0_0_10px_rgba(16,185,129,0.7)]";
+  return "shadow-[0_0_10px_rgba(34,197,94,0.7)]";
 };
 
 // Get column header color based on status
@@ -74,6 +74,6 @@ export const getColumnGlow = (status: "todo" | "doing" | "review" | "done") => {
     case "review":
       return "bg-purple-500/30 shadow-[0_0_10px_2px_rgba(168,85,247,0.2)]";
     case "done":
-      return "bg-green-500/30 shadow-[0_0_10px_2px_rgba(16,185,129,0.2)]";
+      return "bg-green-500/30 shadow-[0_0_10px_2px_rgba(34,197,94,0.2)]";
   }
 };
