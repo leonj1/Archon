@@ -47,11 +47,11 @@ const switchVariants = {
       focusRing: "focus-visible:ring-blue-500",
     },
     green: {
-      checked: "data-[state=checked]:bg-emerald-500/20 data-[state=checked]:border-emerald-500/50",
-      glow: "data-[state=checked]:shadow-[0_0_20px_rgba(16,185,129,0.5)]",
-      thumb: "data-[state=checked]:border-emerald-400 data-[state=checked]:shadow-[0_0_10px_rgba(16,185,129,0.5)]",
-      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-emerald-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(16,185,129,0.7)]",
-      focusRing: "focus-visible:ring-emerald-500",
+      checked: "data-[state=checked]:bg-green-500/20 data-[state=checked]:border-green-500/50",
+      glow: "data-[state=checked]:shadow-[0_0_20px_rgba(34,197,94,0.5)]",
+      thumb: "data-[state=checked]:border-green-400 data-[state=checked]:shadow-[0_0_10px_rgba(34,197,94,0.5)]",
+      icon: "text-gray-500 dark:text-gray-400 data-[state=checked]:text-green-400 data-[state=checked]:drop-shadow-[0_0_5px_rgba(34,197,94,0.7)]",
+      focusRing: "focus-visible:ring-green-500",
     },
     pink: {
       checked: "data-[state=checked]:bg-pink-500/20 data-[state=checked]:border-pink-500/50",

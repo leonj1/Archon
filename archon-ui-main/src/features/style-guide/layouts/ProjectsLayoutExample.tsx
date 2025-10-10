@@ -568,32 +568,52 @@ const ProjectCardExample = ({
 
         {/* Action icons */}
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={(e) => e.stopPropagation()}
-            className="p-1.5 rounded-md hover:bg-red-500/10 text-gray-500 hover:text-red-500 transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "p-1.5 rounded-md transition-colors",
-              project.pinned
-                ? "bg-purple-500/10 text-purple-500"
-                : "hover:bg-purple-500/10 text-gray-500 hover:text-purple-500",
-            )}
-          >
-            <Pin className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => e.stopPropagation()}
-            className="p-1.5 rounded-md hover:bg-cyan-500/10 text-gray-500 hover:text-cyan-500 transition-colors"
-          >
-            <Copy className="w-3.5 h-3.5" />
-          </button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded-md hover:bg-red-500/10 text-gray-500 hover:text-red-500 transition-colors"
+                  aria-label="Delete project"
+                >
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Delete project</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className={cn(
+                    "p-1.5 rounded-md transition-colors",
+                    project.pinned
+                      ? "bg-purple-500/10 text-purple-500"
+                      : "hover:bg-purple-500/10 text-gray-500 hover:text-purple-500",
+                  )}
+                  aria-label={project.pinned ? "Unpin project" : "Pin project"}
+                >
+                  <Pin className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{project.pinned ? "Unpin project" : "Pin project"}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded-md hover:bg-cyan-500/10 text-gray-500 hover:text-cyan-500 transition-colors"
+                  aria-label="Duplicate project"
+                >
+                  <Copy className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Duplicate project</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </SelectableCard>

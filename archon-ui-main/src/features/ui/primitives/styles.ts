@@ -62,7 +62,7 @@ export const glassmorphism = {
     glow: {
       purple: "shadow-[0_0_30px_10px_rgba(168,85,247,0.5)] dark:shadow-[0_0_40px_15px_rgba(168,85,247,0.7)]",
       blue: "shadow-[0_0_30px_10px_rgba(59,130,246,0.5)] dark:shadow-[0_0_40px_15px_rgba(59,130,246,0.7)]",
-      green: "shadow-[0_0_30px_10px_rgba(16,185,129,0.5)] dark:shadow-[0_0_40px_15px_rgba(16,185,129,0.7)]",
+      green: "shadow-[0_0_30px_10px_rgba(34,197,94,0.5)] dark:shadow-[0_0_40px_15px_rgba(34,197,94,0.7)]",
       red: "shadow-[0_0_30px_10px_rgba(239,68,68,0.5)] dark:shadow-[0_0_40px_15px_rgba(239,68,68,0.7)]",
       orange: "shadow-[0_0_30px_10px_rgba(251,146,60,0.5)] dark:shadow-[0_0_40px_15px_rgba(251,146,60,0.7)]",
       cyan: "shadow-[0_0_30px_10px_rgba(34,211,238,0.5)] dark:shadow-[0_0_40px_15px_rgba(34,211,238,0.7)]",
@@ -214,11 +214,11 @@ export const glassCard = {
       solid: "bg-cyan-500/[0.40] dark:bg-cyan-400/[0.60]",
     },
     green: {
-      clear: "bg-emerald-500/[0.03] dark:bg-emerald-400/[0.04]",
-      light: "bg-emerald-500/[0.08] dark:bg-emerald-400/[0.10]",
-      medium: "bg-emerald-500/[0.15] dark:bg-emerald-400/[0.20]",
-      frosted: "bg-emerald-500/[0.25] dark:bg-emerald-400/[0.35]",
-      solid: "bg-emerald-500/[0.40] dark:bg-emerald-400/[0.60]",
+      clear: "bg-green-500/[0.03] dark:bg-green-400/[0.04]",
+      light: "bg-green-500/[0.08] dark:bg-green-400/[0.10]",
+      medium: "bg-green-500/[0.15] dark:bg-green-400/[0.20]",
+      frosted: "bg-green-500/[0.25] dark:bg-green-400/[0.35]",
+      solid: "bg-green-500/[0.40] dark:bg-green-400/[0.60]",
     },
     orange: {
       clear: "bg-orange-500/[0.03] dark:bg-orange-400/[0.04]",
@@ -261,9 +261,9 @@ export const glassCard = {
       hover: "hover:shadow-[0_0_50px_20px_rgba(59,130,246,0.5)] dark:hover:shadow-[0_0_80px_30px_rgba(59,130,246,0.8)]",
     },
     green: {
-      border: "border-emerald-500/50 dark:border-emerald-400/40",
-      glow: "shadow-[0_0_40px_15px_rgba(16,185,129,0.4)] dark:shadow-[0_0_60px_25px_rgba(16,185,129,0.7)]",
-      hover: "hover:shadow-[0_0_50px_20px_rgba(16,185,129,0.5)] dark:hover:shadow-[0_0_80px_30px_rgba(16,185,129,0.8)]",
+      border: "border-green-500/50 dark:border-green-400/40",
+      glow: "shadow-[0_0_40px_15px_rgba(34,197,94,0.4)] dark:shadow-[0_0_60px_25px_rgba(34,197,94,0.7)]",
+      hover: "hover:shadow-[0_0_50px_20px_rgba(34,197,94,0.5)] dark:hover:shadow-[0_0_80px_30px_rgba(34,197,94,0.8)]",
     },
     cyan: {
       border: "border-cyan-500/50 dark:border-cyan-400/40",
@@ -314,10 +314,10 @@ export const glassCard = {
       xl: "shadow-[0_0_100px_rgba(236,72,153,0.6)]",
     },
     green: {
-      sm: "shadow-[0_0_20px_rgba(16,185,129,0.3)]",
-      md: "shadow-[0_0_40px_rgba(16,185,129,0.4)]",
-      lg: "shadow-[0_0_70px_rgba(16,185,129,0.5)]",
-      xl: "shadow-[0_0_100px_rgba(16,185,129,0.6)]",
+      sm: "shadow-[0_0_20px_rgba(34,197,94,0.3)]",
+      md: "shadow-[0_0_40px_rgba(34,197,94,0.4)]",
+      lg: "shadow-[0_0_70px_rgba(34,197,94,0.5)]",
+      xl: "shadow-[0_0_100px_rgba(34,197,94,0.6)]",
     },
     orange: {
       sm: "shadow-[0_0_20px_rgba(251,146,60,0.3)]",
@@ -360,10 +360,10 @@ export const glassCard = {
       xl: "shadow-[inset_0_0_120px_rgba(236,72,153,0.5)]",
     },
     green: {
-      sm: "shadow-[inset_0_0_15px_rgba(16,185,129,0.2)]",
-      md: "shadow-[inset_0_0_40px_rgba(16,185,129,0.3)]",
-      lg: "shadow-[inset_0_0_80px_rgba(16,185,129,0.4)]",
-      xl: "shadow-[inset_0_0_120px_rgba(16,185,129,0.5)]",
+      sm: "shadow-[inset_0_0_15px_rgba(34,197,94,0.2)]",
+      md: "shadow-[inset_0_0_40px_rgba(34,197,94,0.3)]",
+      lg: "shadow-[inset_0_0_80px_rgba(34,197,94,0.4)]",
+      xl: "shadow-[inset_0_0_120px_rgba(34,197,94,0.5)]",
     },
     orange: {
       sm: "shadow-[inset_0_0_15px_rgba(251,146,60,0.2)]",
@@ -406,10 +406,10 @@ export const glassCard = {
       xl: "hover:shadow-[0_0_100px_rgba(236,72,153,0.8)]",
     },
     green: {
-      sm: "hover:shadow-[0_0_20px_rgba(16,185,129,0.5)]",
-      md: "hover:shadow-[0_0_40px_rgba(16,185,129,0.6)]",
-      lg: "hover:shadow-[0_0_70px_rgba(16,185,129,0.7)]",
-      xl: "hover:shadow-[0_0_100px_rgba(16,185,129,0.8)]",
+      sm: "hover:shadow-[0_0_20px_rgba(34,197,94,0.5)]",
+      md: "hover:shadow-[0_0_40px_rgba(34,197,94,0.6)]",
+      lg: "hover:shadow-[0_0_70px_rgba(34,197,94,0.7)]",
+      xl: "hover:shadow-[0_0_100px_rgba(34,197,94,0.8)]",
     },
     orange: {
       sm: "hover:shadow-[0_0_20px_rgba(251,146,60,0.5)]",
@@ -451,10 +451,10 @@ export const glassCard = {
       xl: "hover:shadow-[inset_0_0_120px_rgba(236,72,153,0.7)]",
     },
     green: {
-      sm: "hover:shadow-[inset_0_0_15px_rgba(16,185,129,0.4)]",
-      md: "hover:shadow-[inset_0_0_40px_rgba(16,185,129,0.5)]",
-      lg: "hover:shadow-[inset_0_0_80px_rgba(16,185,129,0.6)]",
-      xl: "hover:shadow-[inset_0_0_120px_rgba(16,185,129,0.7)]",
+      sm: "hover:shadow-[inset_0_0_15px_rgba(34,197,94,0.4)]",
+      md: "hover:shadow-[inset_0_0_40px_rgba(34,197,94,0.5)]",
+      lg: "hover:shadow-[inset_0_0_80px_rgba(34,197,94,0.6)]",
+      xl: "hover:shadow-[inset_0_0_120px_rgba(34,197,94,0.7)]",
     },
     orange: {
       sm: "hover:shadow-[inset_0_0_15px_rgba(251,146,60,0.4)]",
@@ -522,13 +522,13 @@ export const glassCard = {
         },
       },
       green: {
-        line: "before:bg-emerald-500 dark:before:bg-emerald-400",
-        glow: "before:shadow-[0_0_15px_4px_rgba(16,185,129,0.8)]",
+        line: "before:bg-green-500 dark:before:bg-green-400",
+        glow: "before:shadow-[0_0_15px_4px_rgba(34,197,94,0.8)]",
         gradient: {
           horizontal:
-            "before:bg-gradient-to-r before:from-transparent before:via-emerald-500 dark:before:via-emerald-400 before:to-transparent",
+            "before:bg-gradient-to-r before:from-transparent before:via-green-500 dark:before:via-green-400 before:to-transparent",
           vertical:
-            "before:bg-gradient-to-b before:from-transparent before:via-emerald-500 dark:before:via-emerald-400 before:to-transparent",
+            "before:bg-gradient-to-b before:from-transparent before:via-green-500 dark:before:via-green-400 before:to-transparent",
         },
       },
       orange: {

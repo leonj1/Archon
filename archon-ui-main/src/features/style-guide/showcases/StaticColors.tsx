@@ -1,6 +1,19 @@
 import { Card } from "@/features/ui/primitives/card";
 import { cn } from "@/features/ui/primitives/styles";
 
+const GRAY_CLASSES: Record<number, string> = {
+  50: "bg-gray-50",
+  100: "bg-gray-100",
+  200: "bg-gray-200",
+  300: "bg-gray-300",
+  400: "bg-gray-400",
+  500: "bg-gray-500",
+  600: "bg-gray-600",
+  700: "bg-gray-700",
+  800: "bg-gray-800",
+  900: "bg-gray-900",
+};
+
 export const StaticColors = () => {
   const semanticColors = [
     { name: "Primary", hex: "#3b82f6", tailwind: "blue-500", usage: "Primary actions, links, focus states" },
@@ -68,26 +81,12 @@ export const StaticColors = () => {
       <div>
         <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Grayscale</h3>
         <div className="flex gap-1">
-          {[50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((weight) => {
-            const grayClasses: Record<number, string> = {
-              50: "bg-gray-50",
-              100: "bg-gray-100",
-              200: "bg-gray-200",
-              300: "bg-gray-300",
-              400: "bg-gray-400",
-              500: "bg-gray-500",
-              600: "bg-gray-600",
-              700: "bg-gray-700",
-              800: "bg-gray-800",
-              900: "bg-gray-900",
-            };
-            return (
-              <div key={weight} className="flex-1">
-                <div className={cn("h-12 rounded", grayClasses[weight])} />
-                <p className="text-xs text-center mt-1 text-gray-500 dark:text-gray-400">{weight}</p>
-              </div>
-            );
-          })}
+          {[50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((weight) => (
+            <div key={weight} className="flex-1">
+              <div className={cn("h-12 rounded", GRAY_CLASSES[weight])} />
+              <p className="text-xs text-center mt-1 text-gray-500 dark:text-gray-400">{weight}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
