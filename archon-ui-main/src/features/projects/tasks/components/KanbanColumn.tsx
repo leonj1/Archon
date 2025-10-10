@@ -32,71 +32,48 @@ export const KanbanColumn = ({
 }: KanbanColumnProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
-  const [{ isOver }, drop] = useDrop({
+  const [, drop] = useDrop({
     accept: ItemTypes.TASK,
     drop: (item: { id: string; status: Task["status"] }) => {
       if (item.status !== status) {
         onTaskMove(item.id, status);
       }
     },
-    collect: (monitor) => ({
-      isOver: !!monitor.isOver(),
-    }),
   });
 
   drop(ref);
 
   return (
-    <div
-      ref={ref}
-      className={cn(
-        "flex flex-col h-full",
-        "bg-gradient-to-b from-white/20 to-transparent dark:from-black/30 dark:to-transparent",
-        "backdrop-blur-sm",
-        "transition-all duration-200",
-        isOver && "bg-gradient-to-b from-cyan-500/5 to-purple-500/5 dark:from-cyan-400/10 dark:to-purple-400/10",
-        isOver && "border-t-2 border-t-cyan-400/50 dark:border-t-cyan-400/70",
-        isOver &&
-          "shadow-[inset_0_2px_20px_rgba(34,211,238,0.15)] dark:shadow-[inset_0_2px_30px_rgba(34,211,238,0.25)]",
-        isOver && "backdrop-blur-md",
-      )}
-    >
-      {/* Column Header with Glassmorphism */}
-      <div
-        className={cn(
-          "text-center py-3 sticky top-0 z-10",
-          "bg-gradient-to-b from-white/80 to-white/60 dark:from-black/80 dark:to-black/60",
-          "backdrop-blur-md",
-          "border-b border-gray-200/50 dark:border-gray-700/50",
-          "relative",
-        )}
-      >
+    <div ref={ref} className="flex flex-col h-full">
+      {/* Column Header - transparent with colored underline */}
+      <div className="text-center py-3 relative">
         <h3 className={cn("font-mono text-sm font-medium", getColumnColor(status))}>{title}</h3>
-        {/* Column header glow effect */}
+        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{tasks.length}</div>
+        {/* Colored underline */}
         <div
-          className={cn("absolute bottom-0 left-[15%] right-[15%] w-[70%] mx-auto h-[1px]", getColumnGlow(status))}
+          className={cn(
+            "absolute bottom-0 left-[15%] right-[15%] w-[70%] mx-auto h-[1px]",
+            getColumnGlow(status),
+            "shadow-md",
+          )}
         />
       </div>
 
       {/* Tasks Container */}
       <div className="px-2 flex-1 overflow-y-auto space-y-2 py-3 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
-        {tasks.length === 0 ? (
-          <div className={cn("text-center py-8 text-gray-400 dark:text-gray-600 text-sm", "opacity-60")}>No tasks</div>
-        ) : (
-          tasks.map((task, index) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              index={index}
-              projectId={projectId}
-              onTaskReorder={onTaskReorder}
-              onEdit={onTaskEdit}
-              onDelete={onTaskDelete}
-              hoveredTaskId={hoveredTaskId}
-              onTaskHover={onTaskHover}
-            />
-          ))
-        )}
+        {tasks.map((task, index) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            index={index}
+            projectId={projectId}
+            onTaskReorder={onTaskReorder}
+            onEdit={onTaskEdit}
+            onTaskDelete={onTaskDelete}
+            hoveredTaskId={hoveredTaskId}
+            onTaskHover={onTaskHover}
+          />
+        ))}
       </div>
     </div>
   );
