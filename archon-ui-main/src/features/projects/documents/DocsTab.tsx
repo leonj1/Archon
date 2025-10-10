@@ -46,6 +46,7 @@ export const DocsTab = ({ project }: DocsTabProps) => {
       });
     } catch (error) {
       console.error("Failed to save document:", error);
+      throw error;
     }
   };
 
