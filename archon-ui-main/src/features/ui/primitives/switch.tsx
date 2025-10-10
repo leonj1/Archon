@@ -105,7 +105,21 @@ const switchVariants = {
  *    - Uncontrolled: Pass defaultChecked, component manages own state
  */
 const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitives.Root>, SwitchProps>(
-  ({ className, size = "md", color = "cyan", icon, iconOn, iconOff, checked, defaultChecked, onCheckedChange, ...props }, ref) => {
+  (
+    {
+      className,
+      size = "md",
+      color = "cyan",
+      icon,
+      iconOn,
+      iconOff,
+      checked,
+      defaultChecked,
+      onCheckedChange,
+      ...props
+    },
+    ref,
+  ) => {
     const sizeStyles = switchVariants.size[size];
     const colorStyles = switchVariants.color[color];
 
@@ -128,7 +142,7 @@ const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitives.Root>, 
         // Call parent's handler if provided
         onCheckedChange?.(newChecked);
       },
-      [isControlled, onCheckedChange]
+      [isControlled, onCheckedChange],
     );
 
     const displayIcon = React.useMemo(() => {
