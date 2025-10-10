@@ -99,20 +99,42 @@ const switchVariants = {
  *    - iconOn: Displayed when checked
  *    - iconOff: Displayed when unchecked
  *    - icon: Same icon for both states
+ *
+ * 5. CONTROLLED/UNCONTROLLED MODE SUPPORT
+ *    - Controlled: Pass checked prop + onCheckedChange handler
+ *    - Uncontrolled: Pass defaultChecked, component manages own state
  */
 const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitives.Root>, SwitchProps>(
-  ({ className, size = "md", color = "cyan", icon, iconOn, iconOff, checked, ...props }, ref) => {
+  ({ className, size = "md", color = "cyan", icon, iconOn, iconOff, checked, defaultChecked, onCheckedChange, ...props }, ref) => {
     const sizeStyles = switchVariants.size[size];
     const colorStyles = switchVariants.color[color];
 
+    // Detect controlled vs uncontrolled mode
+    const isControlled = checked !== undefined;
+
+    // Internal state for uncontrolled mode
+    const [internalChecked, setInternalChecked] = React.useState(defaultChecked ?? false);
+
+    // Get the actual checked state (controlled or uncontrolled)
+    const actualChecked = isControlled ? checked : internalChecked;
+
+    // Handle state changes for both controlled and uncontrolled modes
+    const handleCheckedChange = React.useCallback(
+      (newChecked: boolean) => {
+        // Update internal state for uncontrolled mode
+        if (!isControlled) {
+          setInternalChecked(newChecked);
+        }
+        // Call parent's handler if provided
+        onCheckedChange?.(newChecked);
+      },
+      [isControlled, onCheckedChange]
+    );
+
     const displayIcon = React.useMemo(() => {
       if (size === "sm") return null;
-
-      if (checked !== undefined) {
-        return checked ? iconOn || icon : iconOff || icon;
-      }
-      return icon;
-    }, [size, checked, icon, iconOn, iconOff]);
+      return actualChecked ? iconOn || icon : iconOff || icon;
+    }, [size, actualChecked, icon, iconOn, iconOff]);
 
     return (
       <SwitchPrimitives.Root
@@ -130,7 +152,8 @@ const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitives.Root>, 
           glassmorphism.interactive.base,
           className,
         )}
-        checked={checked}
+        checked={actualChecked}
+        onCheckedChange={handleCheckedChange}
         {...props}
         ref={ref}
       >

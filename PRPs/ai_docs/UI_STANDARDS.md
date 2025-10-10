@@ -163,6 +163,14 @@ grep -rn "bg-.*-[0-9]" [path] --include="*.tsx" | grep -v "dark:"
 - **Compose with asChild** - Don't wrap, attach behavior to your components
 - **Style via data attributes** - `[data-state="open"]`, `[data-disabled]`
 - **Use Portal** for overlays with proper z-index
+- **Support both controlled and uncontrolled modes** - All form primitives must work in both modes
+
+### Controlled vs Uncontrolled Form Components
+
+**CRITICAL RULE**: Form primitives (Switch, Checkbox, Select, etc.) MUST support both controlled and uncontrolled modes.
+
+**Controlled Mode**: Parent manages state via `value`/`checked` prop + `onChange`/`onCheckedChange` handler
+**Uncontrolled Mode**: Component manages own state via `defaultValue`/`defaultChecked`
 
 ### Anti-Patterns
 ```tsx
@@ -172,6 +180,12 @@ grep -rn "bg-.*-[0-9]" [path] --include="*.tsx" | grep -v "dark:"
 
 // ❌ Wrong composition
 <Dialog.Trigger><button>Open</button></Dialog.Trigger>
+
+// ❌ Only supports controlled mode (breaks uncontrolled usage)
+const Switch = ({ checked, ...props }) => {
+  const displayIcon = checked ? iconOn : iconOff;  // No internal state!
+  return <SwitchPrimitives.Root checked={checked} {...props} />
+};
 ```
 
 ### Good Examples
@@ -184,6 +198,20 @@ grep -rn "bg-.*-[0-9]" [path] --include="*.tsx" | grep -v "dark:"
 // ✅ Radix primitives
 <Select><SelectTrigger /></Select>
 <Checkbox />
+
+// ✅ Supports both controlled and uncontrolled modes
+const Switch = ({ checked, defaultChecked, onCheckedChange, ...props }) => {
+  const isControlled = checked !== undefined;
+  const [internalChecked, setInternalChecked] = useState(defaultChecked ?? false);
+  const actualChecked = isControlled ? checked : internalChecked;
+
+  const handleChange = (newChecked: boolean) => {
+    if (!isControlled) setInternalChecked(newChecked);
+    onCheckedChange?.(newChecked);
+  };
+
+  return <SwitchPrimitives.Root checked={actualChecked} onCheckedChange={handleChange} {...props} />
+};
 ```
 
 ### Automated Scans
@@ -191,9 +219,18 @@ grep -rn "bg-.*-[0-9]" [path] --include="*.tsx" | grep -v "dark:"
 # Native HTML form elements
 grep -rn "<select>\|<option>" [path] --include="*.tsx"
 grep -rn "type=\"checkbox\"\|type=\"radio\"" [path] --include="*.tsx"
+
+# Form primitives that may only support controlled mode (manual check)
+grep -rn "checked.*props\|value.*props" [path]/primitives --include="*.tsx" -A 20
+# Then verify internal state management exists
 ```
 
-**Fix Pattern**: Import from `@/features/ui/primitives/`, use Radix primitives
+**Fix Pattern**:
+- Detect controlled mode: `isControlled = checked !== undefined`
+- Add internal state: `useState(defaultChecked ?? false)`
+- Create handler that updates both internal state and calls parent
+- Use actual state for rendering and pass to Radix primitive
+- Import from `@/features/ui/primitives/`, use Radix primitives
 
 ---
 
@@ -337,8 +374,12 @@ grep -rn "const blurClasses\|backdrop-blur-md" [path]/primitives --include="*.ts
 - **Keyboard support on all interactive elements**
   - `<div onClick={...}>` needs `role="button"`, `tabIndex={0}`, `onKeyDown`
   - Handle Enter and Space keys
-- **ARIA attributes** - `aria-selected`, `aria-current`, `aria-expanded`
+- **ARIA attributes** - `aria-selected`, `aria-current`, `aria-expanded`, `aria-pressed`
 - **Never remove focus rings** - Must be color-specific and static
+- **Icon-only buttons MUST have aria-label** - Required for screen readers
+- **Toggle buttons MUST have aria-pressed** - Indicates current state
+- **Collapsible controls MUST have aria-expanded** - Indicates expanded/collapsed state
+- **Decorative icons MUST have aria-hidden="true"** - Prevents screen reader announcement
 
 ### Anti-Patterns
 ```tsx
@@ -350,6 +391,26 @@ grep -rn "const blurClasses\|backdrop-blur-md" [path]/primitives --include="*.ts
 
 // ❌ Clickable icon without button wrapper
 <ChevronRight onClick={handler} className="cursor-pointer" />
+
+// ❌ Icon-only button without aria-label
+<Button onClick={handler}>
+  <TrashIcon />  // Screen reader has no idea what this does!
+</Button>
+
+// ❌ Toggle button without aria-pressed
+<Button onClick={toggleView} className={viewMode === "grid" && "active"}>
+  <GridIcon />  // No indication of current state!
+</Button>
+
+// ❌ Expandable control without aria-expanded
+<Button onClick={() => setExpanded(!expanded)}>
+  <ChevronDown />  // Screen reader doesn't know if expanded or collapsed!
+</Button>
+
+// ❌ Icon without aria-hidden
+<Button aria-label="Delete">
+  <TrashIcon />  // Screen reader announces both "Delete" AND icon details!
+</Button>
 ```
 
 ### Good Examples
@@ -384,6 +445,29 @@ grep -rn "const blurClasses\|backdrop-blur-md" [path]/primitives --include="*.ts
 >
   <ChevronRight className="h-4 w-4" />
 </button>
+
+// ✅ Icon-only button with proper aria-label and aria-hidden
+<Button onClick={deleteItem} aria-label="Delete task">
+  <TrashIcon aria-hidden="true" />
+</Button>
+
+// ✅ Toggle button with aria-pressed
+<Button
+  onClick={() => setViewMode("grid")}
+  aria-label="Grid view"
+  aria-pressed={viewMode === "grid"}
+>
+  <GridIcon aria-hidden="true" />
+</Button>
+
+// ✅ Expandable control with aria-expanded
+<Button
+  onClick={() => setSidebarExpanded(false)}
+  aria-label="Collapse sidebar"
+  aria-expanded={sidebarExpanded}
+>
+  <ChevronLeft aria-hidden="true" />
+</Button>
 ```
 
 ### Automated Scans
@@ -394,11 +478,31 @@ grep -rn "onClick.*role=\"button\"" [path] --include="*.tsx"
 
 # Icons with onClick (should be wrapped in button)
 grep -rn "<[A-Z].*onClick={" [path] --include="*.tsx" | grep -v "<button\|<Button"
+
+# Icon-only buttons without aria-label (manual check - look for Button with only icon child)
+grep -rn "<Button" [path] --include="*.tsx" -A 2 | grep "Icon className"
+# Then verify aria-label exists
+
+# Toggle buttons without aria-pressed
+grep -rn "onClick.*setViewMode\|onClick.*setLayoutMode" [path] --include="*.tsx"
+# Then verify aria-pressed exists
+
+# Expandable controls without aria-expanded
+grep -rn "onClick.*setExpanded\|onClick.*setSidebarExpanded" [path] --include="*.tsx"
+# Then verify aria-expanded exists
+
+# Icons without aria-hidden when button has aria-label
+grep -rn 'aria-label="' [path] --include="*.tsx" -A 3 | grep "className=\".*Icon"
+# Then verify aria-hidden="true" on icon
 ```
 
 **Fix Pattern**:
 - Add onKeyDown handler with Enter/Space, add tabIndex={0}, add ARIA
 - Wrap clickable icons in `<button type="button">` with proper ARIA attributes
+- Icon-only buttons: Add `aria-label="Descriptive action"`
+- Toggle buttons: Add `aria-pressed={isActive}`
+- Expandable controls: Add `aria-expanded={isExpanded}`
+- Icons in labeled buttons: Add `aria-hidden="true"`
 
 ---
 
@@ -573,6 +677,11 @@ Run ALL these scans during review:
 - Hardcoded glass: `grep -rn "backdrop-blur.*bg-white/.*border" [path]`
 - Missing min-w-0: `grep -rn "flex-1" [path] | grep -v "min-w-0"`
 - Duplicate styling: `grep -rn "const edgeColors = {\|const.*Variants = {" [path]/primitives`
+- Controlled-only form components: `grep -rn "checked.*props\|value.*props" [path]/primitives --include="*.tsx" -A 20` (verify internal state)
+- Icon-only buttons without aria-label: `grep -rn "<Button" [path] --include="*.tsx" -A 2 | grep "Icon className"` (verify aria-label)
+- Toggle buttons without aria-pressed: `grep -rn "setViewMode\|setLayoutMode" [path] --include="*.tsx"` (verify aria-pressed)
+- Expandable controls without aria-expanded: `grep -rn "setExpanded\|setSidebarExpanded" [path] --include="*.tsx"` (verify aria-expanded)
+- Icons without aria-hidden: `grep -rn 'aria-label="' [path] --include="*.tsx" -A 3 | grep "Icon"` (verify aria-hidden)
 
 ### Medium Priority
 - TypeScript: `npx tsc --noEmit [path] 2>&1 | grep "error TS"`

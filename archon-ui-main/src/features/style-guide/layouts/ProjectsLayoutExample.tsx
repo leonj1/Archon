@@ -135,16 +135,20 @@ export const ProjectsLayoutExample = () => {
             size="sm"
             onClick={() => setLayoutMode("horizontal")}
             className={cn("px-3", layoutMode === "horizontal" && "bg-purple-500/20 text-purple-400")}
+            aria-label="Switch to horizontal layout"
+            aria-pressed={layoutMode === "horizontal"}
           >
-            <LayoutGrid className="w-4 h-4" />
+            <LayoutGrid className="w-4 h-4" aria-hidden="true" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setLayoutMode("sidebar")}
             className={cn("px-3", layoutMode === "sidebar" && "bg-purple-500/20 text-purple-400")}
+            aria-label="Switch to sidebar layout"
+            aria-pressed={layoutMode === "sidebar"}
           >
-            <List className="w-4 h-4" />
+            <List className="w-4 h-4" aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -189,16 +193,20 @@ export const ProjectsLayoutExample = () => {
                     size="sm"
                     onClick={() => setViewMode("board")}
                     className={cn("px-3", viewMode === "board" && "bg-cyan-500/20 text-cyan-400")}
+                    aria-label="Board view"
+                    aria-pressed={viewMode === "board"}
                   >
-                    <LayoutGrid className="w-4 h-4" />
+                    <LayoutGrid className="w-4 h-4" aria-hidden="true" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setViewMode("table")}
                     className={cn("px-3", viewMode === "table" && "bg-cyan-500/20 text-cyan-400")}
+                    aria-label="Table view"
+                    aria-pressed={viewMode === "table"}
                   >
-                    <TableIcon className="w-4 h-4" />
+                    <TableIcon className="w-4 h-4" aria-hidden="true" />
                   </Button>
                 </div>
               )}
@@ -219,8 +227,15 @@ export const ProjectsLayoutExample = () => {
             <div className="w-64 flex-shrink-0 space-y-2">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-gray-800 dark:text-white">Projects</h3>
-                <Button variant="ghost" size="sm" onClick={() => setSidebarExpanded(false)} className="px-2">
-                  <List className="w-3 h-3" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSidebarExpanded(false)}
+                  className="px-2"
+                  aria-label="Collapse sidebar"
+                  aria-expanded={sidebarExpanded}
+                >
+                  <List className="w-3 h-3" aria-hidden="true" />
                 </Button>
               </div>
               <div className="space-y-2">
@@ -274,16 +289,20 @@ export const ProjectsLayoutExample = () => {
                     size="sm"
                     onClick={() => setViewMode("board")}
                     className={cn("px-3", viewMode === "board" && "bg-cyan-500/20 text-cyan-400")}
+                    aria-label="Board view"
+                    aria-pressed={viewMode === "board"}
                   >
-                    <LayoutGrid className="w-4 h-4" />
+                    <LayoutGrid className="w-4 h-4" aria-hidden="true" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setViewMode("table")}
                     className={cn("px-3", viewMode === "table" && "bg-cyan-500/20 text-cyan-400")}
+                    aria-label="Table view"
+                    aria-pressed={viewMode === "table"}
                   >
-                    <TableIcon className="w-4 h-4" />
+                    <TableIcon className="w-4 h-4" aria-hidden="true" />
                   </Button>
                 </div>
               )}
@@ -702,8 +721,9 @@ const TaskCardExample = ({ task, index }: { task: (typeof MOCK_TASKS)[0]; index:
                       type="button"
                       onClick={(e) => e.stopPropagation()}
                       className="p-1 rounded hover:bg-cyan-500/10 text-gray-500 hover:text-cyan-500 transition-colors"
+                      aria-label="Edit task"
                     >
-                      <Edit className="w-3 h-3" />
+                      <Edit className="w-3 h-3" aria-hidden="true" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Edit task</TooltipContent>
@@ -714,8 +734,9 @@ const TaskCardExample = ({ task, index }: { task: (typeof MOCK_TASKS)[0]; index:
                       type="button"
                       onClick={(e) => e.stopPropagation()}
                       className="p-1 rounded hover:bg-red-500/10 text-gray-500 hover:text-red-500 transition-colors"
+                      aria-label="Delete task"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3 h-3" aria-hidden="true" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Delete task</TooltipContent>
