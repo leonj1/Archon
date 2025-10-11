@@ -1,11 +1,6 @@
 name: AI-Generated Release Notes
 
 on:
-  release:
-    types: [created, published]
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       tag_name:
