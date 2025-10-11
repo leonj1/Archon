@@ -6,7 +6,7 @@ import { AddDocumentModal } from "./components/AddDocumentModal";
 import { DocumentCard } from "./components/DocumentCard";
 import { DocumentViewer } from "./components/DocumentViewer";
 import { useCreateDocument, useDeleteDocument, useProjectDocuments, useUpdateDocument } from "./hooks";
-import type { ProjectDocument } from "./types";
+import type { DocumentContent, ProjectDocument } from "./types";
 
 interface DocsTabProps {
   project?: {
@@ -38,7 +38,7 @@ export const DocsTab = ({ project }: DocsTabProps) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Handle document save
-  const handleSaveDocument = async (documentId: string, content: any) => {
+  const handleSaveDocument = async (documentId: string, content: DocumentContent) => {
     try {
       await updateDocumentMutation.mutateAsync({
         documentId,
@@ -56,6 +56,8 @@ export const DocsTab = ({ project }: DocsTabProps) => {
       title,
       document_type,
       content: { markdown: "# " + title + "\n\nStart writing your document here..." },
+      // NOTE: Archon does not have user authentication - this is a single-user local app.
+      // "User" is a constant representing the sole user of this Archon instance.
       author: "User",
     });
   };
@@ -89,6 +91,9 @@ export const DocsTab = ({ project }: DocsTabProps) => {
   useEffect(() => {
     setSelectedDocument(null);
     setSearchQuery("");
+    setShowAddModal(false);
+    setShowDeleteModal(false);
+    setDocumentToDelete(null);
   }, [projectId]);
 
   // Auto-select first document when documents load
@@ -200,16 +205,17 @@ export const DocsTab = ({ project }: DocsTabProps) => {
       <AddDocumentModal open={showAddModal} onOpenChange={setShowAddModal} onAdd={handleAddDocument} />
 
       {/* Delete Confirmation Modal */}
-      {documentToDelete && (
-        <DeleteConfirmModal
-          open={showDeleteModal}
-          onOpenChange={setShowDeleteModal}
-          itemName={documentToDelete.title}
-          onConfirm={confirmDelete}
-          onCancel={cancelDelete}
-          type="document"
-        />
-      )}
+      <DeleteConfirmModal
+        open={showDeleteModal}
+        onOpenChange={(open) => {
+          setShowDeleteModal(open);
+          if (!open) setDocumentToDelete(null);
+        }}
+        itemName={documentToDelete?.title ?? ""}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        type="document"
+      />
     </div>
   );
 };
