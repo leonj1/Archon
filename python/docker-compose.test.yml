@@ -1,0 +1,90 @@
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: archon-backend-tests
+    environment:
+      # Core environment variables (provide via .env.test file)
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LOGFIRE_TOKEN=${LOGFIRE_TOKEN:-}
+      - LOGFIRE_ENABLED=${LOGFIRE_ENABLED:-false}
+      
+      # Test-specific settings
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - PYTEST_TIMEOUT=300
+      
+    volumes:
+      # Mount source and tests for live development
+      # Comment these out when running in CI/CD
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./pytest.ini:/app/pytest.ini:ro
+      
+      # Cache directories for faster subsequent runs
+      - pytest_cache:/app/.pytest_cache
+      - playwright_cache:/ms-playwright
+      
+    # Override command for different test scenarios
+    # Default: run all tests
+    command: pytest -v --tb=short
+    
+    # Uncomment for interactive debugging
+    # stdin_open: true
+    # tty: true
+    # command: bash
+    
+    networks:
+      - test-network
+
+  # Optional: Local Supabase for testing (uncomment if needed)
+  # test-db:
+  #   image: supabase/postgres:15.1.1.61
+  #   container_name: archon-test-db
+  #   environment:
+  #     POSTGRES_DB: postgres
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - test-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  pytest_cache:
+  playwright_cache:
+
+# Usage examples:
+#
+# Run all tests:
+# docker-compose -f docker-compose.test.yml up --build
+#
+# Run specific test file:
+# docker-compose -f docker-compose.test.yml run --rm test pytest tests/test_api_essentials.py -v
+#
+# Run with coverage report:
+# docker-compose -f docker-compose.test.yml run --rm test pytest --cov=src --cov-report=html
+#
+# Run only unit tests:
+# docker-compose -f docker-compose.test.yml run --rm test pytest -m unit
+#
+# Run tests with local .env.test file:
+# docker-compose -f docker-compose.test.yml --env-file .env.test up
+#
+# Interactive shell for debugging:
+# docker-compose -f docker-compose.test.yml run --rm test bash
+#
+# Clean up after tests:
+# docker-compose -f docker-compose.test.yml down -v

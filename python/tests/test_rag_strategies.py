@@ -51,8 +51,11 @@ class TestRAGService:
     def rag_service(self, mock_supabase_client):
         """Create RAGService instance"""
         from src.server.services.search import RAGService
+        from src.server.repositories.supabase_repository import SupabaseDatabaseRepository
 
-        return RAGService(supabase_client=mock_supabase_client)
+        # Create a mock repository wrapping the mock client
+        mock_repository = SupabaseDatabaseRepository(mock_supabase_client)
+        return RAGService(database_repository=mock_repository)
 
     def test_rag_service_initialization(self, rag_service):
         """Test RAGService initializes correctly"""
@@ -158,8 +161,11 @@ class TestHybridSearchStrategy:
         """Create HybridSearchStrategy instance"""
         from src.server.services.search import HybridSearchStrategy
         from src.server.services.search.base_search_strategy import BaseSearchStrategy
+        from src.server.repositories.supabase_repository import SupabaseDatabaseRepository
 
-        base_strategy = BaseSearchStrategy(mock_supabase_client)
+        # Create a mock repository wrapping the mock client
+        mock_repository = SupabaseDatabaseRepository(mock_supabase_client)
+        base_strategy = BaseSearchStrategy(database_repository=mock_repository)
         return HybridSearchStrategy(mock_supabase_client, base_strategy)
 
     def test_hybrid_strategy_initialization(self, hybrid_strategy):
@@ -245,8 +251,11 @@ class TestAgenticRAGStrategy:
         """Create AgenticRAGStrategy instance"""
         from src.server.services.search import AgenticRAGStrategy
         from src.server.services.search.base_search_strategy import BaseSearchStrategy
+        from src.server.repositories.supabase_repository import SupabaseDatabaseRepository
 
-        base_strategy = BaseSearchStrategy(mock_supabase_client)
+        # Create a mock repository wrapping the mock client
+        mock_repository = SupabaseDatabaseRepository(mock_supabase_client)
+        base_strategy = BaseSearchStrategy(database_repository=mock_repository)
         return AgenticRAGStrategy(mock_supabase_client, base_strategy)
 
     def test_agentic_strategy_initialization(self, agentic_strategy):
@@ -269,8 +278,11 @@ class TestRAGIntegration:
     def rag_service(self, mock_supabase_client):
         """Create RAGService instance"""
         from src.server.services.search import RAGService
+        from src.server.repositories.supabase_repository import SupabaseDatabaseRepository
 
-        return RAGService(supabase_client=mock_supabase_client)
+        # Create a mock repository wrapping the mock client
+        mock_repository = SupabaseDatabaseRepository(mock_supabase_client)
+        return RAGService(database_repository=mock_repository)
 
     @pytest.mark.asyncio
     async def test_full_rag_pipeline(self, rag_service):
@@ -360,9 +372,12 @@ class TestRAGPerformance:
         from unittest.mock import MagicMock
 
         from src.server.services.search import RAGService
+        from src.server.repositories.supabase_repository import SupabaseDatabaseRepository
 
         mock_client = MagicMock()
-        return RAGService(supabase_client=mock_client)
+        # Create a mock repository wrapping the mock client
+        mock_repository = SupabaseDatabaseRepository(mock_client)
+        return RAGService(database_repository=mock_repository)
 
     @pytest.mark.asyncio
     async def test_concurrent_rag_queries(self, rag_service):
@@ -441,9 +456,12 @@ class TestRAGConfiguration:
         from unittest.mock import MagicMock
 
         from src.server.services.search import RAGService
+        from src.server.repositories.supabase_repository import SupabaseDatabaseRepository
 
         mock_client = MagicMock()
-        return RAGService(supabase_client=mock_client)
+        # Create a mock repository wrapping the mock client
+        mock_repository = SupabaseDatabaseRepository(mock_client)
+        return RAGService(database_repository=mock_repository)
 
     def test_environment_variable_settings(self, rag_service):
         """Test reading settings from environment variables"""

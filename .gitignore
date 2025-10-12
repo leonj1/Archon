@@ -16,3 +16,7 @@ UAT/
 
 # Local release notes testing
 release-notes-*.md
+projects.db
+refactor_db.py
+cli_tools.py
+

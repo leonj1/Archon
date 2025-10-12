@@ -1,0 +1,114 @@
+# Test Container - For running backend test suite
+FROM python:3.12 AS builder
+
+WORKDIR /build
+
+# Install build dependencies and uv
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir uv
+
+# Copy pyproject.toml for dependency installation
+COPY pyproject.toml .
+
+# Install all dependencies (including test dependencies) to a virtual environment using uv
+RUN uv venv /venv && \
+    . /venv/bin/activate && \
+    uv pip install --group all
+
+# Runtime stage
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install runtime dependencies for Playwright and other tools needed by tests
+RUN apt-get update && apt-get install -y \
+    wget \
+    ca-certificates \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libdrm2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libwayland-client0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxkbcommon0 \
+    libxrandr2 \
+    xdg-utils \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Copy the virtual environment from builder
+COPY --from=builder /venv /venv
+
+# Install Playwright browsers for web crawling tests
+ENV PATH=/venv/bin:$PATH
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN playwright install chromium
+
+# Copy source code
+COPY src/ src/
+COPY tests/ tests/
+COPY pytest.ini .
+
+# Set environment variables
+ENV PYTHONPATH="/app:$PYTHONPATH"
+ENV PYTHONUNBUFFERED=1
+ENV PATH="/venv/bin:$PATH"
+
+# Set test-specific environment variables with defaults
+ENV SUPABASE_URL=""
+ENV SUPABASE_SERVICE_KEY=""
+ENV OPENAI_API_KEY=""
+ENV LOGFIRE_TOKEN=""
+
+# Disable logfire in tests by default
+ENV LOGFIRE_ENABLED="false"
+
+# Create a script to run tests with proper environment setup
+RUN echo '#!/bin/bash\n\
+if [ -f /.env.test ]; then\n\
+    export $(cat /.env.test | grep -v "^#" | xargs)\n\
+fi\n\
+exec "$@"' > /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Default command runs all tests
+# Can be overridden to run specific tests or with different options
+CMD ["pytest", "-v", "--tb=short", "--no-header", "--no-summary", "-q"]
+
+# Examples of running the container:
+# 
+# Run all tests:
+# docker run --rm archon-test
+#
+# Run specific test file:
+# docker run --rm archon-test pytest tests/test_api_essentials.py -v
+#
+# Run with coverage:
+# docker run --rm archon-test pytest --cov=src --cov-report=term-missing
+#
+# Run only unit tests:
+# docker run --rm archon-test pytest -m unit
+#
+# Run with environment variables from file:
+# docker run --rm --env-file .env.test archon-test
+#
+# Run interactively for debugging:
+# docker run --rm -it archon-test bash
+#
+# Mount local code for development (changes reflected immediately):
+# docker run --rm -v $(pwd)/src:/app/src -v $(pwd)/tests:/app/tests archon-test

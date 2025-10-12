@@ -1,0 +1,165 @@
+[project]
+name = "database-refactoring-agent"
+version = "1.0.0"
+description = "Database Refactoring Agent with Repository Pattern - Refactors codebases to use the Repository Pattern"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # Core dependencies from the script
+    "claude-agent-sdk>=0.1.0",  # Main SDK for Claude agent integration
+    "rich>=13.0.0",             # Rich terminal output and formatting
+    "python-dotenv>=1.0.0",     # Load environment variables from .env
+
+    # Additional dependencies that may be needed
+    "asyncio>=3.4.3",           # Async support
+    "nest-asyncio>=1.5.0",      # Allow nested event loops
+]
+
+[dependency-groups]
+# Development dependencies
+dev = [
+    "mypy>=1.17.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.12.0",
+    "ruff>=0.12.5",
+    "black>=24.0.0",
+]
+
+[tool.uv]
+# UV package manager settings (if using uv)
+dev-dependencies = [
+    "ipython>=8.0.0",
+]
+
+[tool.ruff]
+# Linting configuration
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501", # line too long - handled by line-length
+    "B008", # do not perform function calls in argument defaults
+    "W191", # indentation contains tabs
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+# Type checking configuration
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+no_implicit_optional = true
+check_untyped_defs = true
+ignore_missing_imports = true  # For external libraries without stubs
+
+[tool.black]
+# Code formatting configuration
+line-length = 120
+target-version = ['py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # Directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[build-system]
+# Build system requirements
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Explicitly configure package discovery to avoid the multiple packages error
+py-modules = ["refactor_db"]
+include-package-data = false
+
+[tool.pytest.ini_options]
+# Pytest configuration
+minversion = "8.0"
+addopts = [
+    "--verbose",
+    "--asyncio-mode=auto",
+    "--tb=short",
+]
+testpaths = [
+    "tests",
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+]
+python_classes = [
+    "Test*",
+]
+python_functions = [
+    "test_*",
+]
+
+[tool.coverage.run]
+# Coverage configuration
+source = ["."]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+
+# Script-specific configuration
+[tool.database-refactoring]
+# Configuration for the database refactoring agent
+supported_languages = ["Python", "Go", "JavaScript", "TypeScript", "Java"]
+supported_databases = ["SQLite", "PostgreSQL", "MySQL", "MongoDB"]
+default_model = "sonnet"
+max_retries = 3
+
+# Agent configurations
+[tool.database-refactoring.agents]
+project_analysis = { model = "sonnet", tools = ["Read", "Grep", "Glob"] }
+discovery = { model = "sonnet", tools = ["Read", "Grep", "Glob"] }
+repository_design = { model = "sonnet", tools = ["Read"] }
+repository_implementation = { model = "sonnet", tools = ["Read", "Write", "Glob"] }
+refactoring = { model = "sonnet", tools = ["Read", "Edit", "MultiEdit", "Grep"] }
+validation = { model = "sonnet", tools = ["Read", "Grep"] }
+code_review = { model = "sonnet", tools = ["Read", "Grep"] }
+test_update = { model = "sonnet", tools = ["Read", "Write", "Edit", "MultiEdit", "Grep", "Glob"] }
+documentation = { model = "sonnet", tools = ["Read", "Write", "Glob"] }
+final_validation = { model = "sonnet", tools = ["Read", "Write", "Grep", "Glob", "Bash"] }

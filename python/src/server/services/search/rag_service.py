@@ -13,9 +13,10 @@ Multiple strategies can be enabled simultaneously and work together.
 """
 
 import os
-from typing import Any
+from typing import Any, Optional
 
 from ...config.logfire_config import get_logger, safe_span
+from ...repositories import DatabaseRepository, SupabaseDatabaseRepository
 from ...utils import get_supabase_client
 from ..embeddings.embedding_service import create_embedding
 from .agentic_rag_strategy import AgenticRAGStrategy
@@ -31,19 +32,40 @@ logger = get_logger(__name__)
 class RAGService:
     """
     Coordinator service that orchestrates multiple RAG strategies.
-
-    This service delegates to strategy implementations and combines them
-    based on configuration settings.
+    
+    Uses dependency injection via DatabaseRepository for all database operations,
+    enabling better testability and separation of concerns.
     """
 
-    def __init__(self, supabase_client=None):
-        """Initialize RAG service as a coordinator for search strategies"""
-        self.supabase_client = supabase_client or get_supabase_client()
+    def __init__(self, database_repository: Optional[DatabaseRepository] = None):
+        """
+        Initialize RAG service with dependency injection.
+        
+        Args:
+            database_repository: DatabaseRepository implementation for database operations.
+                                If None, creates a default SupabaseDatabaseRepository.
+        """
+        # Use injected repository or create default
+        if database_repository is None:
+            supabase_client = get_supabase_client()
+            self.db_repository = SupabaseDatabaseRepository(supabase_client)
+        else:
+            self.db_repository = database_repository
+        
+        # Store supabase_client for backward compatibility with strategies
+        # Note: Strategies should eventually be refactored to use repository pattern too
+        self.supabase_client = (
+            database_repository.supabase_client 
+            if hasattr(database_repository, 'supabase_client') 
+            else get_supabase_client()
+        )
 
-        # Initialize base strategy (always needed)
-        self.base_strategy = BaseSearchStrategy(self.supabase_client)
+        # Initialize base strategy with repository (always needed)
+        self.base_strategy = BaseSearchStrategy(self.db_repository)
 
         # Initialize optional strategies
+        # Note: These strategies still use supabase_client for backward compatibility
+        # They should be refactored to use repository pattern in future iterations
         self.hybrid_strategy = HybridSearchStrategy(self.supabase_client, self.base_strategy)
         self.agentic_strategy = AgenticRAGStrategy(self.supabase_client, self.base_strategy)
 
@@ -175,7 +197,11 @@ class RAGService:
     async def _group_chunks_by_pages(
         self, chunk_results: list[dict[str, Any]], match_count: int
     ) -> list[dict[str, Any]]:
-        """Group chunk results by page_id (if available) or URL and fetch page metadata."""
+        """
+        Group chunk results by page_id (if available) or URL and fetch page metadata.
+        
+        This method now uses the DatabaseRepository instead of direct Supabase calls.
+        """
         page_groups: dict[str, dict[str, Any]] = {}
 
         for result in chunk_results:
@@ -207,31 +233,19 @@ class RAGService:
             match_boost = min(0.2, data["chunk_matches"] * 0.02)
             aggregate_score = avg_similarity * (1 + match_boost)
 
-            # Query page by page_id if available, otherwise by URL
+            # Use repository to query page metadata instead of direct Supabase call
+            page_info = None
             if data["page_id"]:
-                page_info = (
-                    self.supabase_client.table("archon_page_metadata")
-                    .select("id, url, section_title, word_count")
-                    .eq("id", data["page_id"])
-                    .maybe_single()
-                    .execute()
-                )
+                page_info = await self.db_repository.get_page_metadata_by_id(data["page_id"])
             else:
-                # Regular pages - exact URL match
-                page_info = (
-                    self.supabase_client.table("archon_page_metadata")
-                    .select("id, url, section_title, word_count")
-                    .eq("url", data["url"])
-                    .maybe_single()
-                    .execute()
-                )
+                page_info = await self.db_repository.get_page_metadata_by_url(data["url"])
 
-            if page_info and page_info.data is not None:
+            if page_info:
                 page_results.append({
-                    "page_id": page_info.data["id"],
-                    "url": page_info.data["url"],
-                    "section_title": page_info.data.get("section_title"),
-                    "word_count": page_info.data.get("word_count", 0),
+                    "page_id": page_info["id"],
+                    "url": page_info["url"],
+                    "section_title": page_info.get("section_title"),
+                    "word_count": page_info.get("word_count", 0),
                     "chunk_matches": data["chunk_matches"],
                     "aggregate_similarity": aggregate_score,
                     "average_similarity": avg_similarity,

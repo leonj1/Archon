@@ -16,15 +16,15 @@ class TestProjectServiceOptimization:
     """Test ProjectService with include_content parameter."""
     
     @patch('src.server.utils.get_supabase_client')
-    def test_list_projects_with_full_content(self, mock_supabase):
+    @pytest.mark.asyncio
+    async def test_list_projects_with_full_content(self, mock_supabase):
         """Test backward compatibility - default returns full content."""
-        # Setup mock
-        mock_client = Mock()
-        mock_supabase.return_value = mock_client
+        # Setup mock repository
+        from unittest.mock import AsyncMock
+        mock_repository = AsyncMock()
         
         # Mock response with large JSONB fields
-        mock_response = Mock()
-        mock_response.data = [{
+        mock_repository.list_projects.return_value = [{
             "id": "test-id",
             "title": "Test Project",
             "description": "Test Description",
@@ -37,17 +37,9 @@ class TestProjectServiceOptimization:
             "updated_at": "2024-01-01"
         }]
         
-        mock_table = Mock()
-        mock_select = Mock()
-        mock_order = Mock()
-        mock_order.execute.return_value = mock_response
-        mock_select.order.return_value = mock_order
-        mock_table.select.return_value = mock_select
-        mock_client.table.return_value = mock_table
-        
         # Test
-        service = ProjectService(mock_client)
-        success, result = service.list_projects()  # Default include_content=True
+        service = ProjectService(repository=mock_repository)
+        success, result = await service.list_projects()  # Default include_content=True
         
         # Assertions
         assert success
@@ -60,19 +52,23 @@ class TestProjectServiceOptimization:
         assert len(result["projects"][0]["docs"]) == 1
         assert result["projects"][0]["docs"][0]["content"]["large"] is not None
         
-        # Verify SELECT * was used
-        mock_table.select.assert_called_with("*")
+        # Verify repository was called with correct params
+        mock_repository.list_projects.assert_called_once_with(
+            include_content=True,
+            order_by="created_at",
+            desc=True
+        )
     
     @patch('src.server.utils.get_supabase_client')
-    def test_list_projects_lightweight(self, mock_supabase):
+    @pytest.mark.asyncio
+    async def test_list_projects_lightweight(self, mock_supabase):
         """Test lightweight response excludes large fields."""
-        # Setup mock
-        mock_client = Mock()
-        mock_supabase.return_value = mock_client
+        # Setup mock repository
+        from unittest.mock import AsyncMock
+        mock_repository = AsyncMock()
         
         # Mock response with full data (after N+1 fix, we fetch all data)
-        mock_response = Mock()
-        mock_response.data = [{
+        mock_repository.list_projects.return_value = [{
             "id": "test-id",
             "title": "Test Project",
             "description": "Test Description",
@@ -85,19 +81,9 @@ class TestProjectServiceOptimization:
             "data": [{"key": "value"}]  # Has data
         }]
         
-        # Setup mock chain - now simpler after N+1 fix
-        mock_table = Mock()
-        mock_select = Mock()
-        mock_order = Mock()
-        
-        mock_order.execute.return_value = mock_response
-        mock_select.order.return_value = mock_order
-        mock_table.select.return_value = mock_select
-        mock_client.table.return_value = mock_table
-        
         # Test
-        service = ProjectService(mock_client)
-        success, result = service.list_projects(include_content=False)
+        service = ProjectService(repository=mock_repository)
+        success, result = await service.list_projects(include_content=False)
         
         # Assertions
         assert success
@@ -115,9 +101,12 @@ class TestProjectServiceOptimization:
         assert project["stats"]["features_count"] == 2
         assert project["stats"]["has_data"] is True
         
-        # Verify SELECT * was used (after N+1 fix, we fetch all data in one query)
-        mock_table.select.assert_called_with("*")
-        assert mock_client.table.call_count == 1  # Only one query now!
+        # Verify repository was called (after N+1 fix, we fetch all data in one query)
+        mock_repository.list_projects.assert_called_once_with(
+            include_content=True,
+            order_by="created_at",
+            desc=True
+        )
     
     def test_token_reduction(self):
         """Verify token count reduction."""

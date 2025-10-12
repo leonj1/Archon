@@ -36,8 +36,11 @@ def rag_service(mock_supabase):
     with patch("src.server.utils.get_supabase_client", return_value=mock_supabase):
         with patch("src.server.services.credential_service.credential_service"):
             from src.server.services.search.rag_service import RAGService
+            from src.server.repositories.supabase_repository import SupabaseDatabaseRepository
 
-            service = RAGService(supabase_client=mock_supabase)
+            # Create a mock repository wrapping the mock client
+            mock_repository = SupabaseDatabaseRepository(mock_supabase)
+            service = RAGService(database_repository=mock_repository)
             return service
 
 
@@ -154,8 +157,11 @@ class TestHybridSearchCore:
         """Create hybrid search strategy"""
         from src.server.services.search.base_search_strategy import BaseSearchStrategy
         from src.server.services.search.hybrid_search_strategy import HybridSearchStrategy
+        from src.server.repositories.supabase_repository import SupabaseDatabaseRepository
 
-        base_strategy = BaseSearchStrategy(mock_supabase)
+        # Create a mock repository wrapping the mock client
+        mock_repository = SupabaseDatabaseRepository(mock_supabase)
+        base_strategy = BaseSearchStrategy(database_repository=mock_repository)
         return HybridSearchStrategy(mock_supabase, base_strategy)
 
     def test_initialization(self, hybrid_strategy):
@@ -238,8 +244,11 @@ class TestAgenticRAGCore:
         """Create agentic RAG strategy"""
         from src.server.services.search.agentic_rag_strategy import AgenticRAGStrategy
         from src.server.services.search.base_search_strategy import BaseSearchStrategy
+        from src.server.repositories.supabase_repository import SupabaseDatabaseRepository
 
-        base_strategy = BaseSearchStrategy(mock_supabase)
+        # Create a mock repository wrapping the mock client
+        mock_repository = SupabaseDatabaseRepository(mock_supabase)
+        base_strategy = BaseSearchStrategy(database_repository=mock_repository)
         return AgenticRAGStrategy(mock_supabase, base_strategy)
 
     def test_initialization(self, agentic_strategy):

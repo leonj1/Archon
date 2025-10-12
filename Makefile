@@ -5,23 +5,34 @@ SHELL := /bin/bash
 # Docker compose command - prefer newer 'docker compose' plugin over standalone 'docker-compose'
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
-.PHONY: help dev dev-docker stop test test-fe test-be lint lint-fe lint-be clean install check
+.PHONY: help dev dev-docker stop test test-fe test-be test-be-unit test-be-coverage test-be-build test-be-interactive lint lint-fe lint-be clean install check
 
 help:
 	@echo "Archon Development Commands"
 	@echo "==========================="
-	@echo "  make dev        - Backend in Docker, frontend local (recommended)"
-	@echo "  make dev-docker - Everything in Docker"
-	@echo "  make stop       - Stop all services"
-	@echo "  make test       - Run all tests"
-	@echo "  make test-fe    - Run frontend tests only"
-	@echo "  make test-be    - Run backend tests only"
-	@echo "  make lint       - Run all linters"
-	@echo "  make lint-fe    - Run frontend linter only"
-	@echo "  make lint-be    - Run backend linter only"
-	@echo "  make clean      - Remove containers and volumes"
-	@echo "  make install    - Install dependencies"
-	@echo "  make check      - Check environment setup"
+	@echo "Development:"
+	@echo "  make dev               - Backend in Docker, frontend local (recommended)"
+	@echo "  make dev-docker        - Everything in Docker"
+	@echo "  make stop              - Stop all services"
+	@echo "  make clean             - Remove containers and volumes"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test              - Run all tests"
+	@echo "  make test-fe           - Run frontend tests only"
+	@echo "  make test-be           - Run backend tests in Docker"
+	@echo "  make test-be-unit      - Run backend unit tests only"
+	@echo "  make test-be-coverage  - Run backend tests with coverage report"
+	@echo "  make test-be-build     - Build/rebuild test Docker image"
+	@echo "  make test-be-interactive - Open shell in test container"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  make lint              - Run all linters"
+	@echo "  make lint-fe           - Run frontend linter only"
+	@echo "  make lint-be           - Run backend linter only"
+	@echo ""
+	@echo "Setup:"
+	@echo "  make install           - Install dependencies"
+	@echo "  make check             - Check environment setup"
 
 # Install dependencies
 install:
@@ -76,10 +87,37 @@ test-fe:
 	@echo "Running frontend tests..."
 	@cd archon-ui-main && npm test
 
-# Run backend tests
+# Run backend tests in Docker container
 test-be:
-	@echo "Running backend tests..."
-	@cd python && uv run pytest
+	@echo "Running backend tests in Docker..."
+	@cd python && \
+	if [ -f ".env.test" ]; then \
+		$(COMPOSE) -f docker-compose.test.yml --env-file .env.test run --rm test pytest -v --tb=short; \
+	else \
+		echo "⚠️  Warning: .env.test not found. Using default environment."; \
+		$(COMPOSE) -f docker-compose.test.yml run --rm test pytest -v --tb=short; \
+	fi
+
+# Run only unit tests in Docker
+test-be-unit:
+	@echo "Running backend unit tests in Docker..."
+	@cd python && $(COMPOSE) -f docker-compose.test.yml run --rm test pytest -m unit -v --tb=short
+
+# Run tests with coverage report
+test-be-coverage:
+	@echo "Running backend tests with coverage..."
+	@cd python && $(COMPOSE) -f docker-compose.test.yml run --rm test pytest --cov=src --cov-report=term-missing --cov-report=html
+
+# Build/rebuild test Docker image
+test-be-build:
+	@echo "Building backend test Docker image..."
+	@cd python && docker build -f Dockerfile.test -t archon-test .
+	@echo "✓ Test image built"
+
+# Open interactive shell in test container
+test-be-interactive:
+	@echo "Starting interactive shell in test container..."
+	@cd python && $(COMPOSE) -f docker-compose.test.yml run --rm test bash
 
 # Run all linters
 lint: lint-fe lint-be

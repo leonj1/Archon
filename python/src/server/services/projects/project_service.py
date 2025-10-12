@@ -8,9 +8,11 @@ separating business logic from transport-specific code.
 
 # Removed direct logging import - using unified config
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from src.server.utils import get_supabase_client
+from ...repositories.database_repository import DatabaseRepository
+from ...repositories.supabase_repository import SupabaseDatabaseRepository
 
 from ...config.logfire_config import get_logger
 
@@ -20,11 +22,22 @@ logger = get_logger(__name__)
 class ProjectService:
     """Service class for project operations"""
 
-    def __init__(self, supabase_client=None):
-        """Initialize with optional supabase client"""
-        self.supabase_client = supabase_client or get_supabase_client()
+    def __init__(self, repository: Optional[DatabaseRepository] = None, supabase_client=None):
+        """
+        Initialize with optional repository or supabase client.
 
-    def create_project(self, title: str, github_repo: str = None) -> tuple[bool, dict[str, Any]]:
+        Args:
+            repository: DatabaseRepository instance (preferred)
+            supabase_client: Legacy supabase client (for backward compatibility)
+        """
+        if repository is not None:
+            self.repository = repository
+        elif supabase_client is not None:
+            self.repository = SupabaseDatabaseRepository(supabase_client)
+        else:
+            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+
+    async def create_project(self, title: str, github_repo: str = None) -> tuple[bool, dict[str, Any]]:
         """
         Create a new project with optional PRD and GitHub repo.
 
@@ -39,24 +52,17 @@ class ProjectService:
             # Create project data
             project_data = {
                 "title": title.strip(),
-                "docs": [],  # Will add PRD document after creation
+                "docs": [],
                 "features": [],
                 "data": [],
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat(),
             }
 
             if github_repo and isinstance(github_repo, str) and len(github_repo.strip()) > 0:
                 project_data["github_repo"] = github_repo.strip()
 
-            # Insert project
-            response = self.supabase_client.table("archon_projects").insert(project_data).execute()
+            # Create project via repository
+            project = await self.repository.create_project(project_data)
 
-            if not response.data:
-                logger.error("Supabase returned empty data for project creation")
-                return False, {"error": "Failed to create project - database returned no data"}
-
-            project = response.data[0]
             project_id = project["id"]
             logger.info(f"Project created successfully with ID: {project_id}")
 
@@ -73,7 +79,7 @@ class ProjectService:
             logger.error(f"Error creating project: {e}")
             return False, {"error": f"Database error: {str(e)}"}
 
-    def list_projects(self, include_content: bool = True) -> tuple[bool, dict[str, Any]]:
+    async def list_projects(self, include_content: bool = True) -> tuple[bool, dict[str, Any]]:
         """
         List all projects.
 
@@ -85,17 +91,17 @@ class ProjectService:
             Tuple of (success, result_dict)
         """
         try:
-            if include_content:
-                # Current behavior - maintain backward compatibility
-                response = (
-                    self.supabase_client.table("archon_projects")
-                    .select("*")
-                    .order("created_at", desc=True)
-                    .execute()
-                )
+            # Fetch all projects via repository
+            raw_projects = await self.repository.list_projects(
+                include_content=True,
+                order_by="created_at",
+                desc=True
+            )
 
-                projects = []
-                for project in response.data:
+            projects = []
+            if include_content:
+                # Return full project data
+                for project in raw_projects:
                     projects.append({
                         "id": project["id"],
                         "title": project["title"],
@@ -109,23 +115,12 @@ class ProjectService:
                         "data": project.get("data", []),
                     })
             else:
-                # Lightweight response for MCP - fetch all data but only return metadata + stats
-                # FIXED: N+1 query problem - now using single query
-                response = (
-                    self.supabase_client.table("archon_projects")
-                    .select("*")  # Fetch all fields in single query
-                    .order("created_at", desc=True)
-                    .execute()
-                )
-
-                projects = []
-                for project in response.data:
-                    # Calculate counts from fetched data (no additional queries)
+                # Lightweight response for MCP - calculate stats from fetched data
+                for project in raw_projects:
                     docs_count = len(project.get("docs", []))
                     features_count = len(project.get("features", []))
                     has_data = bool(project.get("data", []))
 
-                    # Return only metadata + stats, excluding large JSONB fields
                     projects.append({
                         "id": project["id"],
                         "title": project["title"],
@@ -147,7 +142,7 @@ class ProjectService:
             logger.error(f"Error listing projects: {e}")
             return False, {"error": f"Error listing projects: {str(e)}"}
 
-    def get_project(self, project_id: str) -> tuple[bool, dict[str, Any]]:
+    async def get_project(self, project_id: str) -> tuple[bool, dict[str, Any]]:
         """
         Get a specific project by ID.
 
@@ -155,76 +150,57 @@ class ProjectService:
             Tuple of (success, result_dict)
         """
         try:
-            response = (
-                self.supabase_client.table("archon_projects")
-                .select("*")
-                .eq("id", project_id)
-                .execute()
-            )
+            # Get project via repository
+            project = await self.repository.get_project_by_id(project_id)
 
-            if response.data:
-                project = response.data[0]
-
-                # Get linked sources
-                technical_sources = []
-                business_sources = []
-
-                try:
-                    # Get source IDs from project_sources table
-                    sources_response = (
-                        self.supabase_client.table("archon_project_sources")
-                        .select("source_id, notes")
-                        .eq("project_id", project["id"])
-                        .execute()
-                    )
-
-                    # Collect source IDs by type
-                    technical_source_ids = []
-                    business_source_ids = []
-
-                    for source_link in sources_response.data:
-                        if source_link.get("notes") == "technical":
-                            technical_source_ids.append(source_link["source_id"])
-                        elif source_link.get("notes") == "business":
-                            business_source_ids.append(source_link["source_id"])
-
-                    # Fetch full source objects
-                    if technical_source_ids:
-                        tech_sources_response = (
-                            self.supabase_client.table("archon_sources")
-                            .select("*")
-                            .in_("source_id", technical_source_ids)
-                            .execute()
-                        )
-                        technical_sources = tech_sources_response.data
-
-                    if business_source_ids:
-                        biz_sources_response = (
-                            self.supabase_client.table("archon_sources")
-                            .select("*")
-                            .in_("source_id", business_source_ids)
-                            .execute()
-                        )
-                        business_sources = biz_sources_response.data
-
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to retrieve linked sources for project {project['id']}: {e}"
-                    )
-
-                # Add sources to project data
-                project["technical_sources"] = technical_sources
-                project["business_sources"] = business_sources
-
-                return True, {"project": project}
-            else:
+            if not project:
                 return False, {"error": f"Project with ID {project_id} not found"}
+
+            # Get linked sources
+            technical_sources = []
+            business_sources = []
+
+            try:
+                # Get source links from project_sources table
+                source_links = await self.repository.list_project_sources(project_id)
+
+                # Collect source IDs by type
+                technical_source_ids = []
+                business_source_ids = []
+
+                for source_link in source_links:
+                    if source_link.get("notes") == "technical":
+                        technical_source_ids.append(source_link["source_id"])
+                    elif source_link.get("notes") == "business":
+                        business_source_ids.append(source_link["source_id"])
+
+                # Fetch full source objects
+                if technical_source_ids:
+                    technical_sources = await self.repository.get_sources_for_project(
+                        project_id, technical_source_ids
+                    )
+
+                if business_source_ids:
+                    business_sources = await self.repository.get_sources_for_project(
+                        project_id, business_source_ids
+                    )
+
+            except Exception as e:
+                logger.warning(
+                    f"Failed to retrieve linked sources for project {project['id']}: {e}"
+                )
+
+            # Add sources to project data
+            project["technical_sources"] = technical_sources
+            project["business_sources"] = business_sources
+
+            return True, {"project": project}
 
         except Exception as e:
             logger.error(f"Error getting project: {e}")
             return False, {"error": f"Error getting project: {str(e)}"}
 
-    def delete_project(self, project_id: str) -> tuple[bool, dict[str, Any]]:
+    async def delete_project(self, project_id: str) -> tuple[bool, dict[str, Any]]:
         """
         Delete a project and all its associated tasks.
 
@@ -232,35 +208,21 @@ class ProjectService:
             Tuple of (success, result_dict)
         """
         try:
-            # First, check if project exists
-            check_response = (
-                self.supabase_client.table("archon_projects")
-                .select("id")
-                .eq("id", project_id)
-                .execute()
-            )
-            if not check_response.data:
+            # Check if project exists
+            project = await self.repository.get_project_by_id(project_id)
+            if not project:
                 return False, {"error": f"Project with ID {project_id} not found"}
 
-            # Get task count for reporting
-            tasks_response = (
-                self.supabase_client.table("archon_tasks")
-                .select("id")
-                .eq("project_id", project_id)
-                .execute()
-            )
-            tasks_count = len(tasks_response.data) if tasks_response.data else 0
+            # Get task count for reporting (before deletion)
+            tasks = await self.repository.list_tasks(project_id=project_id, include_archived=True)
+            tasks_count = len(tasks)
 
             # Delete the project (tasks will be deleted by cascade)
-            response = (
-                self.supabase_client.table("archon_projects")
-                .delete()
-                .eq("id", project_id)
-                .execute()
-            )
+            deleted = await self.repository.delete_project(project_id)
 
-            # For DELETE operations, success is indicated by no error, not by response.data content
-            # response.data will be empty list [] even on successful deletion
+            if not deleted:
+                return False, {"error": f"Failed to delete project {project_id}"}
+
             return True, {
                 "project_id": project_id,
                 "deleted_tasks": tasks_count,
@@ -271,7 +233,7 @@ class ProjectService:
             logger.error(f"Error deleting project: {e}")
             return False, {"error": f"Error deleting project: {str(e)}"}
 
-    def get_project_features(self, project_id: str) -> tuple[bool, dict[str, Any]]:
+    async def get_project_features(self, project_id: str) -> tuple[bool, dict[str, Any]]:
         """
         Get features from a project's features JSONB field.
 
@@ -279,18 +241,11 @@ class ProjectService:
             Tuple of (success, result_dict)
         """
         try:
-            response = (
-                self.supabase_client.table("archon_projects")
-                .select("features")
-                .eq("id", project_id)
-                .single()
-                .execute()
-            )
+            # Get features via repository
+            features = await self.repository.get_project_features(project_id)
 
-            if not response.data:
+            if features is None:
                 return False, {"error": "Project not found"}
-
-            features = response.data.get("features", [])
 
             # Extract feature labels for dropdown options
             feature_options = []
@@ -314,7 +269,7 @@ class ProjectService:
             logger.error(f"Error getting project features: {e}")
             return False, {"error": f"Error getting project features: {str(e)}"}
 
-    def update_project(
+    async def update_project(
         self, project_id: str, update_fields: dict[str, Any]
     ) -> tuple[bool, dict[str, Any]]:
         """
@@ -324,10 +279,7 @@ class ProjectService:
             Tuple of (success, result_dict)
         """
         try:
-            # Build update data
-            update_data = {"updated_at": datetime.now().isoformat()}
-
-            # Add allowed fields
+            # Build update data with allowed fields
             allowed_fields = [
                 "title",
                 "description",
@@ -340,6 +292,7 @@ class ProjectService:
                 "pinned",
             ]
 
+            update_data = {}
             for field in allowed_fields:
                 if field in update_fields:
                     update_data[field] = update_fields[field]
@@ -347,39 +300,16 @@ class ProjectService:
             # Handle pinning logic - only one project can be pinned at a time
             if update_fields.get("pinned") is True:
                 # Unpin any other pinned projects first
-                unpin_response = (
-                    self.supabase_client.table("archon_projects")
-                    .update({"pinned": False})
-                    .neq("id", project_id)
-                    .eq("pinned", True)
-                    .execute()
-                )
-                logger.debug(f"Unpinned {len(unpin_response.data or [])} other projects before pinning {project_id}")
+                unpinned_count = await self.repository.unpin_all_projects_except(project_id)
+                logger.debug(f"Unpinned {unpinned_count} other projects before pinning {project_id}")
 
-            # Update the target project
-            response = (
-                self.supabase_client.table("archon_projects")
-                .update(update_data)
-                .eq("id", project_id)
-                .execute()
-            )
+            # Update the target project via repository
+            project = await self.repository.update_project(project_id, update_data)
 
-            if response.data and len(response.data) > 0:
-                project = response.data[0]
+            if project:
                 return True, {"project": project, "message": "Project updated successfully"}
             else:
-                # If update didn't return data, fetch the project to ensure it exists and get current state
-                get_response = (
-                    self.supabase_client.table("archon_projects")
-                    .select("*")
-                    .eq("id", project_id)
-                    .execute()
-                )
-                if get_response.data and len(get_response.data) > 0:
-                    project = get_response.data[0]
-                    return True, {"project": project, "message": "Project updated successfully"}
-                else:
-                    return False, {"error": f"Project with ID {project_id} not found"}
+                return False, {"error": f"Project with ID {project_id} not found"}
 
         except Exception as e:
             logger.error(f"Error updating project: {e}")

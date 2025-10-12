@@ -5,11 +5,11 @@ Implements the foundational vector similarity search that all other strategies b
 This is the core semantic search functionality.
 """
 
-from typing import Any
-
-from supabase import Client
+from typing import Any, Optional
 
 from ...config.logfire_config import get_logger, safe_span
+from ...repositories import DatabaseRepository, SupabaseDatabaseRepository
+from ...utils import get_supabase_client
 
 logger = get_logger(__name__)
 
@@ -20,9 +20,20 @@ SIMILARITY_THRESHOLD = 0.05
 class BaseSearchStrategy:
     """Base strategy implementing fundamental vector similarity search"""
 
-    def __init__(self, supabase_client: Client):
-        """Initialize with database client"""
-        self.supabase_client = supabase_client
+    def __init__(self, database_repository: Optional[DatabaseRepository] = None):
+        """
+        Initialize with dependency injection.
+        
+        Args:
+            database_repository: DatabaseRepository implementation for database operations.
+                                If None, creates a default SupabaseDatabaseRepository.
+        """
+        # Use injected repository or create default
+        if database_repository is None:
+            supabase_client = get_supabase_client()
+            self.db_repository = SupabaseDatabaseRepository(supabase_client)
+        else:
+            self.db_repository = database_repository
 
     async def vector_search(
         self,
@@ -60,13 +71,13 @@ class BaseSearchStrategy:
                 else:
                     rpc_params["filter"] = {}
 
-                # Execute search
-                response = self.supabase_client.rpc(table_rpc, rpc_params).execute()
+                # Execute search using repository
+                results = await self.db_repository.execute_rpc(table_rpc, rpc_params)
 
                 # Filter by similarity threshold
                 filtered_results = []
-                if response.data:
-                    for result in response.data:
+                if results:
+                    for result in results:
                         similarity = float(result.get("similarity", 0.0))
                         if similarity >= SIMILARITY_THRESHOLD:
                             filtered_results.append(result)
@@ -74,7 +85,7 @@ class BaseSearchStrategy:
                 span.set_attribute("results_found", len(filtered_results))
                 span.set_attribute(
                     "results_filtered",
-                    len(response.data) - len(filtered_results) if response.data else 0,
+                    len(results) - len(filtered_results) if results else 0,
                 )
 
                 return filtered_results
