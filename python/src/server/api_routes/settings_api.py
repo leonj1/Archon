@@ -356,3 +356,80 @@ async def check_credential_status(request: dict[str, list[str]]):
     except Exception as e:
         logfire.error(f"Error in credential status check | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
+
+@router.get("/database/info")
+async def get_database_info():
+    """Get information about the current database configuration."""
+    try:
+        import os
+        from ..repositories.repository_factory import get_repository
+        
+        # Get the current repository
+        repository = get_repository()
+        
+        # Determine database type from environment or repository class
+        db_backend = os.getenv("ARCHON_DB_BACKEND", "supabase").lower()
+        
+        # Get database path/URL based on backend type
+        db_info = {
+            "type": db_backend,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if db_backend == "sqlite":
+            # SQLite - show local file path
+            db_path = os.getenv("ARCHON_SQLITE_PATH", "archon.db")
+            # Make path absolute if it's relative
+            if not os.path.isabs(db_path):
+                db_path = os.path.abspath(db_path)
+            
+            db_info["path"] = db_path
+            db_info["display_type"] = "SQLite"
+            db_info["description"] = "Local SQLite database"
+            
+            # Check if file exists and get size
+            if os.path.exists(db_path):
+                size_bytes = os.path.getsize(db_path)
+                size_mb = size_bytes / (1024 * 1024)
+                db_info["size_mb"] = round(size_mb, 2)
+                db_info["exists"] = True
+            else:
+                db_info["exists"] = False
+                
+        elif db_backend == "supabase":
+            # Supabase - show project URL
+            supabase_url = os.getenv("SUPABASE_URL", "")
+            
+            # Extract project ID from URL for display
+            if supabase_url:
+                import re
+                match = re.match(r'https://([^.]+)\.supabase\.co', supabase_url)
+                if match:
+                    project_id = match.group(1)
+                    db_info["path"] = f"{project_id}.supabase.co"
+                else:
+                    db_info["path"] = supabase_url
+            else:
+                db_info["path"] = "Not configured"
+            
+            db_info["display_type"] = "Supabase"
+            db_info["description"] = "Cloud PostgreSQL database"
+            db_info["full_url"] = supabase_url if supabase_url else None
+            
+        elif db_backend == "fake":
+            # Fake repository for testing
+            db_info["path"] = "In-memory (testing)"
+            db_info["display_type"] = "Test Database"
+            db_info["description"] = "In-memory test database"
+        else:
+            # Unknown backend
+            db_info["path"] = "Unknown"
+            db_info["display_type"] = db_backend.title()
+            db_info["description"] = f"Unknown database type: {db_backend}"
+        
+        logfire.info(f"Database info retrieved | type={db_info['type']} | path={db_info.get('path', 'N/A')}")
+        return db_info
+        
+    except Exception as e:
+        logfire.error(f"Error getting database info | error={str(e)}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})

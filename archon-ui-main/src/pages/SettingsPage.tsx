@@ -24,6 +24,7 @@ import { CodeExtractionSettings } from "../components/settings/CodeExtractionSet
 import { IDEGlobalRules } from "../components/settings/IDEGlobalRules";
 import { ButtonPlayground } from "../components/settings/ButtonPlayground";
 import { CollapsibleSettingsCard } from "../components/ui/CollapsibleSettingsCard";
+import { DatabaseSection } from "../components/settings/DatabaseSection";
 import { BugReportButton } from "../components/bug-report/BugReportButton";
 import {
   credentialsService,
@@ -197,6 +198,17 @@ export const SettingsPage = () => {
               defaultExpanded={true}
             >
               <APIKeysSection />
+            </CollapsibleSettingsCard>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <CollapsibleSettingsCard
+              title="Database"
+              icon={Database}
+              accentColor="blue"
+              storageKey="database-info"
+              defaultExpanded={false}
+            >
+              <DatabaseSection />
             </CollapsibleSettingsCard>
           </motion.div>
           <motion.div variants={itemVariants}>

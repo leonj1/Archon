@@ -599,6 +599,25 @@ class CredentialsService {
       return { migrated: false, instanceCount: 0 };
     }
   }
+
+  async getDatabaseInfo(): Promise<DatabaseInfo> {
+    const response = await fetch('/api/database/info');
+    if (!response.ok) {
+      throw new Error('Failed to fetch database information');
+    }
+    return response.json();
+  }
+}
+
+export interface DatabaseInfo {
+  type: string;
+  display_type: string;
+  path: string;
+  description: string;
+  timestamp: string;
+  size_mb?: number;
+  exists?: boolean;
+  full_url?: string;
 }
 
 export const credentialsService = new CredentialsService();
