@@ -35,7 +35,6 @@ from ..config.logfire_config import get_logger, logfire
 
 logger = get_logger(__name__)
 
-
 def _preserve_code_blocks_across_pages(text: str) -> str:
     """
     Fix code blocks that were split across PDF page boundaries.
@@ -73,7 +72,6 @@ def _preserve_code_blocks_across_pages(text: str) -> str:
             text = text[:match.start()] + rejoined + text[match.end():]
     
     return text
-
 
 def _clean_html_to_text(html_content: str) -> str:
     """
@@ -154,7 +152,6 @@ def _clean_html_to_text(html_content: str) -> str:
     
     return processed_html.strip()
 
-
 def extract_text_from_document(file_content: bytes, filename: str, content_type: str) -> str:
     """
     Extract text from various document formats.
@@ -219,7 +216,6 @@ def extract_text_from_document(file_content: bytes, filename: str, content_type:
         )
         # Re-raise with context, preserving original exception chain
         raise Exception(f"Failed to extract text from {filename}") from e
-
 
 def extract_text_from_pdf(file_content: bytes) -> str:
     """
@@ -302,7 +298,6 @@ def extract_text_from_pdf(file_content: bytes) -> str:
 
     # If we get here, no libraries worked
     raise Exception("Failed to extract text from PDF - no working PDF libraries available")
-
 
 def extract_text_from_docx(file_content: bytes) -> str:
     """

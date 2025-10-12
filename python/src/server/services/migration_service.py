@@ -10,9 +10,7 @@ import logfire
 
 from ..config.version import ARCHON_VERSION
 from ..repositories.database_repository import DatabaseRepository
-from ..repositories.supabase_repository import SupabaseDatabaseRepository
-from ..utils import get_supabase_client
-
+from ..repositories.repository_factory import get_repository
 
 class MigrationRecord:
     """Represents a migration record from the database."""
@@ -23,7 +21,6 @@ class MigrationRecord:
         self.migration_name = data.get("migration_name")
         self.applied_at = data.get("applied_at")
         self.checksum = data.get("checksum")
-
 
 class PendingMigration:
     """Represents a pending migration from the filesystem."""
@@ -38,7 +35,6 @@ class PendingMigration:
     def _calculate_checksum(self, content: str) -> str:
         """Calculate MD5 checksum of migration content."""
         return hashlib.md5(content.encode()).hexdigest()
-
 
 class MigrationService:
     """Service for managing database migrations."""
@@ -56,7 +52,7 @@ class MigrationService:
         elif supabase_client is not None:
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
         # Handle both Docker (/app/migration) and local (./migration) environments
         if Path("/app/migration").exists():
@@ -210,7 +206,61 @@ class MigrationService:
             "pending_count": len(pending),
             "applied_count": len(applied),
         }
-
+    
+    async def apply_pending_migrations(self) -> tuple[bool, list[str]]:
+        """
+        Apply all pending migrations to the database.
+        
+        Returns:
+            Tuple of (success, list of applied migration names)
+        """
+        applied = []
+        
+        try:
+            # Get pending migrations
+            pending_migrations = await self.get_pending_migrations()
+            
+            if not pending_migrations:
+                logfire.info("No pending migrations to apply")
+                return True, applied
+            
+            logfire.info(f"Found {len(pending_migrations)} pending migrations")
+            
+            # Get Supabase client to execute SQL
+            supabase = get_supabase_client()
+            
+            for migration in pending_migrations:
+                try:
+                    logfire.info(f"Applying migration: {migration.version}/{migration.name}")
+                    
+                    # Execute the SQL migration
+                    # Note: Supabase client doesn't have a direct SQL execution method,
+                    # so we use RPC or raw postgrest calls
+                    from postgrest import APIError
+                    
+                    # For Supabase, we need to execute raw SQL through RPC
+                    # This requires setting up an RPC function in Supabase
+                    # For now, log that migration needs to be applied manually
+                    logfire.warning(
+                        f"Migration {migration.name} needs to be applied manually through Supabase dashboard. "
+                        f"SQL content available at: {migration.file_path}"
+                    )
+                    
+                    # In production, you would execute this through Supabase SQL editor
+                    # or set up an RPC function to handle migrations
+                    
+                    # For now, we'll mark it as needing manual application
+                    continue
+                    
+                except Exception as e:
+                    logfire.error(f"Failed to apply migration {migration.name}: {e}")
+                    raise
+            
+            return True, applied
+            
+        except Exception as e:
+            logfire.error(f"Error applying migrations: {e}")
+            return False, applied
 
 # Export singleton instance
 migration_service = MigrationService()

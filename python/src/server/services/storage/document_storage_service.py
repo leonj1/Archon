@@ -10,10 +10,10 @@ from typing import Any
 
 from ...config.logfire_config import safe_span, search_logger
 from ...repositories.database_repository import DatabaseRepository
+from ...repositories.repository_factory import get_repository
 from ..credential_service import credential_service
 from ..embeddings.contextual_embedding_service import generate_contextual_embeddings_batch
 from ..embeddings.embedding_service import create_embeddings_batch
-
 
 async def add_documents_to_supabase(
     client,
@@ -49,10 +49,7 @@ async def add_documents_to_supabase(
     """
     # Handle backward compatibility - if repository not provided, create from client
     if repository is None:
-        if client is None:
-            raise ValueError("Either repository or client must be provided")
-        from ...repositories.supabase_repository import SupabaseDatabaseRepository
-        repository = SupabaseDatabaseRepository(client)
+        repository = get_repository()
 
     with safe_span(
         "add_documents_to_supabase", total_documents=len(contents), batch_size=batch_size

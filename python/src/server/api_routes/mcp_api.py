@@ -17,7 +17,6 @@ from ..config.logfire_config import api_logger, safe_set_attribute, safe_span
 
 router = APIRouter(prefix="/api/mcp", tags=["mcp"])
 
-
 def get_container_status() -> dict[str, Any]:
     """Get simple MCP container status without Docker management."""
     docker_client = None
@@ -74,7 +73,6 @@ def get_container_status() -> dict[str, Any]:
             except Exception:
                 pass
 
-
 @router.get("/status")
 async def get_status():
     """Get MCP server status."""
@@ -92,7 +90,6 @@ async def get_status():
             api_logger.error(f"MCP server status API failed - error={str(e)}")
             safe_set_attribute(span, "error", str(e))
             raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/config")
 async def get_mcp_config():
@@ -138,7 +135,6 @@ async def get_mcp_config():
             safe_set_attribute(span, "error", str(e))
             raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/clients")
 async def get_mcp_clients():
     """Get connected MCP clients with type detection."""
@@ -163,7 +159,6 @@ async def get_mcp_clients():
                 "total": 0,
                 "error": str(e)
             }
-
 
 @router.get("/sessions")
 async def get_mcp_sessions():
@@ -193,7 +188,6 @@ async def get_mcp_sessions():
             api_logger.error(f"Failed to get MCP sessions - error={str(e)}")
             safe_set_attribute(span, "error", str(e))
             raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/health")
 async def mcp_health():

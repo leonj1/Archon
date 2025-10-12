@@ -10,7 +10,6 @@ from typing import Any
 
 from ...config.logfire_config import safe_logfire_error, safe_logfire_info
 
-
 class ProgressTracker:
     """
     Utility class for tracking progress updates in memory.

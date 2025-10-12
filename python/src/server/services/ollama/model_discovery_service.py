@@ -17,7 +17,6 @@ from ..llm_provider_service import get_llm_client
 
 logger = get_logger(__name__)
 
-
 @dataclass
 class OllamaModel:
     """Represents a discovered Ollama model with comprehensive capabilities and metadata."""
@@ -56,7 +55,6 @@ class OllamaModel:
     finetune: str | None = None
     embedding_dimension: int | None = None
 
-
 @dataclass
 class ModelCapabilities:
     """Model capability analysis results."""
@@ -70,7 +68,6 @@ class ModelCapabilities:
     model_family: str | None = None
     quantization: str | None = None
 
-
 @dataclass
 class InstanceHealthStatus:
     """Health status for an Ollama instance."""
@@ -80,7 +77,6 @@ class InstanceHealthStatus:
     models_available: int = 0
     error_message: str | None = None
     last_checked: str | None = None
-
 
 class ModelDiscoveryService:
     """Service for discovering and validating Ollama models across multiple instances."""
@@ -1116,7 +1112,6 @@ class ModelDiscoveryService:
                    f"{len(chat_models)} chat, {len(embedding_models)} embedding")
 
         return discovery_result
-
 
 # Global service instance
 model_discovery_service = ModelDiscoveryService()

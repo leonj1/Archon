@@ -28,7 +28,6 @@ from ..llm_provider_service import (
     synthesize_json_from_reasoning,
 )
 
-
 def _extract_json_payload(raw_response: str, context_code: str = "", language: str = "") -> str:
     """Return the best-effort JSON object from an LLM response."""
 
@@ -50,7 +49,6 @@ def _extract_json_payload(raw_response: str, context_code: str = "", language: s
         # If all else fails, return a minimal valid JSON object to avoid downstream errors
         return '{"example_name": "Code Example", "summary": "Code example extracted from context."}'
 
-
     if cleaned.startswith("```"):
         lines = cleaned.splitlines()
         # Drop opening fence
@@ -67,7 +65,6 @@ def _extract_json_payload(raw_response: str, context_code: str = "", language: s
         cleaned = cleaned[start : end + 1]
 
     return cleaned.strip()
-
 
 REASONING_STARTERS = [
     "okay, let's see", "okay, let me", "let me think", "first, i need to", "looking at this",
@@ -120,11 +117,9 @@ async def _get_model_choice() -> str:
         search_logger.warning(f"Error getting model choice: {e}, using default")
         return "gpt-4o-mini"
 
-
 def _get_max_workers() -> int:
     """Get max workers from environment, defaulting to 3."""
     return int(os.getenv("CONTEXTUAL_EMBEDDINGS_MAX_WORKERS", "3"))
-
 
 def _normalize_code_for_comparison(code: str) -> str:
     """
@@ -158,7 +153,6 @@ def _normalize_code_for_comparison(code: str) -> str:
 
     return normalized
 
-
 def _calculate_code_similarity(code1: str, code2: str) -> float:
     """
     Calculate similarity between two code strings using normalized comparison.
@@ -178,7 +172,6 @@ def _calculate_code_similarity(code1: str, code2: str) -> float:
     similarity = SequenceMatcher(None, norm1, norm2).ratio()
 
     return similarity
-
 
 def _select_best_code_variant(similar_blocks: list[dict[str, Any]]) -> dict[str, Any]:
     """
@@ -236,8 +229,6 @@ def _select_best_code_variant(similar_blocks: list[dict[str, Any]]) -> dict[str,
             best_block["variant_languages"] = unique_languages
 
     return best_block
-
-
 
 def extract_code_blocks(markdown_content: str, min_length: int = None) -> list[dict[str, Any]]:
     """
@@ -571,7 +562,6 @@ def extract_code_blocks(markdown_content: str, min_length: int = None) -> list[d
 
     return grouped_blocks
 
-
 def generate_code_example_summary(
     code: str, context_before: str, context_after: str, language: str = "", provider: str = None
 ) -> dict[str, str]:
@@ -592,7 +582,6 @@ def generate_code_example_summary(
 
     # Run the async version in the current thread
     return asyncio.run(_generate_code_example_summary_async(code, context_before, context_after, language, provider))
-
 
 async def _generate_code_example_summary_async(
     code: str,
@@ -677,7 +666,6 @@ Format your response as JSON:
                 new_client, code, context_before, context_after, language, provider,
                 model_choice, guard_prompt, strict_prompt
             )
-
 
 async def _generate_summary_with_client(
     llm_client, code: str, context_before: str, context_after: str,
@@ -1011,7 +999,6 @@ async def _generate_summary_with_client(
             "summary": "Code example for demonstration purposes.",
         }
 
-
 async def generate_code_summaries_batch(
     code_blocks: list[dict[str, Any]], max_workers: int = None, progress_callback=None, provider: str = None
 ) -> list[dict[str, str]]:
@@ -1125,7 +1112,6 @@ async def generate_code_summaries_batch(
                 }
                 fallback_summaries.append(fallback)
             return fallback_summaries
-
 
 async def add_code_examples_to_supabase(
     repository: DatabaseRepository,

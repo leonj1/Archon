@@ -13,7 +13,6 @@ from ..config.logfire_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class SimplifiedSessionManager:
     """Simplified MCP session manager that tracks session IDs and expiration"""
 
@@ -71,10 +70,8 @@ class SimplifiedSessionManager:
         self.cleanup_expired_sessions()
         return len(self.sessions)
 
-
 # Global session manager instance
 _session_manager: SimplifiedSessionManager | None = None
-
 
 def get_session_manager() -> SimplifiedSessionManager:
     """Get the global session manager instance"""

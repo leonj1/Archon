@@ -15,12 +15,10 @@ from pydantic import BaseModel
 
 # Import logging
 from ..config.logfire_config import logfire
-from ..repositories.supabase_repository import SupabaseDatabaseRepository
+from ..repositories.repository_factory import get_repository
 from ..services.credential_service import credential_service, initialize_credentials
-from ..utils import get_supabase_client
 
 router = APIRouter(prefix="/api", tags=["settings"])
-
 
 class CredentialRequest(BaseModel):
     key: str
@@ -29,18 +27,15 @@ class CredentialRequest(BaseModel):
     category: str | None = None
     description: str | None = None
 
-
 class CredentialUpdateRequest(BaseModel):
     value: str
     is_encrypted: bool | None = None
     category: str | None = None
     description: str | None = None
 
-
 class CredentialResponse(BaseModel):
     success: bool
     message: str
-
 
 # Credential Management Endpoints
 @router.get("/credentials")
@@ -74,7 +69,6 @@ async def list_credentials(category: str | None = None):
         logfire.error(f"Error listing credentials | category={category} | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/credentials/categories/{category}")
 async def get_credentials_by_category(category: str):
     """Get all credentials for a specific category."""
@@ -92,7 +86,6 @@ async def get_credentials_by_category(category: str):
             f"Error getting credentials by category | category={category} | error={str(e)}"
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
-
 
 @router.post("/credentials")
 async def create_credential(request: CredentialRequest):
@@ -127,7 +120,6 @@ async def create_credential(request: CredentialRequest):
         logfire.error(f"Error creating credential | key={request.key} | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 # Define optional settings with their default values
 # These are user preferences that should return defaults instead of 404
 # This prevents console errors in the frontend when settings haven't been explicitly set
@@ -137,7 +129,6 @@ OPTIONAL_SETTINGS_WITH_DEFAULTS = {
     "PROJECTS_ENABLED": "false",  # Enable project management features
     "LOGFIRE_ENABLED": "false",  # Enable Pydantic Logfire integration
 }
-
 
 @router.get("/credentials/{key}")
 async def get_credential(key: str):
@@ -182,7 +173,6 @@ async def get_credential(key: str):
     except Exception as e:
         logfire.error(f"Error getting credential | key={key} | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
-
 
 @router.put("/credentials/{key}")
 async def update_credential(key: str, request: dict[str, Any]):
@@ -243,7 +233,6 @@ async def update_credential(key: str, request: dict[str, Any]):
         logfire.error(f"Error updating credential | key={key} | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.delete("/credentials/{key}")
 async def delete_credential(key: str):
     """Delete a credential."""
@@ -263,7 +252,6 @@ async def delete_credential(key: str):
         logfire.error(f"Error deleting credential | key={key} | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.post("/credentials/initialize")
 async def initialize_credentials_endpoint():
     """Reload credentials from database."""
@@ -278,13 +266,12 @@ async def initialize_credentials_endpoint():
         logfire.error(f"Error reloading credentials | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/database/metrics")
 async def database_metrics():
     """Get database metrics and statistics."""
     try:
         logfire.info("Getting database metrics")
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
 
         # Get various table counts using repository
         tables_info = {
@@ -299,9 +286,13 @@ async def database_metrics():
             f"Database metrics retrieved | total_records={total_records} | tables={tables_info}"
         )
 
+        # Detect database backend
+        import os
+        database_backend = os.getenv("ARCHON_DB_BACKEND", "supabase")
+        
         return {
             "status": "healthy",
-            "database": "supabase",
+            "database": database_backend,
             "tables": tables_info,
             "total_records": total_records,
             "timestamp": datetime.now().isoformat(),
@@ -311,7 +302,6 @@ async def database_metrics():
         logfire.error(f"Error getting database metrics | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/settings/health")
 async def settings_health():
     """Health check for settings API."""
@@ -319,7 +309,6 @@ async def settings_health():
     result = {"status": "healthy", "service": "settings"}
 
     return result
-
 
 @router.post("/credentials/status-check")
 async def check_credential_status(request: dict[str, list[str]]):

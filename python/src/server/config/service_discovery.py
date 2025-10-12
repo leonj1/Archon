@@ -11,13 +11,11 @@ from urllib.parse import urlparse
 
 import httpx
 
-
 class Environment(Enum):
     """Deployment environment types"""
 
     DOCKER_COMPOSE = "docker_compose"
     LOCAL = "local"
-
 
 class ServiceDiscovery:
     """
@@ -187,10 +185,8 @@ class ServiceDiscovery:
         """Check if running locally"""
         return self.environment == Environment.LOCAL
 
-
 # Global instance for convenience - lazy loaded
 _discovery = None
-
 
 def get_discovery() -> ServiceDiscovery:
     """Get or create the global ServiceDiscovery instance"""
@@ -199,36 +195,29 @@ def get_discovery() -> ServiceDiscovery:
         _discovery = ServiceDiscovery()
     return _discovery
 
-
 # For backward compatibility - create a property that lazy-loads
 class _LazyDiscovery:
     def __getattr__(self, name):
         return getattr(get_discovery(), name)
 
-
 discovery = _LazyDiscovery()
-
 
 # Convenience functions
 def get_api_url() -> str:
     """Get the API service URL"""
     return get_discovery().get_service_url("api")
 
-
 def get_mcp_url() -> str:
     """Get the MCP service URL"""
     return get_discovery().get_service_url("mcp")
-
 
 def get_agents_url() -> str:
     """Get the Agents service URL"""
     return get_discovery().get_service_url("agents")
 
-
 async def is_service_healthy(service: str) -> bool:
     """Check if a service is healthy"""
     return await get_discovery().health_check(service)
-
 
 # Export key functions and classes
 __all__ = [

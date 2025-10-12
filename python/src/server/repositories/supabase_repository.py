@@ -15,7 +15,6 @@ from .database_repository import DatabaseRepository
 
 logger = get_logger(__name__)
 
-
 class SupabaseDatabaseRepository(DatabaseRepository):
     """
     Concrete implementation of DatabaseRepository using Supabase client.

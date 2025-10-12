@@ -4,7 +4,6 @@ Semantic version parsing and comparison utilities.
 
 import re
 
-
 def parse_version(version_string: str) -> tuple[int, int, int, str | None]:
     """
     Parse a semantic version string into major, minor, patch, and optional prerelease.
@@ -48,7 +47,6 @@ def parse_version(version_string: str) -> tuple[int, int, int, str | None]:
 
     return (major, minor, patch, prerelease)
 
-
 def compare_versions(version1: str, version2: str) -> int:
     """
     Compare two semantic version strings.
@@ -87,7 +85,6 @@ def compare_versions(version1: str, version2: str) -> int:
         elif v1[3] > v2[3]:
             return 1
         return 0
-
 
 def is_newer_version(current: str, latest: str) -> bool:
     """

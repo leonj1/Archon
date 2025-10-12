@@ -11,14 +11,12 @@ from typing import Any, Optional
 
 from ...config.logfire_config import safe_logfire_error, safe_logfire_info
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...repositories.repository_factory import get_repository
 from ...services.credential_service import credential_service
-from ...utils import get_supabase_client
 from ..storage.code_storage_service import (
     add_code_examples_to_supabase,
     generate_code_summaries_batch,
 )
-
 
 class CodeExtractionService:
     """
@@ -67,18 +65,30 @@ class CodeExtractionService:
             repository: DatabaseRepository instance (preferred)
             supabase_client: Legacy supabase client (for backward compatibility)
         """
+        # Handle backward compatibility: if first arg looks like a supabase client (not a DatabaseRepository),
+        # treat it as supabase_client for compatibility with existing code
+        if repository is not None and not isinstance(repository, DatabaseRepository):
+            # First argument is actually a supabase client (backward compatibility)
+            supabase_client = repository
+            repository = None
+            
         if repository is not None:
             self.repository = repository
         elif supabase_client is not None:
+            # Legacy: create repository from supabase client
+            from ...repositories.supabase_repository import SupabaseDatabaseRepository
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
         # Keep reference to client for code_storage_service compatibility
         if supabase_client is not None:
             self.supabase_client = supabase_client
+        elif hasattr(self.repository, 'client'):
+            # For SupabaseDatabaseRepository
+            self.supabase_client = self.repository.client
         else:
-            self.supabase_client = get_supabase_client()
+            self.supabase_client = None
 
         self._settings_cache = {}
 

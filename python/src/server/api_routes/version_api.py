@@ -13,7 +13,6 @@ from ..config.version import ARCHON_VERSION
 from ..services.version_service import version_service
 from ..utils.etag_utils import check_etag, generate_etag
 
-
 # Response models
 class ReleaseAsset(BaseModel):
     """Represents a downloadable asset from a release."""
@@ -23,7 +22,6 @@ class ReleaseAsset(BaseModel):
     download_count: int
     browser_download_url: str
     content_type: str
-
 
 class VersionCheckResponse(BaseModel):
     """Version check response with update information."""
@@ -38,17 +36,14 @@ class VersionCheckResponse(BaseModel):
     assets: list[dict[str, Any]] | None = None
     author: str | None = None
 
-
 class CurrentVersionResponse(BaseModel):
     """Simple current version response."""
 
     version: str
     timestamp: datetime
 
-
 # Create router
 router = APIRouter(prefix="/api/version", tags=["version"])
-
 
 @router.get("/check", response_model=VersionCheckResponse)
 async def check_for_updates(response: Response, if_none_match: str | None = Header(None)):
@@ -94,7 +89,6 @@ async def check_for_updates(response: Response, if_none_match: str | None = Head
             check_error=str(e),
         )
 
-
 @router.get("/current", response_model=CurrentVersionResponse)
 async def get_current_version():
     """
@@ -103,7 +97,6 @@ async def get_current_version():
     Simple endpoint that returns the installed version without checking for updates.
     """
     return CurrentVersionResponse(version=ARCHON_VERSION, timestamp=datetime.now())
-
 
 @router.post("/clear-cache")
 async def clear_version_cache():

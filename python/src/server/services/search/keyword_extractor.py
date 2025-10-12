@@ -238,7 +238,6 @@ PRESERVE_KEYWORDS = {
     "cookies",
 }
 
-
 class KeywordExtractor:
     """Simple keyword extraction for search queries"""
 
@@ -416,10 +415,8 @@ class KeywordExtractor:
 
         return unique_terms
 
-
 # Global instance for easy access
 keyword_extractor = KeywordExtractor()
-
 
 def extract_keywords(query: str, min_length: int = 2, max_keywords: int = 10) -> list[str]:
     """
@@ -434,7 +431,6 @@ def extract_keywords(query: str, min_length: int = 2, max_keywords: int = 10) ->
         List of extracted keywords
     """
     return keyword_extractor.extract_keywords(query, min_length, max_keywords)
-
 
 def build_search_terms(keywords: list[str]) -> list[str]:
     """

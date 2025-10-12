@@ -11,15 +11,13 @@ from typing import Any
 
 from ...config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
-from ...utils import get_supabase_client
+from ...repositories.repository_factory import get_repository
 from ..source_management_service import extract_source_summary, update_source_info
 from ..storage.document_storage_service import add_documents_to_supabase
 from ..storage.storage_services import DocumentStorageService
 from .code_extraction_service import CodeExtractionService
 
 logger = get_logger(__name__)
-
 
 class DocumentStorageOperations:
     """
@@ -47,18 +45,24 @@ class DocumentStorageOperations:
             if hasattr(repository, 'client'):
                 self.supabase_client = repository.client
             else:
-                self.supabase_client = get_supabase_client()
+                self.supabase_client = None
         elif supabase_client is not None:
+            # Legacy: create repository from supabase client
+            from ...repositories.supabase_repository import SupabaseDatabaseRepository
             self.repository = SupabaseDatabaseRepository(supabase_client)
             self.supabase_client = supabase_client
         else:
-            client = get_supabase_client()
-            self.repository = SupabaseDatabaseRepository(client)
-            self.supabase_client = client
+            # Use repository factory to get the configured repository
+            self.repository = get_repository()
+            # Extract supabase_client if available (for SupabaseDatabaseRepository)
+            if hasattr(self.repository, 'client'):
+                self.supabase_client = self.repository.client
+            else:
+                self.supabase_client = None
 
-        # Initialize dependent services (these still need supabase_client for now)
-        self.doc_storage_service = DocumentStorageService(self.supabase_client)
-        self.code_extraction_service = CodeExtractionService(self.supabase_client)
+        # Initialize dependent services - pass repository instead of supabase_client
+        self.doc_storage_service = DocumentStorageService(repository=self.repository)
+        self.code_extraction_service = CodeExtractionService(repository=self.repository)
 
     async def process_and_store_documents(
         self,

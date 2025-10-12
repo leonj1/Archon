@@ -8,9 +8,7 @@ from typing import Any
 
 from ...config.logfire_config import safe_logfire_error, safe_logfire_info
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
-from ...utils import get_supabase_client
-
+from ...repositories.repository_factory import get_repository
 
 class KnowledgeItemService:
     """
@@ -24,10 +22,7 @@ class KnowledgeItemService:
         Args:
             repository: DatabaseRepository instance
         """
-        if repository is not None:
-            self.repository = repository
-        else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+        self.repository = repository or get_repository()
 
     async def list_items(
         self,

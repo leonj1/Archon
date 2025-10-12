@@ -19,12 +19,10 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from ..repositories.database_repository import DatabaseRepository
-from ..repositories.supabase_repository import SupabaseDatabaseRepository
-from ..utils import get_supabase_client
+from ..repositories.repository_factory import get_repository
 from ..config.logfire_config import get_logger
 
 logger = get_logger(__name__)
-
 
 @dataclass
 class CredentialItem:
@@ -36,9 +34,6 @@ class CredentialItem:
     is_encrypted: bool = False
     category: str | None = None
     description: str | None = None
-
-
-
 
 class CredentialService:
     """Service for managing application credentials and configuration."""
@@ -56,7 +51,7 @@ class CredentialService:
         elif supabase_client is not None:
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
         self._cache: dict[str, Any] = {}
         self._cache_initialized = False
@@ -407,6 +402,11 @@ class CredentialService:
         try:
             # Get RAG strategy settings (where UI saves provider selection)
             rag_settings = await self.get_credentials_by_category("rag_strategy")
+            
+            # Ensure rag_settings is a dictionary
+            if not isinstance(rag_settings, dict):
+                logger.error(f"get_credentials_by_category returned non-dict: {type(rag_settings)}")
+                rag_settings = {}
 
             # Get the selected provider based on service type
             if service_type == "embedding":
@@ -515,22 +515,18 @@ class CredentialService:
             logger.error(f"Error setting active provider {provider} for {service_type}: {e}")
             return False
 
-
 # Global instance
 credential_service = CredentialService()
-
 
 async def get_credential(key: str, default: Any = None) -> Any:
     """Convenience function to get a credential."""
     return await credential_service.get_credential(key, default)
-
 
 async def set_credential(
     key: str, value: str, is_encrypted: bool = False, category: str = None, description: str = None
 ) -> bool:
     """Convenience function to set a credential."""
     return await credential_service.set_credential(key, value, is_encrypted, category, description)
-
 
 async def initialize_credentials() -> None:
     """Initialize the credential service by loading all credentials and setting environment variables."""

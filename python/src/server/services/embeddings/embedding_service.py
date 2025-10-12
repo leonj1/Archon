@@ -16,7 +16,6 @@ import numpy as np
 import openai
 
 from ...config.logfire_config import safe_span, search_logger
-from ..credential_service import credential_service
 from ..llm_provider_service import get_embedding_model, get_llm_client
 from ..threading_service import get_threading_service
 from .embedding_exceptions import (
@@ -25,7 +24,6 @@ from .embedding_exceptions import (
     EmbeddingQuotaExhaustedError,
     EmbeddingRateLimitError,
 )
-
 
 @dataclass
 class EmbeddingBatchResult:
@@ -67,7 +65,6 @@ class EmbeddingBatchResult:
     def total_requested(self) -> int:
         return self.success_count + self.failure_count
 
-
 class EmbeddingProviderAdapter(ABC):
     """Adapter interface for embedding providers."""
 
@@ -79,7 +76,6 @@ class EmbeddingProviderAdapter(ABC):
         dimensions: int | None = None,
     ) -> list[list[float]]:
         """Create embeddings for the given texts."""
-
 
 class OpenAICompatibleEmbeddingAdapter(EmbeddingProviderAdapter):
     """Adapter for providers using the OpenAI embeddings API shape."""
@@ -103,7 +99,6 @@ class OpenAICompatibleEmbeddingAdapter(EmbeddingProviderAdapter):
         response = await self._client.embeddings.create(**request_args)
         return [item.embedding for item in response.data]
 
-
 class GoogleEmbeddingAdapter(EmbeddingProviderAdapter):
     """Adapter for Google's native embedding endpoint."""
 
@@ -113,6 +108,9 @@ class GoogleEmbeddingAdapter(EmbeddingProviderAdapter):
         model: str,
         dimensions: int | None = None,
     ) -> list[list[float]]:
+        # Import locally to avoid circular imports
+        from ..credential_service import credential_service
+        
         try:
             google_api_key = await credential_service.get_credential("GOOGLE_API_KEY")
             if not google_api_key:
@@ -216,13 +214,11 @@ class GoogleEmbeddingAdapter(EmbeddingProviderAdapter):
             # Return original embedding if normalization fails
             return embedding
 
-
 def _get_embedding_adapter(provider: str, client: Any) -> EmbeddingProviderAdapter:
     provider_name = (provider or "").lower()
     if provider_name == "google":
         return GoogleEmbeddingAdapter()
     return OpenAICompatibleEmbeddingAdapter(client)
-
 
 async def _maybe_await(value: Any) -> Any:
     """Await the value if it is awaitable, otherwise return as-is."""
@@ -231,7 +227,6 @@ async def _maybe_await(value: Any) -> Any:
 
 # Provider-aware client factory
 get_openai_client = get_llm_client
-
 
 async def create_embedding(text: str, provider: str | None = None) -> list[float]:
     """
@@ -292,7 +287,6 @@ async def create_embedding(text: str, provider: str | None = None) -> list[float
                 f"Embedding error: {error_msg}", text_preview=text, original_error=e
             )
 
-
 async def create_embeddings_batch(
     texts: list[str],
     progress_callback: Any | None = None,
@@ -314,6 +308,9 @@ async def create_embeddings_batch(
     Returns:
         EmbeddingBatchResult with successful embeddings and failure details
     """
+    # Import locally to avoid circular imports
+    from ..credential_service import credential_service
+    
     if not texts:
         return EmbeddingBatchResult()
 
@@ -522,7 +519,6 @@ async def create_embeddings_batch(
                 )
 
             return result
-
 
 # Deprecated functions - kept for backward compatibility
 async def get_openai_api_key() -> str | None:

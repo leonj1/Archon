@@ -14,7 +14,6 @@ from ....config.logfire_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class SinglePageCrawlStrategy:
     """Strategy for crawling a single web page."""
 

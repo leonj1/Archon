@@ -13,10 +13,8 @@ from typing import Any
 import openai
 
 from ..config.logfire_config import get_logger
-from .credential_service import credential_service
 
 logger = get_logger(__name__)
-
 
 # Basic validation functions to avoid circular imports
 def _is_valid_provider(provider: str) -> bool:
@@ -24,7 +22,6 @@ def _is_valid_provider(provider: str) -> bool:
     if not provider or not isinstance(provider, str):
         return False
     return provider.lower() in {"openai", "ollama", "google", "openrouter", "anthropic", "grok"}
-
 
 def _sanitize_for_log(text: str) -> str:
     """Basic text sanitization for logging."""
@@ -35,12 +32,10 @@ def _sanitize_for_log(text: str) -> str:
     sanitized = re.sub(r"xai-[a-zA-Z0-9-_]{20,}", "[REDACTED]", sanitized)
     return sanitized[:100]
 
-
 # Secure settings cache with TTL and validation
 _settings_cache: dict[str, tuple[Any, float, str]] = {}  # value, timestamp, checksum
 _CACHE_TTL_SECONDS = 300  # 5 minutes
 _cache_access_log: list[dict] = []  # Track cache access patterns for security monitoring
-
 
 def _calculate_cache_checksum(value: Any) -> str:
     """Calculate checksum for cache entry integrity validation."""
@@ -54,7 +49,6 @@ def _calculate_cache_checksum(value: Any) -> str:
     except Exception:
         # Fallback for non-serializable objects
         return hashlib.sha256(str(value).encode()).hexdigest()[:16]
-
 
 def _log_cache_access(key: str, action: str, hit: bool = None, security_event: str = None) -> None:
     """Log cache access for security monitoring."""
@@ -76,7 +70,6 @@ def _log_cache_access(key: str, action: str, hit: bool = None, security_event: s
     if security_event:
         safe_key = _sanitize_for_log(key)
         logger.warning(f"Cache security event: {security_event} for key '{safe_key}'")
-
 
 def _get_cached_settings(key: str) -> Any | None:
     """Get cached settings if not expired and valid."""
@@ -122,7 +115,6 @@ def _get_cached_settings(key: str) -> Any | None:
         _log_cache_access(key, "get", hit=False, security_event=f"access_error: {str(e)}")
         return None
 
-
 def _set_cached_settings(key: str, value: Any) -> None:
     """Cache settings with current timestamp and integrity checksum."""
 
@@ -146,7 +138,6 @@ def _set_cached_settings(key: str, value: Any) -> None:
         _log_cache_access(key, "set", security_event=f"set_error: {str(e)}")
         logger.error(f"Failed to cache settings for key {_sanitize_for_log(key)}: {e}")
 
-
 def clear_provider_cache() -> None:
     """Clear the provider configuration cache to force refresh on next request."""
     global _settings_cache
@@ -155,7 +146,6 @@ def clear_provider_cache() -> None:
     _settings_cache.clear()
     _log_cache_access("*", "clear")
     logger.debug(f"Provider configuration cache cleared ({cache_size_before} entries removed)")
-
 
 def invalidate_provider_cache(provider: str = None) -> None:
     """
@@ -191,7 +181,6 @@ def invalidate_provider_cache(provider: str = None) -> None:
 
         safe_provider = _sanitize_for_log(provider)
         logger.debug(f"Cache entries for provider '{safe_provider}' invalidated: {len(keys_to_remove)} entries removed")
-
 
 def get_cache_stats() -> dict[str, Any]:
     """
@@ -269,7 +258,6 @@ def get_cache_stats() -> dict[str, Any]:
 
     return stats
 
-
 def get_cache_security_report() -> dict[str, Any]:
     """
     Get detailed security report for cache monitoring.
@@ -332,6 +320,9 @@ async def get_llm_client(
     Yields:
         openai.AsyncOpenAI: An OpenAI-compatible client configured for the selected provider
     """
+    # Import locally to avoid circular imports
+    from .credential_service import credential_service
+    
     client = None
     provider_name: str | None = None
     api_key = None
@@ -547,8 +538,6 @@ async def get_llm_client(
                     exc_info=True,
                 )
 
-
-
 async def _get_optimal_ollama_instance(instance_type: str | None = None,
                                        use_embedding_provider: bool = False,
                                        base_url_override: str | None = None) -> str:
@@ -563,6 +552,9 @@ async def _get_optimal_ollama_instance(instance_type: str | None = None,
     Returns:
         Best available Ollama instance URL
     """
+    # Import locally to avoid circular imports
+    from .credential_service import credential_service
+    
     # If override URL provided, use it directly
     if base_url_override:
         return base_url_override if base_url_override.endswith('/v1') else f"{base_url_override}/v1"
@@ -596,7 +588,6 @@ async def _get_optimal_ollama_instance(instance_type: str | None = None,
             logger.error(f"Could not retrieve fallback configuration: {fallback_error}")
             return "http://host.docker.internal:11434/v1"
 
-
 async def get_embedding_model(provider: str | None = None) -> str:
     """
     Get the configured embedding model based on the provider.
@@ -607,6 +598,9 @@ async def get_embedding_model(provider: str | None = None) -> str:
     Returns:
         str: The embedding model to use
     """
+    # Import locally to avoid circular imports
+    from .credential_service import credential_service
+    
     try:
         # Get provider configuration
         if provider:
@@ -674,7 +668,6 @@ async def get_embedding_model(provider: str | None = None) -> str:
         # Fallback to OpenAI default
         return "text-embedding-3-small"
 
-
 def is_openai_embedding_model(model: str) -> bool:
     """Check if a model is an OpenAI embedding model."""
     if not model:
@@ -702,7 +695,6 @@ def is_openai_embedding_model(model: str) -> bool:
     # Fallback substring detection for custom naming conventions
     return any(base in model_lower for base in base_models)
 
-
 def is_google_embedding_model(model: str) -> bool:
     """Check if a model is a Google embedding model."""
     if not model:
@@ -718,7 +710,6 @@ def is_google_embedding_model(model: str) -> bool:
     ]
 
     return any(pattern in model_lower for pattern in google_patterns)
-
 
 def is_valid_embedding_model_for_provider(model: str, provider: str) -> bool:
     """
@@ -751,7 +742,6 @@ def is_valid_embedding_model_for_provider(model: str, provider: str) -> bool:
     else:
         # For unknown providers, assume OpenAI compatibility
         return is_openai_embedding_model(model)
-
 
 def get_supported_embedding_models(provider: str) -> list[str]:
     """
@@ -795,7 +785,6 @@ def get_supported_embedding_models(provider: str) -> list[str]:
         # For unknown providers, assume OpenAI compatibility
         return openai_models
 
-
 def is_reasoning_model(model_name: str) -> bool:
     """
     Unified check for reasoning models across providers.
@@ -835,7 +824,6 @@ def is_reasoning_model(model_name: str) -> bool:
 
     return model_lower.startswith(reasoning_prefixes)
 
-
 def _extract_reasoning_strings(value: Any) -> list[str]:
     """Convert reasoning payload fragments into plain-text strings."""
 
@@ -871,7 +859,6 @@ def _extract_reasoning_strings(value: Any) -> list[str]:
 
     return []
 
-
 def _get_message_attr(message: Any, attribute: str) -> Any:
     """Safely access message attributes that may be dict keys or properties."""
 
@@ -880,7 +867,6 @@ def _get_message_attr(message: Any, attribute: str) -> Any:
     if isinstance(message, dict):
         return message.get(attribute)
     return None
-
 
 def extract_message_text(choice: Any) -> tuple[str, str, bool]:
     """Extract primary content and reasoning text from a chat completion choice."""
@@ -921,7 +907,6 @@ def extract_message_text(choice: Any) -> tuple[str, str, bool]:
 
     return content_text, reasoning_text, has_reasoning
 
-
 def _is_reasoning_text(text: str) -> bool:
     """Detect if text appears to be reasoning/thinking output rather than structured content."""
     if not text or len(text) < 10:
@@ -937,7 +922,6 @@ def _is_reasoning_text(text: str) -> bool:
     ]
 
     return any(indicator in text_lower for indicator in reasoning_indicators)
-
 
 def extract_json_from_reasoning(reasoning_text: str, context_code: str = "", language: str = "") -> str:
     """Extract JSON content from reasoning text, with synthesis fallback."""
@@ -974,7 +958,6 @@ def extract_json_from_reasoning(reasoning_text: str, context_code: str = "", lan
 
     # If no JSON found, synthesize from reasoning content
     return synthesize_json_from_reasoning(reasoning_text, context_code, language)
-
 
 def synthesize_json_from_reasoning(reasoning_text: str, context_code: str = "", language: str = "") -> str:
     """Generate JSON structure from reasoning text when no JSON is found."""
@@ -1091,7 +1074,6 @@ def synthesize_json_from_reasoning(reasoning_text: str, context_code: str = "", 
 
     return json.dumps(result)
 
-
 def prepare_chat_completion_params(model: str, params: dict) -> dict:
     """
     Convert parameters for compatibility with reasoning models (GPT-5, o1, o3 series).
@@ -1131,7 +1113,6 @@ def prepare_chat_completion_params(model: str, params: dict) -> dict:
 
     return updated_params
 
-
 async def get_embedding_model_with_routing(provider: str | None = None, instance_url: str | None = None) -> tuple[str, str]:
     """
     Get the embedding model with intelligent routing for multi-instance setups.
@@ -1143,6 +1124,9 @@ async def get_embedding_model_with_routing(provider: str | None = None, instance
     Returns:
         Tuple of (model_name, instance_url) for embedding operations
     """
+    # Import locally to avoid circular imports
+    from .credential_service import credential_service
+    
     try:
         # Get base embedding model
         model_name = await get_embedding_model(provider)
@@ -1166,7 +1150,6 @@ async def get_embedding_model_with_routing(provider: str | None = None, instance
     except Exception as e:
         logger.error(f"Error getting embedding model with routing: {e}")
         return "text-embedding-3-small", None
-
 
 async def validate_provider_instance(provider: str, instance_url: str | None = None) -> dict[str, any]:
     """
@@ -1242,8 +1225,6 @@ async def validate_provider_instance(provider: str, instance_url: str | None = N
             "error_message": str(e),
             "validation_timestamp": time.time()
         }
-
-
 
 def requires_max_completion_tokens(model_name: str) -> bool:
     """Backward compatible alias for previous API."""

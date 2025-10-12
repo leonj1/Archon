@@ -12,7 +12,6 @@ from ..config.version import ARCHON_VERSION
 from ..services.migration_service import migration_service
 from ..utils.etag_utils import check_etag, generate_etag
 
-
 # Response models
 class MigrationRecord(BaseModel):
     """Represents an applied migration."""
@@ -22,7 +21,6 @@ class MigrationRecord(BaseModel):
     applied_at: datetime
     checksum: str | None = None
 
-
 class PendingMigration(BaseModel):
     """Represents a pending migration."""
 
@@ -31,7 +29,6 @@ class PendingMigration(BaseModel):
     sql_content: str
     file_path: str
     checksum: str | None = None
-
 
 class MigrationStatusResponse(BaseModel):
     """Complete migration status response."""
@@ -44,7 +41,6 @@ class MigrationStatusResponse(BaseModel):
     pending_count: int
     applied_count: int
 
-
 class MigrationHistoryResponse(BaseModel):
     """Migration history response."""
 
@@ -52,10 +48,8 @@ class MigrationHistoryResponse(BaseModel):
     total_count: int
     current_version: str
 
-
 # Create router
 router = APIRouter(prefix="/api/migrations", tags=["migrations"])
-
 
 @router.get("/status", response_model=MigrationStatusResponse)
 async def get_migration_status(
@@ -93,7 +87,6 @@ async def get_migration_status(
     except Exception as e:
         logfire.error(f"Error getting migration status: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get migration status: {str(e)}") from e
-
 
 @router.get("/history", response_model=MigrationHistoryResponse)
 async def get_migration_history(response: Response, if_none_match: str | None = Header(None)):
@@ -140,7 +133,6 @@ async def get_migration_history(response: Response, if_none_match: str | None = 
     except Exception as e:
         logfire.error(f"Error getting migration history: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get migration history: {str(e)}") from e
-
 
 @router.get("/pending", response_model=list[PendingMigration])
 async def get_pending_migrations():

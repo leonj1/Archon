@@ -4,7 +4,6 @@ import hashlib
 import json
 from typing import Any
 
-
 def generate_etag(data: Any) -> str:
     """Generate an ETag hash from data.
     
@@ -22,7 +21,6 @@ def generate_etag(data: Any) -> str:
 
     # Return ETag in standard format (quoted)
     return f'"{hash_obj.hexdigest()}"'
-
 
 def check_etag(request_etag: str | None, current_etag: str) -> bool:
     """Check if request ETag matches current ETag.

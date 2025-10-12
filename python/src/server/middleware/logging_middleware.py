@@ -14,7 +14,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..config.logfire_config import LOGFIRE_AVAILABLE, get_logger, is_logfire_enabled
 
-
 class LoggingMiddleware(BaseHTTPMiddleware):
     """
     Middleware that automatically logs HTTP requests and responses.
@@ -63,7 +62,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             )
             raise
 
-
 def instrument_fastapi(app):
     """
     Instrument a FastAPI app with automatic logging.
@@ -88,7 +86,6 @@ def instrument_fastapi(app):
         # Use our custom middleware for basic logging
         app.add_middleware(LoggingMiddleware)
         logger.info("FastAPI instrumented with custom logging middleware")
-
 
 class LoggingRoute(APIRoute):
     """

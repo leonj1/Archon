@@ -13,7 +13,6 @@ from .document_storage_service import add_documents_to_supabase
 
 logger = get_logger(__name__)
 
-
 class DocumentStorageService(BaseStorageService):
     """Service for handling document uploads with progress reporting."""
 

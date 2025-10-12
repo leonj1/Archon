@@ -11,8 +11,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from ..config.logfire_config import get_logger, safe_logfire_error
-from ..repositories.supabase_repository import SupabaseDatabaseRepository
-from ..utils import get_supabase_client
+from ..repositories.repository_factory import get_repository
 
 # Get logger for this module
 logger = get_logger(__name__)
@@ -22,7 +21,6 @@ router = APIRouter(prefix="/api", tags=["pages"])
 
 # Maximum character count for returning full page content
 MAX_PAGE_CHARS = 20_000
-
 
 class PageSummary(BaseModel):
     """Summary model for page listings (no content)"""
@@ -34,7 +32,6 @@ class PageSummary(BaseModel):
     word_count: int
     char_count: int
     chunk_count: int
-
 
 class PageResponse(BaseModel):
     """Response model for a single page (with content)"""
@@ -52,14 +49,12 @@ class PageResponse(BaseModel):
     created_at: str
     updated_at: str
 
-
 class PageListResponse(BaseModel):
     """Response model for page listing"""
 
     pages: list[PageSummary]
     total: int
     source_id: str
-
 
 def _handle_large_page_content(page_data: dict) -> dict:
     """
@@ -89,7 +84,6 @@ def _handle_large_page_content(page_data: dict) -> dict:
 
     return page_data
 
-
 @router.get("/pages")
 async def list_pages(
     source_id: str = Query(..., description="Source ID to filter pages"),
@@ -106,7 +100,7 @@ async def list_pages(
         PageListResponse with list of pages and metadata
     """
     try:
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
 
         page_data = await repository.list_page_metadata_by_source(
             source_id=source_id,
@@ -122,7 +116,6 @@ async def list_pages(
         safe_logfire_error(f"Failed to list pages | source_id={source_id} | error={str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to list pages: {str(e)}") from e
 
-
 @router.get("/pages/by-url")
 async def get_page_by_url(url: str = Query(..., description="The URL of the page to retrieve")):
     """
@@ -137,7 +130,7 @@ async def get_page_by_url(url: str = Query(..., description="The URL of the page
         PageResponse with complete page data
     """
     try:
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
 
         page_data = await repository.get_full_page_metadata_by_url(url)
 
@@ -154,7 +147,6 @@ async def get_page_by_url(url: str = Query(..., description="The URL of the page
         safe_logfire_error(f"Failed to get page by URL | url={url} | error={str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get page: {str(e)}") from e
 
-
 @router.get("/pages/{page_id}")
 async def get_page_by_id(page_id: str):
     """
@@ -167,7 +159,7 @@ async def get_page_by_id(page_id: str):
         PageResponse with complete page data
     """
     try:
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
 
         page_data = await repository.get_full_page_metadata_by_id(page_id)
 

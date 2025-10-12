@@ -13,12 +13,11 @@ from typing import Any, Optional
 
 from src.server.utils import get_supabase_client
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...repositories.repository_factory import get_repository
 
 from ...config.logfire_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class DocumentService:
     """Service class for document operations within projects"""
@@ -36,7 +35,7 @@ class DocumentService:
         elif supabase_client is not None:
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
     async def add_document(
         self,

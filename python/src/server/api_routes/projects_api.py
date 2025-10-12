@@ -20,7 +20,6 @@ from pydantic import BaseModel
 # Removed direct logging import - using unified config
 # Set up standard logger for background tasks
 from ..config.logfire_config import get_logger, logfire
-from ..utils import get_supabase_client
 from ..utils.etag_utils import check_etag, generate_etag
 
 logger = get_logger(__name__)
@@ -42,7 +41,6 @@ from ..repositories import get_repository
 
 router = APIRouter(prefix="/api", tags=["projects"])
 
-
 class CreateProjectRequest(BaseModel):
     title: str
     description: str | None = None
@@ -53,7 +51,6 @@ class CreateProjectRequest(BaseModel):
     technical_sources: list[str] | None = None  # List of knowledge source IDs
     business_sources: list[str] | None = None  # List of knowledge source IDs
     pinned: bool | None = None  # Whether this project should be pinned to top
-
 
 class UpdateProjectRequest(BaseModel):
     title: str | None = None
@@ -66,7 +63,6 @@ class UpdateProjectRequest(BaseModel):
     business_sources: list[str] | None = None  # List of knowledge source IDs
     pinned: bool | None = None  # Whether this project is pinned to top
 
-
 class CreateTaskRequest(BaseModel):
     project_id: str
     title: str
@@ -76,7 +72,6 @@ class CreateTaskRequest(BaseModel):
     task_order: int | None = 0
     priority: str | None = "medium"
     feature: str | None = None
-
 
 @router.get("/projects")
 async def list_projects(
@@ -95,9 +90,9 @@ async def list_projects(
         logfire.debug(f"Listing all projects | include_content={include_content}")
 
         # Use ProjectService to get projects with include_content parameter
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         project_service = ProjectService(repository=repository)
-        success, result = project_service.list_projects(include_content=include_content)
+        success, result = await project_service.list_projects(include_content=include_content)
 
         if not success:
             raise HTTPException(status_code=500, detail=result)
@@ -106,7 +101,7 @@ async def list_projects(
         if include_content:
             # Use SourceLinkingService to format projects with sources
             source_service = SourceLinkingService(repository=repository)
-            formatted_projects = source_service.format_projects_with_sources(result["projects"])
+            formatted_projects = await source_service.format_projects_with_sources(result["projects"])
         else:
             # Lightweight response doesn't need source formatting
             formatted_projects = result["projects"]
@@ -162,7 +157,6 @@ async def list_projects(
         logfire.error(f"Failed to list projects | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.post("/projects")
 async def create_project(request: CreateProjectRequest):
     """Create a new project with streaming progress."""
@@ -188,7 +182,7 @@ async def create_project(request: CreateProjectRequest):
             kwargs["data"] = request.data
 
         # Create project directly with AI assistance
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         project_service = ProjectCreationService(repository=repository)
         success, result = await project_service.create_project_with_ai(
             progress_id="direct",  # No progress tracking needed
@@ -212,9 +206,6 @@ async def create_project(request: CreateProjectRequest):
     except Exception as e:
         logfire.error(f"Failed to start project creation | error={str(e)} | title={request.title}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
-
-
-
 
 @router.get("/projects/health")
 async def projects_health():
@@ -285,7 +276,6 @@ async def projects_health():
             "schema": {"projects_table": False, "tasks_table": False, "valid": False},
         }
 
-
 @router.get("/projects/task-counts")
 async def get_all_task_counts(
     request: Request,
@@ -348,7 +338,6 @@ async def get_all_task_counts(
         logfire.error(f"Failed to get task counts | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/projects/{project_id}")
 async def get_project(project_id: str):
     """Get a specific project."""
@@ -356,7 +345,7 @@ async def get_project(project_id: str):
         logfire.info(f"Getting project | project_id={project_id}")
 
         # Use ProjectService to get the project
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         project_service = ProjectService(repository=repository)
         success, result = project_service.get_project(project_id)
 
@@ -388,7 +377,6 @@ async def get_project(project_id: str):
     except Exception as e:
         logfire.error(f"Failed to get project | error={str(e)} | project_id={project_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
-
 
 @router.put("/projects/{project_id}")
 async def update_project(project_id: str, request: UpdateProjectRequest):
@@ -503,7 +491,6 @@ async def update_project(project_id: str, request: UpdateProjectRequest):
         logfire.error(f"Project update failed | project_id={project_id} | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.delete("/projects/{project_id}")
 async def delete_project(project_id: str):
     """Delete a project and all its tasks."""
@@ -511,7 +498,7 @@ async def delete_project(project_id: str):
         logfire.info(f"Deleting project | project_id={project_id}")
 
         # Use ProjectService to delete the project
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         project_service = ProjectService(repository=repository)
         success, result = project_service.delete_project(project_id)
 
@@ -536,7 +523,6 @@ async def delete_project(project_id: str):
         logfire.error(f"Failed to delete project | error={str(e)} | project_id={project_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/projects/{project_id}/features")
 async def get_project_features(project_id: str):
     """Get features from a project's features JSONB field."""
@@ -544,7 +530,7 @@ async def get_project_features(project_id: str):
         logfire.info(f"Getting project features | project_id={project_id}")
 
         # Use ProjectService to get features
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         project_service = ProjectService(repository=repository)
         success, result = project_service.get_project_features(project_id)
 
@@ -567,7 +553,6 @@ async def get_project_features(project_id: str):
         logfire.error(f"Failed to get project features | error={str(e)} | project_id={project_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/projects/{project_id}/tasks")
 async def list_project_tasks(
     project_id: str,
@@ -586,7 +571,7 @@ async def list_project_tasks(
         )
 
         # Use TaskService to list tasks
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         task_service = TaskService(repository=repository)
         success, result = task_service.list_tasks(
             project_id=project_id,
@@ -671,16 +656,14 @@ async def list_project_tasks(
         logfire.error(f"Failed to list project tasks | project_id={project_id}", exc_info=True)
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 # Remove the complex /tasks endpoint - it's not needed and breaks things
-
 
 @router.post("/tasks")
 async def create_task(request: CreateTaskRequest):
     """Create a new task with automatic reordering."""
     try:
         # Use TaskService to create the task
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         task_service = TaskService(repository=repository)
         success, result = await task_service.create_task(
             project_id=request.project_id,
@@ -709,7 +692,6 @@ async def create_task(request: CreateTaskRequest):
         logfire.error(f"Failed to create task | error={str(e)} | project_id={request.project_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/tasks")
 async def list_tasks(
     status: str | None = None,
@@ -727,7 +709,7 @@ async def list_tasks(
         )
 
         # Use TaskService to list tasks
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         task_service = TaskService(repository=repository)
         success, result = task_service.list_tasks(
             project_id=project_id,
@@ -791,13 +773,12 @@ async def list_tasks(
         logfire.error(f"Failed to list tasks | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/tasks/{task_id}")
 async def get_task(task_id: str):
     """Get a specific task by ID."""
     try:
         # Use TaskService to get the task
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         task_service = TaskService(repository=repository)
         success, result = task_service.get_task(task_id)
 
@@ -821,7 +802,6 @@ async def get_task(task_id: str):
         logfire.error(f"Failed to get task | error={str(e)} | task_id={task_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 class UpdateTaskRequest(BaseModel):
     title: str | None = None
     description: str | None = None
@@ -831,7 +811,6 @@ class UpdateTaskRequest(BaseModel):
     priority: str | None = None
     feature: str | None = None
 
-
 class CreateDocumentRequest(BaseModel):
     document_type: str
     title: str
@@ -839,13 +818,11 @@ class CreateDocumentRequest(BaseModel):
     tags: list[str] | None = None
     author: str | None = None
 
-
 class UpdateDocumentRequest(BaseModel):
     title: str | None = None
     content: dict[str, Any] | None = None
     tags: list[str] | None = None
     author: str | None = None
-
 
 class CreateVersionRequest(BaseModel):
     field_name: str
@@ -855,10 +832,8 @@ class CreateVersionRequest(BaseModel):
     document_id: str | None = None
     created_by: str | None = "system"
 
-
 class RestoreVersionRequest(BaseModel):
     restored_by: str | None = "system"
-
 
 @router.put("/tasks/{task_id}")
 async def update_task(task_id: str, request: UpdateTaskRequest):
@@ -882,7 +857,7 @@ async def update_task(task_id: str, request: UpdateTaskRequest):
             update_fields["feature"] = request.feature
 
         # Use TaskService to update the task
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         task_service = TaskService(repository=repository)
         success, result = await task_service.update_task(task_id, update_fields)
 
@@ -906,13 +881,12 @@ async def update_task(task_id: str, request: UpdateTaskRequest):
         logfire.error(f"Failed to update task | error={str(e)} | task_id={task_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.delete("/tasks/{task_id}")
 async def delete_task(task_id: str):
     """Archive a task (soft delete)."""
     try:
         # Use TaskService to archive the task
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         task_service = TaskService(repository=repository)
         success, result = await task_service.archive_task(task_id, archived_by="api")
 
@@ -934,9 +908,7 @@ async def delete_task(task_id: str):
         logfire.error(f"Failed to archive task | error={str(e)} | task_id={task_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 # MCP endpoints for task operations
-
 
 @router.put("/mcp/tasks/{task_id}/status")
 async def mcp_update_task_status(task_id: str, status: str):
@@ -945,7 +917,7 @@ async def mcp_update_task_status(task_id: str, status: str):
         logfire.info(f"MCP task status update | task_id={task_id} | status={status}")
 
         # Use TaskService to update the task
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         task_service = TaskService(repository=repository)
         success, result = await task_service.update_task(
             task_id=task_id, update_fields={"status": status}
@@ -974,11 +946,9 @@ async def mcp_update_task_status(task_id: str, status: str):
         )
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # Progress tracking via HTTP polling - see /api/progress endpoints
 
 # ==================== DOCUMENT MANAGEMENT ENDPOINTS ====================
-
 
 @router.get("/projects/{project_id}/docs")
 async def list_project_documents(project_id: str, include_content: bool = False):
@@ -996,7 +966,7 @@ async def list_project_documents(project_id: str, include_content: bool = False)
         )
 
         # Use DocumentService to list documents
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         document_service = DocumentService(repository=repository)
         success, result = document_service.list_documents(project_id, include_content=include_content)
 
@@ -1018,7 +988,6 @@ async def list_project_documents(project_id: str, include_content: bool = False)
         logfire.error(f"Failed to list documents | error={str(e)} | project_id={project_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.post("/projects/{project_id}/docs")
 async def create_project_document(project_id: str, request: CreateDocumentRequest):
     """Create a new document for a project."""
@@ -1028,7 +997,7 @@ async def create_project_document(project_id: str, request: CreateDocumentReques
         )
 
         # Use DocumentService to create document
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         document_service = DocumentService(repository=repository)
         success, result = document_service.add_document(
             project_id=project_id,
@@ -1057,7 +1026,6 @@ async def create_project_document(project_id: str, request: CreateDocumentReques
         logfire.error(f"Failed to create document | error={str(e)} | project_id={project_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/projects/{project_id}/docs/{doc_id}")
 async def get_project_document(project_id: str, doc_id: str):
     """Get a specific document from a project."""
@@ -1065,7 +1033,7 @@ async def get_project_document(project_id: str, doc_id: str):
         logfire.info(f"Getting document | project_id={project_id} | doc_id={doc_id}")
 
         # Use DocumentService to get document
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         document_service = DocumentService(repository=repository)
         success, result = document_service.get_document(project_id, doc_id)
 
@@ -1087,7 +1055,6 @@ async def get_project_document(project_id: str, doc_id: str):
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.put("/projects/{project_id}/docs/{doc_id}")
 async def update_project_document(project_id: str, doc_id: str, request: UpdateDocumentRequest):
     """Update a document in a project."""
@@ -1106,7 +1073,7 @@ async def update_project_document(project_id: str, doc_id: str, request: UpdateD
             update_fields["author"] = request.author
 
         # Use DocumentService to update document
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         document_service = DocumentService(repository=repository)
         success, result = document_service.update_document(project_id, doc_id, update_fields)
 
@@ -1128,7 +1095,6 @@ async def update_project_document(project_id: str, doc_id: str, request: UpdateD
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.delete("/projects/{project_id}/docs/{doc_id}")
 async def delete_project_document(project_id: str, doc_id: str):
     """Delete a document from a project."""
@@ -1136,7 +1102,7 @@ async def delete_project_document(project_id: str, doc_id: str):
         logfire.info(f"Deleting document | project_id={project_id} | doc_id={doc_id}")
 
         # Use DocumentService to delete document
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         document_service = DocumentService(repository=repository)
         success, result = document_service.delete_document(project_id, doc_id)
 
@@ -1158,9 +1124,7 @@ async def delete_project_document(project_id: str, doc_id: str):
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 # ==================== VERSION MANAGEMENT ENDPOINTS ====================
-
 
 @router.get("/projects/{project_id}/versions")
 async def list_project_versions(project_id: str, field_name: str = None):
@@ -1171,7 +1135,7 @@ async def list_project_versions(project_id: str, field_name: str = None):
         )
 
         # Use VersioningService to list versions
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         versioning_service = VersioningService(repository=repository)
         success, result = versioning_service.list_versions(project_id, field_name)
 
@@ -1193,7 +1157,6 @@ async def list_project_versions(project_id: str, field_name: str = None):
         logfire.error(f"Failed to list versions | error={str(e)} | project_id={project_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.post("/projects/{project_id}/versions")
 async def create_project_version(project_id: str, request: CreateVersionRequest):
     """Create a version snapshot for a project's JSONB field."""
@@ -1203,7 +1166,7 @@ async def create_project_version(project_id: str, request: CreateVersionRequest)
         )
 
         # Use VersioningService to create version
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         versioning_service = VersioningService(repository=repository)
         success, result = versioning_service.create_version(
             project_id=project_id,
@@ -1233,7 +1196,6 @@ async def create_project_version(project_id: str, request: CreateVersionRequest)
         logfire.error(f"Failed to create version | error={str(e)} | project_id={project_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/projects/{project_id}/versions/{field_name}/{version_number}")
 async def get_project_version(project_id: str, field_name: str, version_number: int):
     """Get a specific version's content."""
@@ -1243,7 +1205,7 @@ async def get_project_version(project_id: str, field_name: str, version_number: 
         )
 
         # Use VersioningService to get version content
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         versioning_service = VersioningService(repository=repository)
         success, result = versioning_service.get_version_content(
             project_id, field_name, version_number
@@ -1269,7 +1231,6 @@ async def get_project_version(project_id: str, field_name: str, version_number: 
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.post("/projects/{project_id}/versions/{field_name}/{version_number}/restore")
 async def restore_project_version(
     project_id: str, field_name: str, version_number: int, request: RestoreVersionRequest
@@ -1281,7 +1242,7 @@ async def restore_project_version(
         )
 
         # Use VersioningService to restore version
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         versioning_service = VersioningService(repository=repository)
         success, result = versioning_service.restore_version(
             project_id=project_id,

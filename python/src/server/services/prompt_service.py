@@ -11,11 +11,9 @@ from typing import Optional
 
 from ..config.logfire_config import get_logger
 from ..repositories.database_repository import DatabaseRepository
-from ..repositories.supabase_repository import SupabaseDatabaseRepository
-from ..utils import get_supabase_client
+from ..repositories.repository_factory import get_repository
 
 logger = get_logger(__name__)
-
 
 class PromptService:
     """Singleton service for managing AI agent prompts."""
@@ -50,7 +48,7 @@ class PromptService:
             elif supabase_client is not None:
                 self._repository = SupabaseDatabaseRepository(supabase_client)
             else:
-                self._repository = SupabaseDatabaseRepository(get_supabase_client())
+                self._repository = get_repository()
 
     async def load_prompts(self) -> None:
         """
@@ -112,7 +110,6 @@ class PromptService:
     def get_last_loaded_time(self) -> datetime | None:
         """Get the timestamp of when prompts were last loaded."""
         return self._last_loaded
-
 
 # Global instance
 prompt_service = PromptService()

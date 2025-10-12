@@ -12,10 +12,9 @@ from src.server.utils import get_supabase_client
 
 from ...config.logfire_config import get_logger
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...repositories.repository_factory import get_repository
 
 logger = get_logger(__name__)
-
 
 class SourceLinkingService:
     """Service class for managing project-source relationships"""
@@ -33,7 +32,7 @@ class SourceLinkingService:
         elif supabase_client is not None:
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
     async def get_project_sources(self, project_id: str) -> tuple[bool, dict[str, Any]]:
         """

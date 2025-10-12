@@ -35,7 +35,6 @@ except ImportError:
 _logfire_configured = False
 _logfire_enabled = False
 
-
 def is_logfire_enabled() -> bool:
     """Check if Logfire should be enabled based on environment variables."""
     global _logfire_enabled
@@ -48,7 +47,6 @@ def is_logfire_enabled() -> bool:
         _logfire_enabled = False
 
     return _logfire_enabled and LOGFIRE_AVAILABLE
-
 
 def setup_logfire(
     token: str | None = None, environment: str = "development", service_name: str = "archon-server"
@@ -133,7 +131,6 @@ def setup_logfire(
         f"📋 Logging configured (Logfire: {'enabled' if _logfire_enabled else 'disabled'})"
     )
 
-
 def get_logger(name: str) -> logging.Logger:
     """
     Get a standard Python logger that works with or without Logfire.
@@ -145,7 +142,6 @@ def get_logger(name: str) -> logging.Logger:
         Standard Python Logger instance
     """
     return logging.getLogger(name)
-
 
 @contextmanager
 def safe_span(name: str, **kwargs):
@@ -171,7 +167,6 @@ def safe_span(name: str, **kwargs):
     else:
         yield NoOpSpan()
 
-
 class NoOpSpan:
     """No-operation span for when Logfire is disabled."""
 
@@ -189,7 +184,6 @@ class NoOpSpan:
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-
 def safe_set_attribute(span: Any, key: str, value: Any) -> None:
     """
     Safely set a span attribute.
@@ -205,7 +199,6 @@ def safe_set_attribute(span: Any, key: str, value: Any) -> None:
         except Exception:
             pass
 
-
 def safe_record_exception(span: Any, exception: Exception) -> None:
     """
     Safely record an exception on a span.
@@ -219,7 +212,6 @@ def safe_record_exception(span: Any, exception: Exception) -> None:
             span.record_exception(exception)
         except Exception:
             pass
-
 
 def safe_logfire_info(message: str, **kwargs) -> None:
     """
@@ -235,7 +227,6 @@ def safe_logfire_info(message: str, **kwargs) -> None:
         except Exception:
             pass
 
-
 def safe_logfire_error(message: str, **kwargs) -> None:
     """
     Safely call logfire.error if available.
@@ -249,7 +240,6 @@ def safe_logfire_error(message: str, **kwargs) -> None:
             logfire.error(message, **kwargs)
         except Exception:
             pass
-
 
 def safe_logfire_warning(message: str, **kwargs) -> None:
     """
@@ -265,7 +255,6 @@ def safe_logfire_warning(message: str, **kwargs) -> None:
         except Exception:
             pass
 
-
 def safe_logfire_debug(message: str, **kwargs) -> None:
     """
     Safely call logfire.debug if available.
@@ -280,7 +269,6 @@ def safe_logfire_debug(message: str, **kwargs) -> None:
         except Exception:
             pass
 
-
 # Pre-configured loggers for different components
 api_logger = get_logger("api")
 mcp_logger = get_logger("mcp")
@@ -290,7 +278,6 @@ crawl_logger = get_logger("crawl")
 project_logger = get_logger("project")
 storage_logger = get_logger("storage")
 embedding_logger = get_logger("embedding")
-
 
 # Export everything needed
 __all__ = [

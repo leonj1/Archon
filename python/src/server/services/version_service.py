@@ -11,7 +11,6 @@ import logfire
 from ..config.version import ARCHON_VERSION, GITHUB_REPO_NAME, GITHUB_REPO_OWNER
 from ..utils.semantic_version import is_newer_version
 
-
 class VersionService:
     """Service for checking Archon version against GitHub releases."""
 
@@ -156,7 +155,6 @@ class VersionService:
         """Clear the cached version data."""
         self._cache = None
         self._cache_time = None
-
 
 # Export singleton instance
 version_service = VersionService()

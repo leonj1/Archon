@@ -13,7 +13,6 @@ from typing import Any
 
 from .database_repository import DatabaseRepository
 
-
 class FakeDatabaseRepository(DatabaseRepository):
     """
     In-memory implementation of DatabaseRepository for testing.

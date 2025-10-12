@@ -10,7 +10,6 @@ import os
 import openai
 
 from ...config.logfire_config import search_logger
-from ..credential_service import credential_service
 from ..llm_provider_service import (
     extract_message_text,
     get_llm_client,
@@ -18,7 +17,6 @@ from ..llm_provider_service import (
     requires_max_completion_tokens,
 )
 from ..threading_service import get_threading_service
-
 
 async def generate_contextual_embedding(
     full_document: str, chunk: str, provider: str = None
@@ -36,6 +34,9 @@ async def generate_contextual_embedding(
         - The contextual text that situates the chunk within the document
         - Boolean indicating if contextual embedding was performed
     """
+    # Import credential_service locally to avoid circular import
+    from ..credential_service import credential_service
+    
     # Model choice is a RAG setting, get from credential service
     try:
         model_choice = await credential_service.get_credential("MODEL_CHOICE", "gpt-4.1-nano")
@@ -99,7 +100,6 @@ Please give a short succinct context to situate this chunk within the overall do
             search_logger.error(f"Error generating contextual embedding: {e}")
         return chunk, False
 
-
 async def process_chunk_with_context(
     url: str, content: str, full_document: str
 ) -> tuple[str, bool]:
@@ -117,7 +117,6 @@ async def process_chunk_with_context(
         - Boolean indicating if contextual embedding was performed
     """
     return await generate_contextual_embedding(full_document, content)
-
 
 async def _get_model_choice(provider: str | None = None) -> str:
     """Get model choice from credential service with centralized defaults."""
@@ -161,7 +160,6 @@ async def _get_model_choice(provider: str | None = None) -> str:
     search_logger.debug(f"Using model from credential service: {model}")
 
     return model
-
 
 async def generate_contextual_embeddings_batch(
     full_documents: list[str], chunks: list[str], provider: str = None

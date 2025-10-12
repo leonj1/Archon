@@ -26,7 +26,6 @@ ALLOWED_INTERNAL_IPS = [
     "archon-mcp",  # Docker service name
 ]
 
-
 def is_internal_request(request: Request) -> bool:
     """Check if request is from an internal source."""
     client_host = request.client.host if request.client else None
@@ -50,12 +49,10 @@ def is_internal_request(request: Request) -> bool:
 
     return False
 
-
 @router.get("/health")
 async def internal_health():
     """Internal health check endpoint."""
     return {"status": "healthy", "service": "internal-api"}
-
 
 @router.get("/credentials/agents")
 async def get_agent_credentials(request: Request) -> dict[str, Any]:
@@ -112,7 +109,6 @@ async def get_agent_credentials(request: Request) -> dict[str, Any]:
     except Exception as e:
         logger.error(f"Error retrieving agent credentials: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve credentials")
-
 
 @router.get("/credentials/mcp")
 async def get_mcp_credentials(request: Request) -> dict[str, Any]:

@@ -1,0 +1,28 @@
+# Flyway Migration Container
+# Handles automatic database schema migrations for both Supabase and SQLite
+
+FROM flyway/flyway:10-alpine
+
+# Install additional tools
+USER root
+RUN apk add --no-cache sqlite bash
+
+# Create migrations directory structure
+RUN mkdir -p /flyway/sql/postgresql /flyway/sql/sqlite /flyway/conf
+
+# Copy migration files
+COPY migration/flyway/ /flyway/sql/
+COPY migration/flyway.conf /flyway/conf/
+
+# Script to detect database type and run appropriate migrations
+COPY migration/run-migrations.sh /flyway/run-migrations.sh
+RUN chmod +x /flyway/run-migrations.sh
+
+# Download SQLite JDBC driver (Flyway doesn't include it by default)
+RUN wget -q https://repo1.maven.org/maven2/org/xerial/sqlite-jdbc/3.44.1.0/sqlite-jdbc-3.44.1.0.jar \
+    -O /flyway/drivers/sqlite-jdbc-3.44.1.0.jar
+
+# Flyway container runs as root by default, which is fine for migrations
+
+# Use our custom script as entrypoint
+ENTRYPOINT ["/bin/sh", "/flyway/run-migrations.sh"]

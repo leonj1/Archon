@@ -8,10 +8,8 @@ from datetime import datetime
 from typing import Any, Optional
 
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
-from ...utils import get_supabase_client
+from ...repositories.repository_factory import get_repository
 from ...config.logfire_config import safe_logfire_error, safe_logfire_info
-
 
 class DatabaseMetricsService:
     """
@@ -31,7 +29,7 @@ class DatabaseMetricsService:
         elif supabase_client is not None:
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
     async def get_metrics(self) -> dict[str, Any]:
         """

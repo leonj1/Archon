@@ -9,7 +9,6 @@ import re
 
 from pydantic import BaseModel
 
-
 class LLMsFullSection(BaseModel):
     """Parsed section from llms-full.txt file"""
 
@@ -18,7 +17,6 @@ class LLMsFullSection(BaseModel):
     content: str  # Section content (including H1 header)
     url: str  # Synthetic URL: base.txt#core-concepts
     word_count: int
-
 
 def create_section_slug(h1_heading: str) -> str:
     """
@@ -55,7 +53,6 @@ def create_section_slug(h1_heading: str) -> str:
 
     return slug
 
-
 def create_section_url(base_url: str, h1_heading: str, section_order: int) -> str:
     """
     Generate synthetic URL with slug anchor for a section.
@@ -70,7 +67,6 @@ def create_section_url(base_url: str, h1_heading: str, section_order: int) -> st
     """
     slug = create_section_slug(h1_heading)
     return f"{base_url}#section-{section_order}-{slug}"
-
 
 def parse_llms_full_sections(content: str, base_url: str) -> list[LLMsFullSection]:
     """

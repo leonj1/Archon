@@ -24,7 +24,6 @@ This interface organizes database operations into 14 domains:
 from abc import ABC, abstractmethod
 from typing import Any
 
-
 class DatabaseRepository(ABC):
     """
     Abstract interface for database operations.

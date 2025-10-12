@@ -15,7 +15,6 @@ from .model_discovery_service import model_discovery_service
 
 logger = get_logger(__name__)
 
-
 @dataclass
 class RoutingDecision:
     """Represents a routing decision for embedding generation."""
@@ -28,7 +27,6 @@ class RoutingDecision:
     fallback_applied: bool = False
     routing_strategy: str = "auto-detect"  # auto-detect, model-mapping, fallback
 
-
 @dataclass
 class EmbeddingRoute:
     """Configuration for embedding routing."""
@@ -38,7 +36,6 @@ class EmbeddingRoute:
     dimensions: int
     column_name: str
     performance_score: float = 1.0  # Higher is better
-
 
 class EmbeddingRouter:
     """
@@ -445,7 +442,6 @@ class EmbeddingRouter:
                 "low": confidence_low
             }
         }
-
 
 # Global service instance
 embedding_router = EmbeddingRouter()

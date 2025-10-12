@@ -13,7 +13,6 @@ from ....config.logfire_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class URLHandler:
     """Helper class for URL operations."""
 
@@ -455,7 +454,6 @@ class URLHandler:
         except Exception as e:
             logger.warning(f"Error checking if file is link collection: {e}", exc_info=True)
             return False
-
 
     @staticmethod
     def extract_display_name(url: str) -> str:

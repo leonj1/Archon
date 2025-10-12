@@ -10,7 +10,6 @@ from ....config.logfire_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class SiteConfig:
     """Helper class for site-specific configurations."""
 

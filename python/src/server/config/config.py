@@ -9,12 +9,10 @@ from urllib.parse import urlparse
 
 from jose import jwt
 
-
 class ConfigurationError(Exception):
     """Raised when there's an error in configuration."""
 
     pass
-
 
 @dataclass
 class EnvironmentConfig:
@@ -27,7 +25,6 @@ class EnvironmentConfig:
     host: str = "0.0.0.0"
     transport: str = "sse"
 
-
 @dataclass
 class RAGStrategyConfig:
     """Configuration for RAG strategies."""
@@ -36,7 +33,6 @@ class RAGStrategyConfig:
     use_hybrid_search: bool = True
     use_agentic_rag: bool = True
     use_reranking: bool = True
-
 
 def validate_openai_api_key(api_key: str) -> bool:
     """Validate OpenAI API key format."""
@@ -47,7 +43,6 @@ def validate_openai_api_key(api_key: str) -> bool:
         raise ConfigurationError("OpenAI API key must start with 'sk-'")
 
     return True
-
 
 def validate_supabase_key(supabase_key: str) -> tuple[bool, str]:
     """Validate Supabase key type and return validation result.
@@ -91,7 +86,6 @@ def validate_supabase_key(supabase_key: str) -> tuple[bool, str]:
         # This handles new key formats or non-JWT keys
         return True, "UNABLE_TO_VALIDATE"
 
-
 def validate_supabase_url(url: str) -> bool:
     """Validate Supabase URL format."""
     if not url:
@@ -133,7 +127,6 @@ def validate_supabase_url(url: str) -> bool:
         raise ConfigurationError("Invalid Supabase URL format")
 
     return True
-
 
 def load_environment_config() -> EnvironmentConfig:
     """Load and validate environment configuration."""
@@ -211,11 +204,9 @@ def load_environment_config() -> EnvironmentConfig:
         transport=transport,
     )
 
-
 def get_config() -> EnvironmentConfig:
     """Get environment configuration with validation."""
     return load_environment_config()
-
 
 def get_rag_strategy_config() -> RAGStrategyConfig:
     """Load RAG strategy configuration from environment variables."""

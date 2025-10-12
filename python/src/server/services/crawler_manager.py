@@ -18,7 +18,6 @@ from ..config.logfire_config import get_logger, safe_logfire_error, safe_logfire
 
 logger = get_logger(__name__)
 
-
 class CrawlerManager:
     """Manages the global crawler instance."""
 
@@ -144,10 +143,8 @@ class CrawlerManager:
                 self._crawler = None
                 self._initialized = False
 
-
 # Global instance
 _crawler_manager = CrawlerManager()
-
 
 async def get_crawler() -> AsyncWebCrawler | None:
     """Get the global crawler instance."""
@@ -164,11 +161,9 @@ async def get_crawler() -> AsyncWebCrawler | None:
         )
     return crawler
 
-
 async def initialize_crawler():
     """Initialize the global crawler."""
     await _crawler_manager.initialize()
-
 
 async def cleanup_crawler():
     """Clean up the global crawler."""

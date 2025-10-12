@@ -29,15 +29,15 @@ import os
 from typing import Literal, Optional
 
 from ..config.logfire_config import get_logger
-from ..utils import get_supabase_client
+from ..services.client_manager import get_supabase_client
 from .database_repository import DatabaseRepository
 from .fake_repository import FakeDatabaseRepository
+from .sqlite_repository import SQLiteDatabaseRepository
 from .supabase_repository import SupabaseDatabaseRepository
 
 logger = get_logger(__name__)
 
 BackendType = Literal["supabase", "fake", "sqlite"]
-
 
 class RepositoryFactory:
     """
@@ -99,10 +99,7 @@ class RepositoryFactory:
         elif backend == "fake":
             self._repository = self._create_fake_repository()
         elif backend == "sqlite":
-            raise NotImplementedError(
-                "SQLite backend is not yet implemented. "
-                "Use 'supabase' or 'fake' backend instead."
-            )
+            self._repository = self._create_sqlite_repository()
         else:
             raise ValueError(
                 f"Unknown backend: {backend}. "
@@ -175,11 +172,35 @@ class RepositoryFactory:
             Configured FakeDatabaseRepository
         """
         return FakeDatabaseRepository()
+    
+    @staticmethod
+    def _create_sqlite_repository() -> SQLiteDatabaseRepository:
+        """
+        Create a SQLiteDatabaseRepository instance.
 
+        Returns:
+            Configured SQLiteDatabaseRepository
+        """
+        import os
+        import asyncio
+        
+        logger.info("Creating SQLiteDatabaseRepository")
+        
+        # Get database path from environment or use default
+        db_path = os.getenv("ARCHON_SQLITE_PATH", "archon.db")
+        
+        # Create the repository
+        repository = SQLiteDatabaseRepository(db_path)
+        
+        # Schedule initialization to run when first used
+        # The SQLite repository will auto-initialize on first use via its _get_connection method
+        # We'll enhance the repository to ensure initialization happens automatically
+        
+        logger.info(f"SQLiteDatabaseRepository created with path: {db_path}")
+        return repository
 
 # Global factory instance
 _factory = RepositoryFactory()
-
 
 def get_repository(backend: Optional[BackendType] = None) -> DatabaseRepository:
     """
@@ -218,7 +239,6 @@ def get_repository(backend: Optional[BackendType] = None) -> DatabaseRepository:
     """
     return _factory.get_repository(backend)
 
-
 def reset_factory() -> None:
     """
     Reset the global factory state.
@@ -233,7 +253,6 @@ def reset_factory() -> None:
             # ... test code ...
     """
     _factory.reset()
-
 
 __all__ = [
     "RepositoryFactory",

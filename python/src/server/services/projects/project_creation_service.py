@@ -13,10 +13,9 @@ from src.server.utils import get_supabase_client
 
 from ...config.logfire_config import get_logger
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...repositories.repository_factory import get_repository
 
 logger = get_logger(__name__)
-
 
 class ProjectCreationService:
     """Service class for advanced project creation with AI assistance"""
@@ -34,7 +33,7 @@ class ProjectCreationService:
         elif supabase_client is not None:
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
     async def create_project_with_ai(
         self,
@@ -112,7 +111,6 @@ class ProjectCreationService:
                     "business_sources": [],  # Empty initially
                 }
 
-
                 return True, {
                     "project_id": project_id,
                     "project": project_data_for_frontend,
@@ -155,8 +153,6 @@ class ProjectCreationService:
 
             # Import DocumentAgent (lazy import to avoid startup issues)
             from ...agents.document_agent import DocumentAgent
-
-
 
             # Initialize DocumentAgent
             document_agent = DocumentAgent()

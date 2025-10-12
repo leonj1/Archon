@@ -17,7 +17,6 @@ from ..helpers.url_handler import URLHandler
 
 logger = get_logger(__name__)
 
-
 class RecursiveCrawlStrategy:
     """Strategy for recursive crawling of websites."""
 

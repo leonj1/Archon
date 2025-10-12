@@ -16,11 +16,9 @@ from urllib.parse import urlparse
 
 from ...config.logfire_config import get_logger, safe_span
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
-from ...utils import get_supabase_client
+from ...repositories.repository_factory import get_repository
 
 logger = get_logger(__name__)
-
 
 class BaseStorageService(ABC):
     """Base class for all storage services with common functionality."""
@@ -36,15 +34,21 @@ class BaseStorageService(ABC):
         if repository is not None:
             self.repository = repository
         elif supabase_client is not None:
+            # Legacy: create repository from supabase client
+            from ...repositories.supabase_repository import SupabaseDatabaseRepository
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
         # Keep supabase_client for legacy utility functions that still need it
         # This will be removed once all utility functions are migrated to use repository
-        if supabase_client is None:
-            supabase_client = get_supabase_client()
-        self.supabase_client = supabase_client
+        if supabase_client:
+            self.supabase_client = supabase_client
+        elif hasattr(self.repository, 'client'):
+            # For SupabaseDatabaseRepository
+            self.supabase_client = self.repository.client
+        else:
+            self.supabase_client = None
 
         # Lazy import threading service
         from ...utils import get_utils_threading_service

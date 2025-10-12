@@ -15,7 +15,6 @@ from .embedding_exceptions import (
     EmbeddingRateLimitError,
 )
 
-
 class ProviderErrorAdapter(ABC):
     """Abstract base class for provider-specific error handling."""
 
@@ -26,7 +25,6 @@ class ProviderErrorAdapter(ABC):
     @abstractmethod
     def sanitize_error_message(self, message: str) -> str:
         pass
-
 
 class OpenAIErrorAdapter(ProviderErrorAdapter):
     def get_provider_name(self) -> str:
@@ -58,7 +56,6 @@ class OpenAIErrorAdapter(ProviderErrorAdapter):
 
         return sanitized
 
-
 class GoogleAIErrorAdapter(ProviderErrorAdapter):
     def get_provider_name(self) -> str:
         return "google"
@@ -89,7 +86,6 @@ class GoogleAIErrorAdapter(ProviderErrorAdapter):
 
         return sanitized
 
-
 class AnthropicErrorAdapter(ProviderErrorAdapter):
     def get_provider_name(self) -> str:
         return "anthropic"
@@ -116,7 +112,6 @@ class AnthropicErrorAdapter(ProviderErrorAdapter):
             return "Anthropic API encountered an error. Please verify your API key."
 
         return sanitized
-
 
 class ProviderErrorFactory:
     """Factory for provider-agnostic error handling."""

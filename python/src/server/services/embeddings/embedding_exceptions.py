@@ -7,7 +7,6 @@ while allowing batch processes to continue by skipping failed items.
 
 from typing import Any
 
-
 class EmbeddingError(Exception):
     """Base exception for all embedding-related errors."""
 
@@ -42,7 +41,6 @@ class EmbeddingError(Exception):
             "metadata": self.metadata,
         }
 
-
 class EmbeddingQuotaExhaustedError(EmbeddingError):
     """
     Raised when API quota is exhausted.
@@ -57,7 +55,6 @@ class EmbeddingQuotaExhaustedError(EmbeddingError):
         if tokens_used:
             self.metadata["tokens_used"] = tokens_used
 
-
 class EmbeddingRateLimitError(EmbeddingError):
     """
     Raised when rate limit is hit after max retries.
@@ -71,7 +68,6 @@ class EmbeddingRateLimitError(EmbeddingError):
         self.retry_count = retry_count
         self.metadata["retry_count"] = retry_count
 
-
 class EmbeddingAsyncContextError(EmbeddingError):
     """
     Raised when sync embedding function is called from async context.
@@ -81,7 +77,6 @@ class EmbeddingAsyncContextError(EmbeddingError):
     """
 
     pass
-
 
 class EmbeddingAPIError(EmbeddingError):
     """
@@ -98,7 +93,6 @@ class EmbeddingAPIError(EmbeddingError):
             self.metadata["original_error_type"] = type(original_error).__name__
             self.metadata["original_error_message"] = str(original_error)
 
-
 class EmbeddingAuthenticationError(EmbeddingError):
     """
     Raised when API authentication fails (invalid or expired API key).
@@ -113,7 +107,6 @@ class EmbeddingAuthenticationError(EmbeddingError):
         self.api_key_prefix = api_key_prefix[:3] + "…" if api_key_prefix and len(api_key_prefix) >= 3 else None
         if self.api_key_prefix:
             self.metadata["api_key_prefix"] = self.api_key_prefix
-
 
 class EmbeddingValidationError(EmbeddingError):
     """

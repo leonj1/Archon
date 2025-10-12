@@ -18,7 +18,6 @@ router = APIRouter(prefix="/api/progress", tags=["progress"])
 # Terminal states that don't require further polling
 TERMINAL_STATES = {"completed", "failed", "error", "cancelled"}
 
-
 @router.get("/{operation_id}")
 async def get_progress(
     operation_id: str,
@@ -44,7 +43,6 @@ async def get_progress(
                 detail={"error": f"Operation {operation_id} not found"}
             )
 
-
         # Ensure we have the progress_id in the response without mutating shared state
         operation_with_id = {**operation, "progress_id": operation_id}
 
@@ -53,7 +51,6 @@ async def get_progress(
 
         # Create standardized response using Pydantic model
         progress_response = create_progress_response(operation_type, operation_with_id)
-
 
         # Convert to dict with camelCase fields for API response
         response_data = progress_response.model_dump(by_alias=True, exclude_none=True)
@@ -95,7 +92,6 @@ async def get_progress(
     except Exception as e:
         logfire.error(f"Failed to get progress | error={e!s} | operation_id={operation_id}", exc_info=True)
         raise HTTPException(status_code=500, detail={"error": str(e)}) from e
-
 
 @router.get("/")
 async def list_active_operations():

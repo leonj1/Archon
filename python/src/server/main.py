@@ -63,7 +63,6 @@ uvicorn_logger.setLevel(logging.WARNING)  # Only log warnings and errors, not ev
 # Global flag to track if initialization is complete
 _initialization_complete = False
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown tasks."""
@@ -78,9 +77,88 @@ async def lifespan(app: FastAPI):
         from .config.config import get_config
 
         get_config()  # This will raise ConfigurationError if anon key detected
+        
+        # Check if we're using SQLite backend
+        db_backend = os.getenv("ARCHON_DB_BACKEND", "supabase").lower()
+        
+        if db_backend == "sqlite":
+            # Check if we should skip DB initialization (e.g., when using Flyway)
+            skip_db_init = os.getenv("ARCHON_SKIP_DB_INIT", "false").lower() == "true"
+            
+            if skip_db_init:
+                logger.info("✅ Skipping SQLite initialization (handled by Flyway migration container)")
+            else:
+                # Initialize SQLite database if needed
+                from .services.sqlite_migration_service import ensure_sqlite_database
+                
+                db_path = os.getenv("ARCHON_SQLITE_PATH", "archon.db")
+                logger.info(f"Initializing SQLite database: {db_path}")
+                
+                if await ensure_sqlite_database(db_path):
+                    logger.info("✅ SQLite database initialized successfully")
+                else:
+                    logger.error("❌ Failed to initialize SQLite database")
+                    raise RuntimeError("SQLite database initialization failed")
 
         # Initialize credentials from database FIRST - this is the foundation for everything else
         await initialize_credentials()
+        
+        # Check for pending database migrations (Supabase)
+        if db_backend != "sqlite":
+            from .services.migration_service import migration_service
+            from .services.auto_migration_service import ensure_database_schema
+            
+            try:
+                # First, try to auto-apply critical migrations
+                logger.info("Attempting to auto-apply critical database migrations...")
+                schema_ready = await ensure_database_schema()
+                
+                if not schema_ready:
+                    logger.warning("Auto-migration could not complete - manual action may be required")
+                
+                # Then check overall migration status
+                status = await migration_service.get_migration_status()
+                if status["bootstrap_required"] or status["has_pending"]:
+                    # Critical migrations are missing - don't just warn, fail to start
+                    error_msg = (
+                        f"❌ CRITICAL: Database is missing required schema!\n"
+                        f"   - {status['pending_count']} migrations need to be applied\n"
+                        f"   - Bootstrap required: {status['bootstrap_required']}\n\n"
+                        f"   SOLUTION:\n"
+                        f"   1. Open Supabase Dashboard → SQL Editor\n"
+                        f"   2. Run the complete setup: /migration/complete_setup.sql\n"
+                        f"      OR apply individual migrations from /migration/0.1.0/\n\n"
+                        f"   First missing migration: {status['pending_migrations'][0]['name'] if status['pending_migrations'] else 'unknown'}\n\n"
+                        f"   The application CANNOT run without the proper database schema.\n"
+                        f"   See /QUICK_FIX_DATABASE.md for detailed instructions."
+                    )
+                    
+                    logger.error(error_msg)
+                    
+                    # Check if this is a critical migration (like source_url)
+                    critical_migrations = ["001_add_source_url_display_name", "008_add_migration_tracking"]
+                    has_critical = any(
+                        m["name"] in critical_migrations 
+                        for m in status["pending_migrations"]
+                    )
+                    
+                    if has_critical or status["bootstrap_required"]:
+                        # Log critical warning but allow startup (temporary fix)
+                        logger.error(
+                            "⚠️  RUNNING WITH INCOMPLETE SCHEMA - EXPECT ERRORS!\n"
+                            "   Apply migrations ASAP to fix issues.\n"
+                            "   Run /APPLY_MIGRATIONS_NOW.sql in Supabase"
+                        )
+                        # Uncomment the lines below to enforce schema (recommended)
+                        # raise RuntimeError(
+                        #     "Database schema is incomplete. Please apply migrations before starting. "
+                        #     "See logs above for instructions."
+                        # )
+            except RuntimeError:
+                # Re-raise RuntimeError to stop startup (if enforcement is enabled)
+                raise
+            except Exception as e:
+                logger.warning(f"Could not check migration status: {e}")
 
         # Now that credentials are loaded, we can properly initialize logging
         # This must happen AFTER credentials so LOGFIRE_ENABLED is set from database
@@ -110,7 +188,6 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             api_logger.warning(f"Could not initialize prompt service: {e}")
 
-
         # MCP Client functionality removed from architecture
         # Agents now use MCP tools directly
 
@@ -137,12 +214,10 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             api_logger.warning("Could not cleanup crawling context: %s", e, exc_info=True)
 
-
         api_logger.info("✅ Cleanup completed")
 
     except Exception:
         api_logger.error("❌ Error during shutdown", exc_info=True)
-
 
 # Create FastAPI application
 app = FastAPI(
@@ -161,7 +236,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Add middleware to skip logging for health checks
 @app.middleware("http")
 async def skip_health_check_logs(request, call_next):
@@ -177,7 +251,6 @@ async def skip_health_check_logs(request, call_next):
         logger.setLevel(old_level)
         return response
     return await call_next(request)
-
 
 # Include API routers
 app.include_router(settings_router)
@@ -195,7 +268,6 @@ app.include_router(providers_router)
 app.include_router(version_router)
 app.include_router(migration_router)
 
-
 # Root endpoint
 @app.get("/")
 async def root():
@@ -207,7 +279,6 @@ async def root():
         "status": "healthy",
         "modules": ["settings", "mcp", "mcp-clients", "knowledge", "projects"],
     }
-
 
 # Health check endpoint
 @app.get("/health")
@@ -230,16 +301,29 @@ async def health_check(response: Response):
     schema_status = await _check_database_schema()
     if not schema_status["valid"]:
         response.status_code = 503  # Service Unavailable
-        return {
+        migration_response = {
             "status": "migration_required",
             "service": "archon-backend",
             "timestamp": datetime.now().isoformat(),
             "ready": False,
             "migration_required": True,
             "message": schema_status["message"],
-            "migration_instructions": "Open Supabase Dashboard → SQL Editor → Run: migration/add_source_url_display_name.sql",
             "schema_valid": False
         }
+        
+        # Add specific instructions if available
+        if "instructions" in schema_status:
+            migration_response["instructions"] = schema_status["instructions"]
+        else:
+            migration_response["instructions"] = [
+                "Apply complete schema: Run /migration/complete_setup.sql in Supabase SQL Editor",
+                "Check pending migrations: GET /api/migrations/status"
+            ]
+        
+        if "missing_columns" in schema_status:
+            migration_response["missing_columns"] = schema_status["missing_columns"]
+        
+        return migration_response
 
     return {
         "status": "healthy",
@@ -250,13 +334,11 @@ async def health_check(response: Response):
         "schema_valid": True,
     }
 
-
 # API health check endpoint (alias for /health at /api/health)
 @app.get("/api/health")
 async def api_health_check(response: Response):
     """API health check endpoint - alias for /health."""
     return await health_check(response)
-
 
 # Cache schema check result to avoid repeated database queries
 _schema_check_cache = {"valid": None, "checked_at": 0}
@@ -276,10 +358,9 @@ async def _check_database_schema():
         return _schema_check_cache["result"]
 
     try:
-        from .repositories.supabase_repository import SupabaseDatabaseRepository
-        from .services.client_manager import get_supabase_client
+        from .repositories.repository_factory import get_repository
 
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
 
         # Try to query sources table to verify schema exists
         # This will fail if table doesn't exist or required columns are missing
@@ -309,7 +390,12 @@ async def _check_database_schema():
         if (missing_source_url or missing_source_display) and is_column_error:
             result = {
                 "valid": False,
-                "message": "Database schema outdated - missing required columns from recent updates"
+                "message": "Database schema outdated - missing source_url column. Please apply migrations.",
+                "instructions": [
+                    "Quick fix: Run /migration/complete_setup.sql in Supabase SQL Editor",
+                    "Or apply individual migration: /migration/0.1.0/001_add_source_url_display_name.sql"
+                ],
+                "missing_columns": ["source_url", "source_display_name"] if missing_source_url else ["source_display_name"]
             }
             # Cache failed result with timestamp
             _schema_check_cache["valid"] = False
@@ -336,9 +422,7 @@ async def _check_database_schema():
         # Don't cache inconclusive results - allow retry
         return result
 
-
 # Export the app directly for uvicorn to use
-
 
 def main():
     """Main entry point for running the server."""
@@ -360,7 +444,6 @@ def main():
         reload=True,
         log_level="info",
     )
-
 
 if __name__ == "__main__":
     main()

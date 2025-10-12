@@ -5,13 +5,12 @@ Provides lightweight summary data for knowledge items to minimize data transfer.
 Optimized for frequent polling and card displays.
 """
 
+import json
 from typing import Any, Optional
 
 from ...config.logfire_config import safe_logfire_info, safe_logfire_error
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
-from ...utils import get_supabase_client
-
+from ...repositories.repository_factory import get_repository
 
 class KnowledgeSummaryService:
     """
@@ -26,10 +25,7 @@ class KnowledgeSummaryService:
         Args:
             repository: DatabaseRepository instance
         """
-        if repository is not None:
-            self.repository = repository
-        else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+        self.repository = repository or get_repository()
 
     async def get_summaries(
         self,
@@ -92,6 +88,15 @@ class KnowledgeSummaryService:
                 for source in sources:
                     source_id = source["source_id"]
                     metadata = source.get("metadata", {})
+                    
+                    # Parse metadata if it's a JSON string
+                    if isinstance(metadata, str):
+                        try:
+                            metadata = json.loads(metadata) if metadata else {}
+                        except (json.JSONDecodeError, TypeError):
+                            metadata = {}
+                    elif metadata is None:
+                        metadata = {}
                     
                     # Use the original source_url from the source record (the URL the user entered)
                     # Fall back to first crawled page URL, then to source:// format as last resort

@@ -9,13 +9,11 @@ from typing import Any, Optional
 
 from ...config.logfire_config import get_logger, safe_span
 from ...repositories import DatabaseRepository, SupabaseDatabaseRepository
-from ...utils import get_supabase_client
 
 logger = get_logger(__name__)
 
 # Fixed similarity threshold for vector results
 SIMILARITY_THRESHOLD = 0.05
-
 
 class BaseSearchStrategy:
     """Base strategy implementing fundamental vector similarity search"""

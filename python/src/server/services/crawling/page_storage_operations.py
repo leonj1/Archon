@@ -9,14 +9,12 @@ from typing import Any, Optional
 
 from postgrest.exceptions import APIError
 
-from src.server.utils import get_supabase_client
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...repositories.repository_factory import get_repository
 from ...config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from .helpers.llms_full_parser import parse_llms_full_sections
 
 logger = get_logger(__name__)
-
 
 class PageStorageOperations:
     """
@@ -34,12 +32,21 @@ class PageStorageOperations:
             repository: DatabaseRepository instance (preferred)
             supabase_client: Legacy supabase client (for backward compatibility)
         """
+        # Handle backward compatibility: if first arg looks like a supabase client (not a DatabaseRepository),
+        # treat it as supabase_client for compatibility with existing code
+        if repository is not None and not isinstance(repository, DatabaseRepository):
+            # First argument is actually a supabase client (backward compatibility)
+            supabase_client = repository
+            repository = None
+            
         if repository is not None:
             self.repository = repository
         elif supabase_client is not None:
+            # Legacy: create repository from supabase client
+            from ...repositories.supabase_repository import SupabaseDatabaseRepository
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
     async def store_pages(
         self,

@@ -17,7 +17,6 @@ from typing import Any, Optional
 
 from ...config.logfire_config import get_logger, safe_span
 from ...repositories import DatabaseRepository, SupabaseDatabaseRepository
-from ...utils import get_supabase_client
 from ..embeddings.embedding_service import create_embedding
 from .agentic_rag_strategy import AgenticRAGStrategy
 
@@ -27,7 +26,6 @@ from .hybrid_search_strategy import HybridSearchStrategy
 from .reranking_strategy import RerankingStrategy
 
 logger = get_logger(__name__)
-
 
 class RAGService:
     """

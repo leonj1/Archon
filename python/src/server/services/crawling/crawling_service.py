@@ -13,8 +13,7 @@ from typing import Any, Optional
 
 from ...config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
-from ...utils import get_supabase_client
+from ...repositories.repository_factory import get_repository
 from ...utils.progress.progress_tracker import ProgressTracker
 from ..credential_service import credential_service
 
@@ -38,13 +37,11 @@ logger = get_logger(__name__)
 _active_orchestrations: dict[str, "CrawlingService"] = {}
 _orchestration_lock: asyncio.Lock | None = None
 
-
 def _ensure_orchestration_lock() -> asyncio.Lock:
     global _orchestration_lock
     if _orchestration_lock is None:
         _orchestration_lock = asyncio.Lock()
     return _orchestration_lock
-
 
 async def get_active_orchestration(progress_id: str) -> Optional["CrawlingService"]:
     """Get an active orchestration service by progress ID."""
@@ -52,20 +49,17 @@ async def get_active_orchestration(progress_id: str) -> Optional["CrawlingServic
     async with lock:
         return _active_orchestrations.get(progress_id)
 
-
 async def register_orchestration(progress_id: str, orchestration: "CrawlingService"):
     """Register an active orchestration service."""
     lock = _ensure_orchestration_lock()
     async with lock:
         _active_orchestrations[progress_id] = orchestration
 
-
 async def unregister_orchestration(progress_id: str):
     """Unregister an orchestration service."""
     lock = _ensure_orchestration_lock()
     async with lock:
         _active_orchestrations.pop(progress_id, None)
-
 
 class CrawlingService:
     """
@@ -91,16 +85,17 @@ class CrawlingService:
         elif supabase_client is not None:
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
         # Keep supabase_client for operations that haven't been migrated yet
         # (DocumentStorageOperations and PageStorageOperations)
+        # We'll pass the repository to operations instead of supabase client
+        self.supabase_client = None
         if supabase_client is not None:
             self.supabase_client = supabase_client
         elif hasattr(self.repository, 'client'):
+            # For SupabaseDatabaseRepository
             self.supabase_client = self.repository.client
-        else:
-            self.supabase_client = get_supabase_client()
 
         self.progress_id = progress_id
         self.progress_tracker = None
@@ -117,9 +112,9 @@ class CrawlingService:
         self.single_page_strategy = SinglePageCrawlStrategy(crawler, self.markdown_generator)
         self.sitemap_strategy = SitemapCrawlStrategy()
 
-        # Initialize operations (still use supabase_client as these haven't been migrated)
-        self.doc_storage_ops = DocumentStorageOperations(self.supabase_client)
-        self.page_storage_ops = PageStorageOperations(self.supabase_client)
+        # Initialize operations with repository instead of supabase_client
+        self.doc_storage_ops = DocumentStorageOperations(repository=self.repository)
+        self.page_storage_ops = PageStorageOperations(repository=self.repository)
 
         # Track progress state across all stages to prevent UI resets
         self.progress_state = {"progressId": self.progress_id} if self.progress_id else {}
@@ -809,7 +804,6 @@ class CrawlingService:
             )
 
         return crawl_results, crawl_type
-
 
 # Alias for backward compatibility
 CrawlOrchestrationService = CrawlingService

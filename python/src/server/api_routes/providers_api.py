@@ -13,7 +13,6 @@ from ..services.credential_service import credential_service
 
 router = APIRouter(prefix="/api/providers", tags=["providers"])
 
-
 async def test_openai_connection(api_key: str) -> bool:
     """Test OpenAI API connectivity"""
     try:
@@ -27,7 +26,6 @@ async def test_openai_connection(api_key: str) -> bool:
         logfire.warning(f"OpenAI connectivity test failed: {e}")
         return False
 
-
 async def test_google_connection(api_key: str) -> bool:
     """Test Google AI API connectivity"""
     try:
@@ -40,7 +38,6 @@ async def test_google_connection(api_key: str) -> bool:
     except Exception:
         logfire.warning("Google AI connectivity test failed")
         return False
-
 
 async def test_anthropic_connection(api_key: str) -> bool:
     """Test Anthropic API connectivity"""
@@ -58,7 +55,6 @@ async def test_anthropic_connection(api_key: str) -> bool:
         logfire.warning(f"Anthropic connectivity test failed: {e}")
         return False
 
-
 async def test_openrouter_connection(api_key: str) -> bool:
     """Test OpenRouter API connectivity"""
     try:
@@ -71,7 +67,6 @@ async def test_openrouter_connection(api_key: str) -> bool:
     except Exception as e:
         logfire.warning(f"OpenRouter connectivity test failed: {e}")
         return False
-
 
 async def test_grok_connection(api_key: str) -> bool:
     """Test Grok API connectivity"""
@@ -86,7 +81,6 @@ async def test_grok_connection(api_key: str) -> bool:
         logfire.warning(f"Grok connectivity test failed: {e}")
         return False
 
-
 PROVIDER_TESTERS = {
     "openai": test_openai_connection,
     "google": test_google_connection,
@@ -94,7 +88,6 @@ PROVIDER_TESTERS = {
     "openrouter": test_openrouter_connection,
     "grok": test_grok_connection,
 }
-
 
 @router.get("/{provider}/status")
 async def get_provider_status(

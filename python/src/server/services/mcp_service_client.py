@@ -14,7 +14,6 @@ import httpx
 from ..config.logfire_config import mcp_logger
 from ..config.service_discovery import get_agents_url, get_api_url
 
-
 class MCPServiceClient:
     """
     Client for MCP service to communicate with other microservices via HTTP.
@@ -220,10 +219,8 @@ class MCPServiceClient:
 
         return health_status
 
-
 # Global client instance
 _mcp_client = None
-
 
 def get_mcp_service_client() -> MCPServiceClient:
     """Get or create the global MCP service client"""

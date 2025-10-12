@@ -21,7 +21,6 @@ from ..embeddings.embedding_service import create_embedding
 
 logger = get_logger(__name__)
 
-
 class AgenticRAGStrategy:
     """Strategy class implementing agentic RAG for code example search and extraction"""
 
@@ -363,12 +362,10 @@ class AgenticRAGStrategy:
             "enhanced_query_recommended": is_code_query,
         }
 
-
 # Utility functions for standalone usage
 def create_agentic_rag_strategy(supabase_client: Client) -> AgenticRAGStrategy:
     """Create an agentic RAG strategy instance."""
     return AgenticRAGStrategy(supabase_client)
-
 
 async def search_code_examples_agentic(
     client: Client,
@@ -392,7 +389,6 @@ async def search_code_examples_agentic(
     """
     strategy = AgenticRAGStrategy(client)
     return await strategy.search_code_examples_async(query, match_count, filter_metadata, source_id)
-
 
 def analyze_query_for_code_search(query: str) -> dict[str, Any]:
     """

@@ -28,14 +28,12 @@ from ..config.logfire_config import get_logger
 # Get logger for this module
 logfire_logger = get_logger("threading")
 
-
 class ProcessingMode(str, Enum):
     """Processing modes for different workload types"""
 
     CPU_INTENSIVE = "cpu_intensive"  # AI summaries, embeddings, heavy computation
     IO_BOUND = "io_bound"  # Database operations, file I/O
     NETWORK_BOUND = "network_bound"  # External API calls, web requests
-
 
 @dataclass
 class RateLimitConfig:
@@ -47,7 +45,6 @@ class RateLimitConfig:
     backoff_multiplier: float = 1.5  # Exponential backoff multiplier
     max_backoff: float = 60.0  # Maximum backoff delay in seconds
 
-
 @dataclass
 class SystemMetrics:
     """Current system performance metrics"""
@@ -57,7 +54,6 @@ class SystemMetrics:
     available_memory_gb: float
     active_threads: int
     timestamp: float = field(default_factory=time.time)
-
 
 @dataclass
 class ThreadingConfig:
@@ -70,7 +66,6 @@ class ThreadingConfig:
     batch_size: int = 15
     yield_interval: float = 0.1  # How often to yield control to event loop
     health_check_interval: float = 30  # System health check frequency
-
 
 class RateLimiter:
     """Thread-safe rate limiter with token bucket algorithm"""
@@ -185,7 +180,6 @@ class RateLimiter:
             "max_requests": self.config.requests_per_minute,
             "max_tokens": self.config.tokens_per_minute,
         }
-
 
 class MemoryAdaptiveDispatcher:
     """Dynamically adjust concurrency based on memory usage"""
@@ -339,7 +333,6 @@ class MemoryAdaptiveDispatcher:
                             "message": f"Worker {worker_id} completed item {index + 1}",
                         })
 
-
                     return result
 
                 except Exception as e:
@@ -400,8 +393,6 @@ class MemoryAdaptiveDispatcher:
             )
 
         return successful_results
-
-
 
 class ThreadingService:
     """Main threading service that coordinates all threading operations"""
@@ -505,7 +496,6 @@ class ThreadingService:
             enable_worker_tracking=enable_worker_tracking,
         )
 
-
     def get_system_metrics(self) -> SystemMetrics:
         """Get current system performance metrics"""
         return self.memory_dispatcher.get_system_metrics()
@@ -557,10 +547,8 @@ class ThreadingService:
                 logfire_logger.error("Health check failed", extra={"error": str(e)})
                 await asyncio.sleep(self.config.health_check_interval)
 
-
 # Global threading service instance
 _threading_service: ThreadingService | None = None
-
 
 def get_threading_service() -> ThreadingService:
     """Get the global threading service instance"""
@@ -569,13 +557,11 @@ def get_threading_service() -> ThreadingService:
         _threading_service = ThreadingService()
     return _threading_service
 
-
 async def start_threading_service() -> ThreadingService:
     """Start the global threading service"""
     service = get_threading_service()
     await service.start()
     return service
-
 
 async def stop_threading_service():
     """Stop the global threading service"""

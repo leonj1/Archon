@@ -22,6 +22,7 @@ from pydantic import BaseModel
 
 # Import unified logging
 from ..config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
+from ..repositories.repository_factory import get_repository
 from ..services.crawler_manager import get_crawler
 from ..services.crawling import CrawlingService
 from ..services.credential_service import credential_service
@@ -29,8 +30,6 @@ from ..services.embeddings.provider_error_adapters import ProviderErrorFactory
 from ..services.knowledge import DatabaseMetricsService, KnowledgeItemService, KnowledgeSummaryService
 from ..services.search.rag_service import RAGService
 from ..services.storage import DocumentStorageService
-from ..repositories.supabase_repository import SupabaseDatabaseRepository
-from ..utils import get_supabase_client
 from ..utils.document_processing import extract_text_from_document
 
 # Get logger for this module
@@ -38,7 +37,6 @@ logger = get_logger(__name__)
 
 # Create router
 router = APIRouter(prefix="/api", tags=["knowledge"])
-
 
 # Create a semaphore to limit concurrent crawl OPERATIONS (not pages within a crawl)
 # This prevents the server from becoming unresponsive during heavy crawling
@@ -56,9 +54,6 @@ crawl_semaphore = asyncio.Semaphore(CONCURRENT_CRAWL_LIMIT)
 
 # Track active async crawl tasks for cancellation support
 active_crawl_tasks: dict[str, asyncio.Task] = {}
-
-
-
 
 async def _validate_provider_api_key(provider: str = None) -> None:
     """Validate LLM provider API key before starting operations."""
@@ -143,7 +138,6 @@ async def _validate_provider_api_key(provider: str = None) -> None:
             }
         ) from None
 
-
 # Request Models
 class KnowledgeItemRequest(BaseModel):
     url: str
@@ -165,7 +159,6 @@ class KnowledgeItemRequest(BaseModel):
             }
         }
 
-
 class CrawlRequest(BaseModel):
     url: str
     knowledge_type: str = "general"
@@ -173,13 +166,11 @@ class CrawlRequest(BaseModel):
     update_frequency: int = 7
     max_depth: int = 2  # Maximum crawl depth (1-5)
 
-
 class RagQueryRequest(BaseModel):
     query: str
     source: str | None = None
     match_count: int = 5
     return_mode: str = "chunks"  # "chunks" or "pages"
-
 
 @router.get("/crawl-progress/{progress_id}")
 async def get_crawl_progress(progress_id: str):
@@ -223,18 +214,17 @@ async def get_crawl_progress(progress_id: str):
         safe_logfire_error(f"Failed to get crawl progress | error={str(e)} | progress_id={progress_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/knowledge-items/sources")
 async def get_knowledge_sources():
     """Get all available knowledge sources."""
     try:
-        # Return empty list for now to pass the test
-        # In production, this would query the database
-        return []
+        # Use repository to get actual sources
+        repository = get_repository()
+        sources = await repository.list_sources()
+        return sources
     except Exception as e:
         safe_logfire_error(f"Failed to get knowledge sources | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
-
 
 @router.get("/knowledge-items")
 async def get_knowledge_items(
@@ -243,7 +233,7 @@ async def get_knowledge_items(
     """Get knowledge items with pagination and filtering."""
     try:
         # Use KnowledgeItemService with repository
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         service = KnowledgeItemService(repository=repository)
         result = await service.list_items(
             page=page, per_page=per_page, knowledge_type=knowledge_type, search=search
@@ -255,7 +245,6 @@ async def get_knowledge_items(
             f"Failed to get knowledge items | error={str(e)} | page={page} | per_page={per_page}"
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
-
 
 @router.get("/knowledge-items/summary")
 async def get_knowledge_items_summary(
@@ -275,7 +264,7 @@ async def get_knowledge_items_summary(
         # Input guards
         page = max(1, page)
         per_page = min(100, max(1, per_page))
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         service = KnowledgeSummaryService(repository=repository)
         result = await service.get_summaries(
             page=page, per_page=per_page, knowledge_type=knowledge_type, search=search
@@ -288,13 +277,12 @@ async def get_knowledge_items_summary(
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.put("/knowledge-items/{source_id}")
 async def update_knowledge_item(source_id: str, updates: dict):
     """Update a knowledge item's metadata."""
     try:
         # Use KnowledgeItemService with repository
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         service = KnowledgeItemService(repository=repository)
         success, result = await service.update_item(source_id, updates)
 
@@ -314,7 +302,6 @@ async def update_knowledge_item(source_id: str, updates: dict):
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.delete("/knowledge-items/{source_id}")
 async def delete_knowledge_item(source_id: str):
     """Delete a knowledge item from the database."""
@@ -326,7 +313,7 @@ async def delete_knowledge_item(source_id: str):
         logger.debug("Creating SourceManagementService...")
         from ..services.source_management_service import SourceManagementService
 
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         source_service = SourceManagementService(repository=repository)
         logger.debug("Successfully created SourceManagementService")
 
@@ -364,7 +351,6 @@ async def delete_knowledge_item(source_id: str):
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/knowledge-items/{source_id}/chunks")
 async def get_knowledge_item_chunks(
     source_id: str,
@@ -396,7 +382,7 @@ async def get_knowledge_item_chunks(
         )
 
         # Use KnowledgeItemService for database operations
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         service = KnowledgeItemService(repository=repository)
 
         result = await service.get_chunks_for_source(
@@ -496,7 +482,6 @@ async def get_knowledge_item_chunks(
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/knowledge-items/{source_id}/code-examples")
 async def get_knowledge_item_code_examples(
     source_id: str,
@@ -525,7 +510,7 @@ async def get_knowledge_item_code_examples(
         )
 
         # Use KnowledgeItemService for database operations
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         service = KnowledgeItemService(repository=repository)
 
         result = await service.get_code_examples_for_source(
@@ -570,7 +555,6 @@ async def get_knowledge_item_code_examples(
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.post("/knowledge-items/{source_id}/refresh")
 async def refresh_knowledge_item(source_id: str):
     """Refresh a knowledge item by re-crawling its URL with the same metadata."""
@@ -578,6 +562,12 @@ async def refresh_knowledge_item(source_id: str):
     # Validate API key before starting expensive refresh operation
     logger.info("🔍 About to validate API key for refresh...")
     provider_config = await credential_service.get_active_provider("embedding")
+    
+    # Ensure provider_config is a dictionary
+    if not isinstance(provider_config, dict):
+        logger.error(f"❌ get_active_provider returned non-dict type: {type(provider_config)} - value: {provider_config}")
+        provider_config = {"provider": "openai"}
+    
     provider = provider_config.get("provider", "openai")
     await _validate_provider_api_key(provider)
     logger.info("✅ API key validation completed successfully for refresh")
@@ -586,7 +576,7 @@ async def refresh_knowledge_item(source_id: str):
         safe_logfire_info(f"Starting knowledge item refresh | source_id={source_id}")
 
         # Get the existing knowledge item
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         service = KnowledgeItemService(repository=repository)
         existing_item = await service.get_item(source_id)
 
@@ -637,7 +627,7 @@ async def refresh_knowledge_item(source_id: str):
             )
 
         # Use the same crawl orchestration as regular crawl
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         crawl_service = CrawlingService(
             crawler=crawler, repository=repository
         )
@@ -690,7 +680,6 @@ async def refresh_knowledge_item(source_id: str):
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.post("/knowledge-items/crawl")
 async def crawl_knowledge_item(request: KnowledgeItemRequest):
     """Crawl a URL and add it to the knowledge base with progress tracking."""
@@ -705,6 +694,12 @@ async def crawl_knowledge_item(request: KnowledgeItemRequest):
     # Validate API key before starting expensive operation
     logger.info("🔍 About to validate API key...")
     provider_config = await credential_service.get_active_provider("embedding")
+    
+    # Ensure provider_config is a dictionary
+    if not isinstance(provider_config, dict):
+        logger.error(f"❌ get_active_provider returned non-dict type: {type(provider_config)} - value: {provider_config}")
+        provider_config = {"provider": "openai"}
+    
     provider = provider_config.get("provider", "openai")
     await _validate_provider_api_key(provider)
     logger.info("✅ API key validation completed successfully")
@@ -767,7 +762,6 @@ async def crawl_knowledge_item(request: KnowledgeItemRequest):
         safe_logfire_error(f"Failed to start crawl | error={str(e)} | url={str(request.url)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 async def _perform_crawl_with_progress(
     progress_id: str, request: KnowledgeItemRequest, tracker
 ):
@@ -792,7 +786,7 @@ async def _perform_crawl_with_progress(
                 await tracker.error(f"Failed to initialize crawler: {str(e)}")
                 return
 
-            repository = SupabaseDatabaseRepository(get_supabase_client())
+            repository = get_repository()
             orchestration_service = CrawlingService(crawler, repository=repository)
             orchestration_service.set_progress_id(progress_id)
 
@@ -854,7 +848,6 @@ async def _perform_crawl_with_progress(
                     f"Cleaned up crawl task from registry | progress_id={progress_id}"
                 )
 
-
 @router.post("/documents/upload")
 async def upload_document(
     file: UploadFile = File(...),
@@ -867,6 +860,12 @@ async def upload_document(
     # Validate API key before starting expensive upload operation  
     logger.info("🔍 About to validate API key for upload...")
     provider_config = await credential_service.get_active_provider("embedding")
+    
+    # Ensure provider_config is a dictionary
+    if not isinstance(provider_config, dict):
+        logger.error(f"❌ get_active_provider returned non-dict type: {type(provider_config)} - value: {provider_config}")
+        provider_config = {"provider": "openai"}
+    
     provider = provider_config.get("provider", "openai")
     await _validate_provider_api_key(provider)
     logger.info("✅ API key validation completed successfully for upload")
@@ -935,7 +934,6 @@ async def upload_document(
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 async def _perform_upload_with_progress(
     progress_id: str,
     file_content: bytes,
@@ -966,7 +964,6 @@ async def _perform_upload_with_progress(
             f"Starting document upload with progress tracking | progress_id={progress_id} | filename={filename} | content_type={content_type}"
         )
 
-
         # Extract text from document with progress - use mapper for consistent progress
         mapped_progress = progress_mapper.map_progress("processing", 50)
         await tracker.update(
@@ -992,7 +989,7 @@ async def _perform_upload_with_progress(
             return
 
         # Use DocumentStorageService to handle the upload
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         doc_storage_service = DocumentStorageService(repository=repository)
 
         # Generate source_id from filename with UUID to prevent collisions
@@ -1014,7 +1011,6 @@ async def _perform_upload_with_progress(
                 currentUrl=f"file://{filename}",
                 **(batch_info or {})
             )
-
 
         # Call the service's upload_document method
         success, result = await doc_storage_service.upload_document(
@@ -1056,7 +1052,6 @@ async def _perform_upload_with_progress(
             del active_crawl_tasks[progress_id]
             safe_logfire_info(f"Cleaned up upload task from registry | progress_id={progress_id}")
 
-
 @router.post("/knowledge-items/search")
 async def search_knowledge_items(request: RagQueryRequest):
     """Search knowledge items - alias for RAG query."""
@@ -1070,7 +1065,6 @@ async def search_knowledge_items(request: RagQueryRequest):
     # Delegate to the RAG query handler
     return await perform_rag_query(request)
 
-
 @router.post("/rag/query")
 async def perform_rag_query(request: RagQueryRequest):
     """Perform a RAG query on the knowledge base using service layer."""
@@ -1083,7 +1077,7 @@ async def perform_rag_query(request: RagQueryRequest):
 
     try:
         # Use RAGService for unified RAG query with return_mode support
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         search_service = RAGService(repository=repository)
         success, result = await search_service.perform_rag_query(
             query=request.query,
@@ -1108,13 +1102,12 @@ async def perform_rag_query(request: RagQueryRequest):
         )
         raise HTTPException(status_code=500, detail={"error": f"RAG query failed: {str(e)}"})
 
-
 @router.post("/rag/code-examples")
 async def search_code_examples(request: RagQueryRequest):
     """Search for code examples relevant to the query using dedicated code examples service."""
     try:
         # Use RAGService for code examples search
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         search_service = RAGService(repository=repository)
         success, result = await search_service.search_code_examples_service(
             query=request.query,
@@ -1145,20 +1138,18 @@ async def search_code_examples(request: RagQueryRequest):
             status_code=500, detail={"error": f"Code examples search failed: {str(e)}"}
         )
 
-
 @router.post("/code-examples")
 async def search_code_examples_simple(request: RagQueryRequest):
     """Search for code examples - simplified endpoint at /api/code-examples."""
     # Delegate to the existing endpoint handler
     return await search_code_examples(request)
 
-
 @router.get("/rag/sources")
 async def get_available_sources():
     """Get all available sources for RAG queries."""
     try:
         # Use KnowledgeItemService with repository
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         service = KnowledgeItemService(repository=repository)
         result = await service.get_available_sources()
 
@@ -1171,7 +1162,6 @@ async def get_available_sources():
         safe_logfire_error(f"Failed to get available sources | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.delete("/sources/{source_id}")
 async def delete_source(source_id: str):
     """Delete a source and all its associated data."""
@@ -1181,7 +1171,7 @@ async def delete_source(source_id: str):
         # Use SourceManagementService directly
         from ..services.source_management_service import SourceManagementService
 
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         source_service = SourceManagementService(repository=repository)
 
         success, result_data = source_service.delete_source(source_id)
@@ -1207,20 +1197,18 @@ async def delete_source(source_id: str):
         safe_logfire_error(f"Failed to delete source | error={str(e)} | source_id={source_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
-
 @router.get("/database/metrics")
 async def get_database_metrics():
     """Get database metrics and statistics."""
     try:
         # Use DatabaseMetricsService with repository
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         service = DatabaseMetricsService(repository=repository)
         metrics = await service.get_metrics()
         return metrics
     except Exception as e:
         safe_logfire_error(f"Failed to get database metrics | error={str(e)}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
-
 
 @router.get("/health")
 async def knowledge_health():
@@ -1249,14 +1237,11 @@ async def knowledge_health():
 
     return result
 
-
-
 @router.post("/knowledge-items/stop/{progress_id}")
 async def stop_crawl_task(progress_id: str):
     """Stop a running crawl task."""
     try:
         from ..services.crawling import get_active_orchestration, unregister_orchestration
-
 
         safe_logfire_info(f"Stop crawl requested | progress_id={progress_id}")
 

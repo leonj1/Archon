@@ -12,12 +12,11 @@ from typing import Any, Optional
 
 from src.server.utils import get_supabase_client
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...repositories.repository_factory import get_repository
 
 from ...config.logfire_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class ProjectService:
     """Service class for project operations"""
@@ -35,7 +34,7 @@ class ProjectService:
         elif supabase_client is not None:
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
     async def create_project(self, title: str, github_repo: str = None) -> tuple[bool, dict[str, Any]]:
         """

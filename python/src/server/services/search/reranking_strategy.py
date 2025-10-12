@@ -26,7 +26,6 @@ logger = get_logger(__name__)
 # Default reranking model
 DEFAULT_RERANKING_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
-
 class RerankingStrategy:
     """Strategy class implementing result reranking using CrossEncoder models"""
 
@@ -201,7 +200,6 @@ class RerankingStrategy:
             "crossencoder_available": CROSSENCODER_AVAILABLE,
             "model_loaded": self.model is not None,
         }
-
 
 class RerankingConfig:
     """Configuration helper for reranking settings"""

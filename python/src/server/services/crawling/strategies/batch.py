@@ -15,7 +15,6 @@ from ...credential_service import credential_service
 
 logger = get_logger(__name__)
 
-
 class BatchCrawlStrategy:
     """Strategy for crawling multiple URLs in batch."""
 

@@ -9,12 +9,10 @@ from typing import Any, Optional
 
 from ..config.logfire_config import get_logger, search_logger
 from ..repositories.database_repository import DatabaseRepository
-from ..repositories.supabase_repository import SupabaseDatabaseRepository
-from ..utils import get_supabase_client
+from ..repositories.repository_factory import get_repository
 from .llm_provider_service import extract_message_text, get_llm_client
 
 logger = get_logger(__name__)
-
 
 async def extract_source_summary(
     source_id: str, content: str, max_length: int = 500, provider: str = None
@@ -95,7 +93,6 @@ The above content is from the documentation for '{source_id}'. Please provide a 
             f"Error generating summary with LLM for {source_id}: {e}. Using default summary."
         )
         return default_summary
-
 
 async def generate_source_title_and_metadata(
     source_id: str,
@@ -209,7 +206,6 @@ Generate only the title, nothing else."""
     }
 
     return title, metadata
-
 
 async def update_source_info(
     repository: DatabaseRepository,
@@ -356,7 +352,6 @@ async def update_source_info(
         search_logger.error(f"Error updating source {source_id}: {e}")
         raise  # Re-raise the exception so the caller knows it failed
 
-
 class SourceManagementService:
     """Service class for source management operations"""
 
@@ -373,7 +368,7 @@ class SourceManagementService:
         elif supabase_client is not None:
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
     async def get_available_sources(self) -> tuple[bool, dict[str, Any]]:
         """

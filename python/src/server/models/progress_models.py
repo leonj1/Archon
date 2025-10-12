@@ -4,7 +4,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 class ProgressDetails(BaseModel):
     """Detailed progress information for granular tracking."""
 
@@ -22,7 +21,6 @@ class ProgressDetails(BaseModel):
     code_blocks_found: int | None = Field(None, alias="codeBlocksFound")
 
     model_config = ConfigDict(populate_by_name=True)
-
 
 class BaseProgressResponse(BaseModel):
     """Base progress response with common fields."""
@@ -63,7 +61,6 @@ class BaseProgressResponse(BaseModel):
         return []
 
     model_config = ConfigDict(populate_by_name=True)  # Accept both snake_case and camelCase
-
 
 class CrawlProgressResponse(BaseProgressResponse):
     """Progress response for crawl operations."""
@@ -116,7 +113,6 @@ class CrawlProgressResponse(BaseProgressResponse):
 
     model_config = ConfigDict(populate_by_name=True)  # Accept both snake_case and camelCase
 
-
 class UploadProgressResponse(BaseProgressResponse):
     """Progress response for document upload operations."""
 
@@ -138,7 +134,6 @@ class UploadProgressResponse(BaseProgressResponse):
 
     model_config = ConfigDict(populate_by_name=True)  # Accept both snake_case and camelCase
 
-
 class ProjectCreationProgressResponse(BaseProgressResponse):
     """Progress response for project creation operations."""
 
@@ -153,7 +148,6 @@ class ProjectCreationProgressResponse(BaseProgressResponse):
     total_tasks_planned: int | None = Field(None, alias="totalTasksPlanned")
 
     model_config = ConfigDict(populate_by_name=True)  # Accept both snake_case and camelCase
-
 
 def create_progress_response(
     operation_type: str,

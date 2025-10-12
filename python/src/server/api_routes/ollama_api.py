@@ -16,7 +16,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from ..config.logfire_config import get_logger
-from ..repositories.supabase_repository import SupabaseDatabaseRepository
+from ..repositories.repository_factory import get_repository
 from ..services.llm_provider_service import validate_provider_instance
 from ..services.ollama.embedding_router import embedding_router
 from ..services.ollama.model_discovery_service import model_discovery_service
@@ -25,14 +25,12 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/ollama", tags=["ollama"])
 
-
 # Pydantic models for API requests/responses
 class InstanceValidationRequest(BaseModel):
     """Request for validating an Ollama instance."""
     instance_url: str = Field(..., description="URL of the Ollama instance")
     instance_type: str | None = Field(None, description="Instance type: chat, embedding, or both")
     timeout_seconds: int | None = Field(30, description="Timeout for validation in seconds")
-
 
 class InstanceValidationResponse(BaseModel):
     """Response for instance validation."""
@@ -44,13 +42,11 @@ class InstanceValidationResponse(BaseModel):
     capabilities: dict[str, Any]
     health_status: dict[str, Any]
 
-
 class ModelDiscoveryRequest(BaseModel):
     """Request for model discovery."""
     instance_urls: list[str] = Field(..., description="List of Ollama instance URLs")
     include_capabilities: bool = Field(True, description="Include model capability detection")
     cache_ttl: int | None = Field(300, description="Cache TTL in seconds")
-
 
 class ModelDiscoveryResponse(BaseModel):
     """Response for model discovery."""
@@ -61,13 +57,11 @@ class ModelDiscoveryResponse(BaseModel):
     discovery_errors: list[str]
     unique_model_names: list[str]
 
-
 class EmbeddingRouteRequest(BaseModel):
     """Request for embedding routing analysis."""
     model_name: str = Field(..., description="Name of the embedding model")
     instance_url: str = Field(..., description="URL of the Ollama instance")
     text_sample: str | None = Field(None, description="Optional text sample for optimization")
-
 
 class EmbeddingRouteResponse(BaseModel):
     """Response for embedding routing."""
@@ -79,7 +73,6 @@ class EmbeddingRouteResponse(BaseModel):
     fallback_applied: bool
     routing_strategy: str
     performance_score: float | None
-
 
 @router.get("/models", response_model=ModelDiscoveryResponse)
 async def discover_models_endpoint(
@@ -138,7 +131,6 @@ async def discover_models_endpoint(
     except Exception as e:
         logger.error(f"Error in model discovery: {e}")
         raise HTTPException(status_code=500, detail=f"Model discovery failed: {str(e)}")
-
 
 @router.get("/instances/health")
 async def health_check_endpoint(
@@ -204,7 +196,6 @@ async def health_check_endpoint(
         logger.error(f"Error in health check: {e}")
         raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
 
-
 @router.post("/validate", response_model=InstanceValidationResponse)
 async def validate_instance_endpoint(request: InstanceValidationRequest) -> InstanceValidationResponse:
     """
@@ -254,7 +245,6 @@ async def validate_instance_endpoint(request: InstanceValidationRequest) -> Inst
         logger.error(f"Error validating instance {request.instance_url}: {e}")
         raise HTTPException(status_code=500, detail=f"Instance validation failed: {str(e)}")
 
-
 @router.post("/embedding/route", response_model=EmbeddingRouteResponse)
 async def analyze_embedding_route_endpoint(request: EmbeddingRouteRequest) -> EmbeddingRouteResponse:
     """
@@ -290,7 +280,6 @@ async def analyze_embedding_route_endpoint(request: EmbeddingRouteRequest) -> Em
     except Exception as e:
         logger.error(f"Error analyzing embedding route: {e}")
         raise HTTPException(status_code=500, detail=f"Embedding route analysis failed: {str(e)}")
-
 
 @router.get("/embedding/routes")
 async def get_available_embedding_routes_endpoint(
@@ -347,7 +336,6 @@ async def get_available_embedding_routes_endpoint(
         logger.error(f"Error getting embedding routes: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get embedding routes: {str(e)}")
 
-
 @router.delete("/cache")
 async def clear_ollama_cache_endpoint() -> dict[str, str]:
     """
@@ -375,12 +363,10 @@ async def clear_ollama_cache_endpoint() -> dict[str, str]:
         logger.error(f"Error clearing caches: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to clear caches: {str(e)}")
 
-
 class ModelDiscoveryAndStoreRequest(BaseModel):
     """Request for discovering and storing models from Ollama instances."""
     instance_urls: list[str] = Field(..., description="List of Ollama instance URLs")
     force_refresh: bool = Field(False, description="Force refresh even if cached data exists")
-
 
 class StoredModelInfo(BaseModel):
     """Stored model information with Archon compatibility assessment."""
@@ -399,7 +385,6 @@ class StoredModelInfo(BaseModel):
     last_updated: str
     embedding_dimensions: int | None = None  # Dimensions for embedding models
 
-
 class ModelListResponse(BaseModel):
     """Response containing discovered and stored models."""
     models: list[StoredModelInfo]
@@ -407,7 +392,6 @@ class ModelListResponse(BaseModel):
     instances_checked: int
     last_discovery: str | None
     cache_status: str
-
 
 @router.post("/models/discover-and-store", response_model=ModelListResponse)
 async def discover_and_store_models_endpoint(request: ModelDiscoveryAndStoreRequest) -> ModelListResponse:
@@ -421,10 +405,9 @@ async def discover_and_store_models_endpoint(request: ModelDiscoveryAndStoreRequ
     try:
         logger.info(f"Starting model discovery and storage for {len(request.instance_urls)} instances")
 
-        from ..utils import get_supabase_client
-
+        
         # Initialize repository for database operations
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
 
         stored_models = []
         instances_checked = 0
@@ -493,7 +476,6 @@ async def discover_and_store_models_endpoint(request: ModelDiscoveryAndStoreRequ
         logger.error(f"Error in model discovery and storage: {e}")
         raise HTTPException(status_code=500, detail=f"Model discovery failed: {str(e)}")
 
-
 @router.get("/models/stored", response_model=ModelListResponse)
 async def get_stored_models_endpoint() -> ModelListResponse:
     """
@@ -505,10 +487,9 @@ async def get_stored_models_endpoint() -> ModelListResponse:
     try:
         logger.info("Retrieving stored Ollama models")
 
-        from ..utils import get_supabase_client
-
+        
         # Initialize repository for database operations
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
 
         # Get stored models from archon_settings using repository
         models_setting = await repository.get_settings_by_key("ollama_discovered_models")
@@ -577,7 +558,6 @@ async def get_stored_models_endpoint() -> ModelListResponse:
         logger.error(f"Error retrieving stored models: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve models: {str(e)}")
 
-
 # Background task functions
 async def _warm_model_cache(instance_urls: list[str]) -> None:
     """Background task to warm up model caches."""
@@ -595,7 +575,6 @@ async def _warm_model_cache(instance_urls: list[str]) -> None:
 
     except Exception as e:
         logger.error(f"Error warming model cache: {e}")
-
 
 # Helper functions for model assessment and analysis
 async def _assess_archon_compatibility_with_testing(model, instance_url: str) -> dict[str, Any]:
@@ -647,7 +626,6 @@ async def _assess_archon_compatibility_with_testing(model, instance_url: str) ->
         'features': features,
         'limitations': limitations
     }
-
 
 def _assess_archon_compatibility(model) -> dict[str, Any]:
     """Legacy compatibility assessment for backward compatibility. Consider using _assess_archon_compatibility_with_testing for new code."""
@@ -709,7 +687,6 @@ def _assess_archon_compatibility(model) -> dict[str, Any]:
         'limitations': limitations
     }
 
-
 def _determine_model_type(model) -> str:
     """Determine the primary type of a model."""
     model_name = model.name.lower()
@@ -749,7 +726,6 @@ def _determine_model_type(model) -> str:
     else:
         return 'chat'  # Default to chat for unknown models
 
-
 def _extract_model_size(model) -> int | None:
     """Extract model size in MB from model information."""
     # This would need to be enhanced based on actual Ollama model data structure
@@ -771,7 +747,6 @@ def _extract_model_size(model) -> int | None:
 
     return None
 
-
 def _extract_context_length(model) -> int | None:
     """Extract context length from model information."""
     model_name = model.name.lower()
@@ -788,7 +763,6 @@ def _extract_context_length(model) -> int | None:
 
     return 4096  # Default context length
 
-
 def _extract_parameters(model) -> str | None:
     """Extract parameter count from model name."""
     model_name = model.name.lower()
@@ -800,7 +774,6 @@ def _extract_parameters(model) -> str | None:
             return pattern.upper()
 
     return None
-
 
 def _assess_performance_rating(model) -> str | None:
     """Assess performance rating based on model characteristics."""
@@ -820,7 +793,6 @@ def _assess_performance_rating(model) -> str | None:
 
     return 'medium'  # Default to medium
 
-
 def _generate_model_description(model) -> str | None:
     """Generate a description for the model based on its characteristics."""
     model_name = model.name
@@ -836,7 +808,6 @@ def _generate_model_description(model) -> str | None:
             return f"{model_name} chat model with {params} parameters for text generation and conversation"
         else:
             return f"{model_name} chat model for text generation and conversation"
-
 
 async def _test_function_calling_capability(model_name: str, instance_url: str) -> bool:
     """
@@ -896,7 +867,6 @@ async def _test_function_calling_capability(model_name: str, instance_url: str) 
         logger.debug(f"Function calling test failed for {model_name}: {e}")
         return False
 
-
 async def _test_structured_output_capability(model_name: str, instance_url: str) -> bool:
     """
     Test if a model supports structured output by requesting JSON format.
@@ -952,7 +922,6 @@ async def _test_structured_output_capability(model_name: str, instance_url: str)
         logger.debug(f"Structured output test failed for {model_name}: {e}")
         return False
 
-
 @router.post("/models/discover-with-details", response_model=ModelDiscoveryResponse)
 async def discover_models_with_real_details(request: ModelDiscoveryAndStoreRequest) -> ModelDiscoveryResponse:
     """
@@ -966,10 +935,9 @@ async def discover_models_with_real_details(request: ModelDiscoveryAndStoreReque
 
         import httpx
 
-        from ..utils import get_supabase_client
-
+        
         # Initialize repository for database operations
-        repository = SupabaseDatabaseRepository(get_supabase_client())
+        repository = get_repository()
         stored_models = []
         instances_checked = 0
 
@@ -1179,7 +1147,6 @@ async def discover_models_with_real_details(request: ModelDiscoveryAndStoreReque
         logger.error(f"Error in detailed model discovery: {e}")
         raise HTTPException(status_code=500, detail=f"Model discovery failed: {str(e)}")
 
-
 def _determine_model_type_from_name_only(model_name: str) -> str:
     """Determine model type based only on name patterns, ignoring capabilities."""
     model_name_lower = model_name.lower()
@@ -1207,7 +1174,6 @@ def _determine_model_type_from_name_only(model_name: str) -> str:
     # Default to chat for unknown patterns
     return 'chat'
 
-
 class ModelCapabilityTestRequest(BaseModel):
     """Request for testing model capabilities in real-time."""
     model_name: str = Field(..., description="Name of the model to test")
@@ -1215,7 +1181,6 @@ class ModelCapabilityTestRequest(BaseModel):
     test_function_calling: bool = Field(True, description="Test function calling capability")
     test_structured_output: bool = Field(True, description="Test structured output capability")
     timeout_seconds: int = Field(15, description="Timeout for each test in seconds")
-
 
 class ModelCapabilityTestResponse(BaseModel):
     """Response for model capability testing."""
@@ -1225,7 +1190,6 @@ class ModelCapabilityTestResponse(BaseModel):
     compatibility_assessment: dict[str, Any]
     test_duration_seconds: float
     errors: list[str]
-
 
 @router.post("/models/test-capabilities", response_model=ModelCapabilityTestResponse)
 async def test_model_capabilities_endpoint(request: ModelCapabilityTestRequest) -> ModelCapabilityTestResponse:

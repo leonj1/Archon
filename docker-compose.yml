@@ -6,6 +6,30 @@
 #   docker compose --profile agents up -d    # Also starts archon-agents
 
 services:
+  # Database Migration Service (Flyway)
+  # Runs first to ensure database schema is up-to-date
+  archon-migrations:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrations
+    container_name: archon-migrations
+    environment:
+      - ARCHON_DB_BACKEND=sqlite
+      - ARCHON_SQLITE_PATH=/data/archon.db
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:-}
+      - SUPABASE_DB_URL=${SUPABASE_DB_URL:-}
+      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD:-}
+      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST:-}
+      - SUPABASE_DB_PORT=${SUPABASE_DB_PORT:-5432}
+      - SUPABASE_DB_NAME=${SUPABASE_DB_NAME:-postgres}
+      - SUPABASE_DB_USER=${SUPABASE_DB_USER:-postgres}
+    volumes:
+      - ./data:/data # SQLite database location
+      - ./migration:/migration # Migration files
+    networks:
+      - app-network
+
   # Server Service (FastAPI + Socket.IO + Crawling)
   archon-server:
     build:
@@ -16,9 +40,15 @@ services:
         ARCHON_SERVER_PORT: ${ARCHON_SERVER_PORT:-8181}
         UV_TIMEOUT: ${UV_TIMEOUT:-300}
     container_name: archon-server
+    depends_on:
+      archon-migrations:
+        condition: service_completed_successfully
     ports:
       - "${ARCHON_SERVER_PORT:-8181}:${ARCHON_SERVER_PORT:-8181}"
     environment:
+      - ARCHON_DB_BACKEND=sqlite
+      - ARCHON_SQLITE_PATH=/data/archon.db
+      - ARCHON_SKIP_DB_INIT=true  # Skip internal migration since Flyway handles it
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -37,6 +67,7 @@ services:
       - ./python/src:/app/src # Mount source code for hot reload
       - ./python/tests:/app/tests # Mount tests for UI test execution
       - ./migration:/app/migration # Mount migration files for version tracking
+      - ./data:/data # SQLite database persistence
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command:

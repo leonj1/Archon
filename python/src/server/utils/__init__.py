@@ -50,7 +50,6 @@ from ..services.threading_service import (
 # Global threading service instance for optimization
 _threading_service = None
 
-
 async def initialize_threading_service(
     threading_config: ThreadingConfig | None = None,
     rate_limit_config: RateLimitConfig | None = None,
@@ -64,14 +63,12 @@ async def initialize_threading_service(
         await _threading_service.start()
     return _threading_service
 
-
 def get_utils_threading_service():
     """Get the threading service instance (lazy initialization)"""
     global _threading_service
     if _threading_service is None:
         _threading_service = get_threading_service()
     return _threading_service
-
 
 # Export all imported functions for backward compatibility
 __all__ = [

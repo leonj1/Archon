@@ -11,14 +11,13 @@ from typing import Any, Optional
 
 from src.server.utils import get_supabase_client
 from ...repositories.database_repository import DatabaseRepository
-from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...repositories.repository_factory import get_repository
 
 from ...config.logfire_config import get_logger
 
 logger = get_logger(__name__)
 
 # Task updates are handled via polling - no broadcasting needed
-
 
 class TaskService:
     """Service class for task operations"""
@@ -38,7 +37,7 @@ class TaskService:
         elif supabase_client is not None:
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
-            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+            self.repository = get_repository()
 
     def validate_status(self, status: str) -> tuple[bool, str]:
         """Validate task status"""
@@ -146,7 +145,6 @@ class TaskService:
             task = await self.repository.create_task(task_data)
 
             if task:
-
 
                 return True, {
                     "task": {

@@ -5,7 +5,6 @@ Maps sub-task progress (0-100%) to overall task progress ranges.
 This ensures smooth progress reporting without jumping backwards.
 """
 
-
 class ProgressMapper:
     """Maps sub-task progress to overall progress ranges"""
 
