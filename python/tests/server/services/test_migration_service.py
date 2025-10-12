@@ -92,8 +92,7 @@ def test_migration_service_init_docker():
 @pytest.mark.asyncio
 async def test_get_applied_migrations_success(migration_service, mock_supabase_client):
     """Test successful retrieval of applied migrations."""
-    mock_response = MagicMock()
-    mock_response.data = [
+    mock_data = [
         {
             "id": "123",
             "version": "0.1.0",
@@ -103,25 +102,26 @@ async def test_get_applied_migrations_success(migration_service, mock_supabase_c
         },
     ]
 
-    mock_supabase_client.table.return_value.select.return_value.order.return_value.execute.return_value = mock_response
+    # Mock the repository method
+    mock_repo = AsyncMock()
+    mock_repo.get_applied_migrations.return_value = mock_data
+    migration_service.repository = mock_repo
 
-    with patch.object(migration_service, '_get_supabase_client', return_value=mock_supabase_client):
-        with patch.object(migration_service, 'check_migrations_table_exists', return_value=True):
-            result = await migration_service.get_applied_migrations()
+    with patch.object(migration_service, 'check_migrations_table_exists', return_value=True):
+        result = await migration_service.get_applied_migrations()
 
-            assert len(result) == 1
-            assert isinstance(result[0], MigrationRecord)
-            assert result[0].version == "0.1.0"
-            assert result[0].migration_name == "001_initial"
+        assert len(result) == 1
+        assert isinstance(result[0], MigrationRecord)
+        assert result[0].version == "0.1.0"
+        assert result[0].migration_name == "001_initial"
 
 
 @pytest.mark.asyncio
 async def test_get_applied_migrations_table_not_exists(migration_service, mock_supabase_client):
     """Test handling when migrations table doesn't exist."""
-    with patch.object(migration_service, '_get_supabase_client', return_value=mock_supabase_client):
-        with patch.object(migration_service, 'check_migrations_table_exists', return_value=False):
-            result = await migration_service.get_applied_migrations()
-            assert result == []
+    with patch.object(migration_service, 'check_migrations_table_exists', return_value=False):
+        result = await migration_service.get_applied_migrations()
+        assert result == []
 
 
 @pytest.mark.asyncio

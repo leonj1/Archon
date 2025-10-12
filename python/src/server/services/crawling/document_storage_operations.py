@@ -10,6 +10,9 @@ from collections.abc import Callable
 from typing import Any
 
 from ...config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
+from ...repositories.database_repository import DatabaseRepository
+from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...utils import get_supabase_client
 from ..source_management_service import extract_source_summary, update_source_info
 from ..storage.document_storage_service import add_documents_to_supabase
 from ..storage.storage_services import DocumentStorageService
@@ -23,16 +26,39 @@ class DocumentStorageOperations:
     Handles document storage operations for crawled content.
     """
 
-    def __init__(self, supabase_client):
+    def __init__(self, repository: DatabaseRepository | None = None, supabase_client=None):
         """
-        Initialize document storage operations.
+        Initialize with optional repository or supabase client.
 
         Args:
-            supabase_client: The Supabase client for database operations
+            repository: DatabaseRepository instance (preferred)
+            supabase_client: Legacy supabase client (for backward compatibility)
         """
-        self.supabase_client = supabase_client
-        self.doc_storage_service = DocumentStorageService(supabase_client)
-        self.code_extraction_service = CodeExtractionService(supabase_client)
+        # Handle backward compatibility: if first arg looks like a supabase client (not a DatabaseRepository),
+        # treat it as supabase_client for compatibility with existing code like DocumentStorageOperations(supabase_client)
+        if repository is not None and not isinstance(repository, DatabaseRepository):
+            # First argument is actually a supabase client (backward compatibility)
+            supabase_client = repository
+            repository = None
+
+        if repository is not None:
+            self.repository = repository
+            # Extract supabase_client for legacy dependencies
+            if hasattr(repository, 'client'):
+                self.supabase_client = repository.client
+            else:
+                self.supabase_client = get_supabase_client()
+        elif supabase_client is not None:
+            self.repository = SupabaseDatabaseRepository(supabase_client)
+            self.supabase_client = supabase_client
+        else:
+            client = get_supabase_client()
+            self.repository = SupabaseDatabaseRepository(client)
+            self.supabase_client = client
+
+        # Initialize dependent services (these still need supabase_client for now)
+        self.doc_storage_service = DocumentStorageService(self.supabase_client)
+        self.code_extraction_service = CodeExtractionService(self.supabase_client)
 
     async def process_and_store_documents(
         self,
@@ -262,7 +288,7 @@ class DocumentStorageOperations:
 
         # Call add_documents_to_supabase with the correct parameters
         storage_stats = await add_documents_to_supabase(
-            client=self.supabase_client,
+            client=self.supabase_client,  # For backward compatibility
             urls=all_urls,  # Now has entry per chunk
             chunk_numbers=all_chunk_numbers,  # Proper chunk numbers (0, 1, 2, etc)
             contents=all_contents,  # Individual chunks
@@ -274,6 +300,7 @@ class DocumentStorageOperations:
             provider=None,  # Use configured provider
             cancellation_check=cancellation_check,  # Pass cancellation check
             url_to_page_id=url_to_page_id,  # Link chunks to pages
+            repository=self.repository,  # Use repository pattern
         )
 
         # Calculate chunk counts
@@ -359,7 +386,7 @@ class DocumentStorageOperations:
             try:
                 # Call async update_source_info directly
                 await update_source_info(
-                    client=self.supabase_client,
+                    repository=self.repository,
                     source_id=source_id,
                     summary=summary,
                     word_count=source_id_word_counts[source_id],
@@ -400,7 +427,7 @@ class DocumentStorageOperations:
                     if source_display_name:
                         fallback_data["source_display_name"] = source_display_name
 
-                    self.supabase_client.table("archon_sources").upsert(fallback_data).execute()
+                    await self.repository.upsert_source(fallback_data)
                     safe_logfire_info(f"Fallback source creation succeeded for '{source_id}'")
                 except Exception as fallback_error:
                     logger.error(f"Both source creation attempts failed for '{source_id}'", exc_info=True)
@@ -415,13 +442,8 @@ class DocumentStorageOperations:
         if unique_source_ids:
             for source_id in unique_source_ids:
                 try:
-                    source_check = (
-                        self.supabase_client.table("archon_sources")
-                        .select("source_id")
-                        .eq("source_id", source_id)
-                        .execute()
-                    )
-                    if not source_check.data:
+                    source_check = await self.repository.get_source_by_id(source_id)
+                    if not source_check:
                         raise Exception(
                             f"Source record verification failed - '{source_id}' does not exist in sources table"
                         )

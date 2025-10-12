@@ -66,7 +66,7 @@ dev: check
 	npm run dev
 
 # Full Docker development
-dev-docker: check
+start: check
 	@echo "Starting full Docker environment..."
 	@$(COMPOSE) --profile full up -d --build
 	@echo "✓ All services running"

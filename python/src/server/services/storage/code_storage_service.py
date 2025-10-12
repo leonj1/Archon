@@ -15,9 +15,8 @@ from difflib import SequenceMatcher
 from typing import Any
 from urllib.parse import urlparse
 
-from supabase import Client
-
 from ...config.logfire_config import search_logger
+from ...repositories.database_repository import DatabaseRepository
 from ..credential_service import credential_service
 from ..embeddings.contextual_embedding_service import generate_contextual_embeddings_batch
 from ..embeddings.embedding_service import create_embeddings_batch
@@ -1129,7 +1128,7 @@ async def generate_code_summaries_batch(
 
 
 async def add_code_examples_to_supabase(
-    client: Client,
+    repository: DatabaseRepository,
     urls: list[str],
     chunk_numbers: list[int],
     code_examples: list[str],
@@ -1142,10 +1141,10 @@ async def add_code_examples_to_supabase(
     embedding_provider: str | None = None,
 ):
     """
-    Add code examples to the Supabase code_examples table in batches.
+    Add code examples to the database code_examples table in batches.
 
     Args:
-        client: Supabase client
+        repository: Database repository for data operations
         urls: List of URLs
         chunk_numbers: List of chunk numbers
         code_examples: List of code example contents
@@ -1164,7 +1163,7 @@ async def add_code_examples_to_supabase(
     unique_urls = list(set(urls))
     for url in unique_urls:
         try:
-            client.table("archon_code_examples").delete().eq("url", url).execute()
+            await repository.delete_code_examples_by_url(url)
         except Exception as e:
             search_logger.error(f"Error deleting existing code examples for {url}: {e}")
 
@@ -1339,19 +1338,19 @@ async def add_code_examples_to_supabase(
             search_logger.warning("No records to insert for this batch; skipping insert.")
             continue
 
-        # Insert batch into Supabase with retry logic
+        # Insert batch into database with retry logic
         max_retries = 3
         retry_delay = 1.0
 
         for retry in range(max_retries):
             try:
-                client.table("archon_code_examples").insert(batch_data).execute()
+                await repository.insert_code_examples_batch(batch_data)
                 # Success - break out of retry loop
                 break
             except Exception as e:
                 if retry < max_retries - 1:
                     search_logger.warning(
-                        f"Error inserting batch into Supabase (attempt {retry + 1}/{max_retries}): {e}"
+                        f"Error inserting batch into database (attempt {retry + 1}/{max_retries}): {e}"
                     )
                     search_logger.info(f"Retrying in {retry_delay} seconds...")
                     await asyncio.sleep(retry_delay)
@@ -1364,7 +1363,7 @@ async def add_code_examples_to_supabase(
                     successful_inserts = 0
                     for record in batch_data:
                         try:
-                            client.table("archon_code_examples").insert(record).execute()
+                            await repository.insert_code_example(record)
                             successful_inserts += 1
                         except Exception as individual_error:
                             search_logger.error(

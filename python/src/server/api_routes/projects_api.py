@@ -35,6 +35,9 @@ from ..services.projects import (
 from ..services.projects.document_service import DocumentService
 from ..services.projects.versioning_service import VersioningService
 
+# Repository imports
+from ..repositories import get_repository
+
 # Using HTTP polling for real-time updates
 
 router = APIRouter(prefix="/api", tags=["projects"])
@@ -92,7 +95,8 @@ async def list_projects(
         logfire.debug(f"Listing all projects | include_content={include_content}")
 
         # Use ProjectService to get projects with include_content parameter
-        project_service = ProjectService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        project_service = ProjectService(repository=repository)
         success, result = project_service.list_projects(include_content=include_content)
 
         if not success:
@@ -101,7 +105,7 @@ async def list_projects(
         # Only format with sources if we have full content
         if include_content:
             # Use SourceLinkingService to format projects with sources
-            source_service = SourceLinkingService()
+            source_service = SourceLinkingService(repository=repository)
             formatted_projects = source_service.format_projects_with_sources(result["projects"])
         else:
             # Lightweight response doesn't need source formatting
@@ -184,7 +188,8 @@ async def create_project(request: CreateProjectRequest):
             kwargs["data"] = request.data
 
         # Create project directly with AI assistance
-        project_service = ProjectCreationService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        project_service = ProjectCreationService(repository=repository)
         success, result = await project_service.create_project_with_ai(
             progress_id="direct",  # No progress tracking needed
             title=request.title,
@@ -213,14 +218,21 @@ async def create_project(request: CreateProjectRequest):
 
 @router.get("/projects/health")
 async def projects_health():
-    """Health check for projects API and database schema validation."""
+    """
+    Health check for projects API and database schema validation.
+
+    This endpoint demonstrates using the repository factory pattern.
+    The factory automatically provides the configured database backend.
+    """
     try:
         logfire.info("Projects health check requested")
-        supabase_client = get_supabase_client()
+
+        # Get repository instance from factory (uses configured backend)
+        repository = get_repository()
 
         # Check if projects table exists by testing ProjectService
         try:
-            project_service = ProjectService(supabase_client)
+            project_service = ProjectService(repository=repository)
             # Try to list projects with limit 1 to test table access
             success, _ = project_service.list_projects()
             projects_table_exists = success
@@ -234,7 +246,7 @@ async def projects_health():
 
         # Check if tasks table exists by testing TaskService
         try:
-            task_service = TaskService(supabase_client)
+            task_service = TaskService(repository=repository)
             # Try to list tasks with limit 1 to test table access
             success, _ = task_service.list_tasks(include_closed=True)
             tasks_table_exists = success
@@ -282,9 +294,12 @@ async def get_all_task_counts(
     """
     Get task counts for all projects in a single batch query.
     Optimized endpoint to avoid N+1 query problem.
-    
+
     Returns counts grouped by project_id with todo, doing, and done counts.
     Review status is included in doing count to match frontend logic.
+
+    This endpoint demonstrates using the repository factory pattern for
+    consistent repository access across the application.
     """
     try:
         # Get If-None-Match header for ETag comparison
@@ -292,10 +307,9 @@ async def get_all_task_counts(
 
         logfire.debug(f"Getting task counts for all projects | etag={if_none_match}")
 
-        # Use TaskService to get batch task counts
-        # Get client explicitly to ensure mocking works in tests
-        supabase_client = get_supabase_client()
-        task_service = TaskService(supabase_client)
+        # Get repository instance from factory (uses configured backend)
+        repository = get_repository()
+        task_service = TaskService(repository=repository)
         success, result = task_service.get_all_project_task_counts()
 
         if not success:
@@ -342,7 +356,8 @@ async def get_project(project_id: str):
         logfire.info(f"Getting project | project_id={project_id}")
 
         # Use ProjectService to get the project
-        project_service = ProjectService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        project_service = ProjectService(repository=repository)
         success, result = project_service.get_project(project_id)
 
         if not success:
@@ -403,10 +418,11 @@ async def update_project(project_id: str, request: UpdateProjectRequest):
             try:
                 from ..services.projects.versioning_service import VersioningService
 
-                versioning_service = VersioningService(supabase_client)
+                repository = SupabaseDatabaseRepository(supabase_client)
+                versioning_service = VersioningService(repository=repository)
 
                 # Get current project for comparison
-                project_service = ProjectService(supabase_client)
+                project_service = ProjectService(repository=repository)
                 success, current_result = project_service.get_project(project_id)
 
                 if success and current_result.get("project"):
@@ -439,8 +455,10 @@ async def update_project(project_id: str, request: UpdateProjectRequest):
                 logfire.warning(f"Failed to create version snapshots: {e}")
                 # Don't fail the update, just log the warning
 
-        # Use ProjectService to update the project
-        project_service = ProjectService(supabase_client)
+        # Use ProjectService to update the project (reuse repository if already created above)
+        if 'repository' not in locals():
+            repository = SupabaseDatabaseRepository(supabase_client)
+        project_service = ProjectService(repository=repository)
         success, result = project_service.update_project(project_id, update_fields)
 
         if not success:
@@ -454,7 +472,7 @@ async def update_project(project_id: str, request: UpdateProjectRequest):
         project = result["project"]
 
         # Handle source updates using SourceLinkingService
-        source_service = SourceLinkingService(supabase_client)
+        source_service = SourceLinkingService(repository=repository)
 
         if request.technical_sources is not None or request.business_sources is not None:
             source_success, source_result = source_service.update_project_sources(
@@ -493,7 +511,8 @@ async def delete_project(project_id: str):
         logfire.info(f"Deleting project | project_id={project_id}")
 
         # Use ProjectService to delete the project
-        project_service = ProjectService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        project_service = ProjectService(repository=repository)
         success, result = project_service.delete_project(project_id)
 
         if not success:
@@ -525,7 +544,8 @@ async def get_project_features(project_id: str):
         logfire.info(f"Getting project features | project_id={project_id}")
 
         # Use ProjectService to get features
-        project_service = ProjectService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        project_service = ProjectService(repository=repository)
         success, result = project_service.get_project_features(project_id)
 
         if not success:
@@ -566,7 +586,8 @@ async def list_project_tasks(
         )
 
         # Use TaskService to list tasks
-        task_service = TaskService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        task_service = TaskService(repository=repository)
         success, result = task_service.list_tasks(
             project_id=project_id,
             include_closed=True,  # Get all tasks, including done
@@ -659,7 +680,8 @@ async def create_task(request: CreateTaskRequest):
     """Create a new task with automatic reordering."""
     try:
         # Use TaskService to create the task
-        task_service = TaskService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        task_service = TaskService(repository=repository)
         success, result = await task_service.create_task(
             project_id=request.project_id,
             title=request.title,
@@ -705,7 +727,8 @@ async def list_tasks(
         )
 
         # Use TaskService to list tasks
-        task_service = TaskService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        task_service = TaskService(repository=repository)
         success, result = task_service.list_tasks(
             project_id=project_id,
             status=status,
@@ -774,7 +797,8 @@ async def get_task(task_id: str):
     """Get a specific task by ID."""
     try:
         # Use TaskService to get the task
-        task_service = TaskService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        task_service = TaskService(repository=repository)
         success, result = task_service.get_task(task_id)
 
         if not success:
@@ -858,7 +882,8 @@ async def update_task(task_id: str, request: UpdateTaskRequest):
             update_fields["feature"] = request.feature
 
         # Use TaskService to update the task
-        task_service = TaskService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        task_service = TaskService(repository=repository)
         success, result = await task_service.update_task(task_id, update_fields)
 
         if not success:
@@ -887,7 +912,8 @@ async def delete_task(task_id: str):
     """Archive a task (soft delete)."""
     try:
         # Use TaskService to archive the task
-        task_service = TaskService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        task_service = TaskService(repository=repository)
         success, result = await task_service.archive_task(task_id, archived_by="api")
 
         if not success:
@@ -919,7 +945,8 @@ async def mcp_update_task_status(task_id: str, status: str):
         logfire.info(f"MCP task status update | task_id={task_id} | status={status}")
 
         # Use TaskService to update the task
-        task_service = TaskService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        task_service = TaskService(repository=repository)
         success, result = await task_service.update_task(
             task_id=task_id, update_fields={"status": status}
         )
@@ -969,7 +996,8 @@ async def list_project_documents(project_id: str, include_content: bool = False)
         )
 
         # Use DocumentService to list documents
-        document_service = DocumentService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        document_service = DocumentService(repository=repository)
         success, result = document_service.list_documents(project_id, include_content=include_content)
 
         if not success:
@@ -1000,7 +1028,8 @@ async def create_project_document(project_id: str, request: CreateDocumentReques
         )
 
         # Use DocumentService to create document
-        document_service = DocumentService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        document_service = DocumentService(repository=repository)
         success, result = document_service.add_document(
             project_id=project_id,
             document_type=request.document_type,
@@ -1036,7 +1065,8 @@ async def get_project_document(project_id: str, doc_id: str):
         logfire.info(f"Getting document | project_id={project_id} | doc_id={doc_id}")
 
         # Use DocumentService to get document
-        document_service = DocumentService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        document_service = DocumentService(repository=repository)
         success, result = document_service.get_document(project_id, doc_id)
 
         if not success:
@@ -1076,7 +1106,8 @@ async def update_project_document(project_id: str, doc_id: str, request: UpdateD
             update_fields["author"] = request.author
 
         # Use DocumentService to update document
-        document_service = DocumentService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        document_service = DocumentService(repository=repository)
         success, result = document_service.update_document(project_id, doc_id, update_fields)
 
         if not success:
@@ -1105,7 +1136,8 @@ async def delete_project_document(project_id: str, doc_id: str):
         logfire.info(f"Deleting document | project_id={project_id} | doc_id={doc_id}")
 
         # Use DocumentService to delete document
-        document_service = DocumentService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        document_service = DocumentService(repository=repository)
         success, result = document_service.delete_document(project_id, doc_id)
 
         if not success:
@@ -1139,7 +1171,8 @@ async def list_project_versions(project_id: str, field_name: str = None):
         )
 
         # Use VersioningService to list versions
-        versioning_service = VersioningService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        versioning_service = VersioningService(repository=repository)
         success, result = versioning_service.list_versions(project_id, field_name)
 
         if not success:
@@ -1170,7 +1203,8 @@ async def create_project_version(project_id: str, request: CreateVersionRequest)
         )
 
         # Use VersioningService to create version
-        versioning_service = VersioningService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        versioning_service = VersioningService(repository=repository)
         success, result = versioning_service.create_version(
             project_id=project_id,
             field_name=request.field_name,
@@ -1209,7 +1243,8 @@ async def get_project_version(project_id: str, field_name: str, version_number: 
         )
 
         # Use VersioningService to get version content
-        versioning_service = VersioningService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        versioning_service = VersioningService(repository=repository)
         success, result = versioning_service.get_version_content(
             project_id, field_name, version_number
         )
@@ -1246,7 +1281,8 @@ async def restore_project_version(
         )
 
         # Use VersioningService to restore version
-        versioning_service = VersioningService()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        versioning_service = VersioningService(repository=repository)
         success, result = versioning_service.restore_version(
             project_id=project_id,
             field_name=field_name,

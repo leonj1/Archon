@@ -119,7 +119,7 @@ class DocumentStorageService(BaseStorageService):
 
                 logger.info(f"Updating source info for {source_id} with knowledge_type={knowledge_type}")
                 await update_source_info(
-                    self.supabase_client,
+                    self.repository,
                     source_id,
                     source_summary,
                     total_word_count,

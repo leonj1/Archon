@@ -7,6 +7,9 @@ Handles all knowledge item CRUD operations and data transformations.
 from typing import Any
 
 from ...config.logfire_config import safe_logfire_error, safe_logfire_info
+from ...repositories.database_repository import DatabaseRepository
+from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...utils import get_supabase_client
 
 
 class KnowledgeItemService:
@@ -14,14 +17,17 @@ class KnowledgeItemService:
     Service for managing knowledge items including listing, filtering, updating, and deletion.
     """
 
-    def __init__(self, supabase_client):
+    def __init__(self, repository: DatabaseRepository | None = None):
         """
         Initialize the knowledge item service.
 
         Args:
-            supabase_client: The Supabase client for database operations
+            repository: DatabaseRepository instance
         """
-        self.supabase = supabase_client
+        if repository is not None:
+            self.repository = repository
+        else:
+            self.repository = SupabaseDatabaseRepository(get_supabase_client())
 
     async def list_items(
         self,
@@ -43,46 +49,28 @@ class KnowledgeItemService:
             Dict containing items, pagination info, and total count
         """
         try:
-            # Build the query with filters at database level for better performance
-            query = self.supabase.from_("archon_sources").select("*")
+            # Get all sources from repository
+            all_sources = await self.repository.list_sources(knowledge_type=knowledge_type)
 
-            # Apply knowledge type filter at database level if provided
-            if knowledge_type:
-                query = query.contains("metadata", {"knowledge_type": knowledge_type})
-
-            # Apply search filter at database level if provided
+            # Apply search filter if provided
             if search:
-                search_pattern = f"%{search}%"
-                query = query.or_(
-                    f"title.ilike.{search_pattern},summary.ilike.{search_pattern},source_id.ilike.{search_pattern}"
-                )
+                search_lower = search.lower()
+                filtered_sources = [
+                    s for s in all_sources
+                    if search_lower in s.get("title", "").lower()
+                    or search_lower in s.get("summary", "").lower()
+                    or search_lower in s.get("source_id", "").lower()
+                ]
+            else:
+                filtered_sources = all_sources
 
             # Get total count before pagination
-            # Clone the query for counting
-            count_query = self.supabase.from_("archon_sources").select(
-                "*", count="exact", head=True
-            )
+            total = len(filtered_sources)
 
-            # Apply same filters to count query
-            if knowledge_type:
-                count_query = count_query.contains("metadata", {"knowledge_type": knowledge_type})
-
-            if search:
-                search_pattern = f"%{search}%"
-                count_query = count_query.or_(
-                    f"title.ilike.{search_pattern},summary.ilike.{search_pattern},source_id.ilike.{search_pattern}"
-                )
-
-            count_result = count_query.execute()
-            total = count_result.count if hasattr(count_result, "count") else 0
-
-            # Apply pagination at database level
+            # Apply pagination
             start_idx = (page - 1) * per_page
-            query = query.range(start_idx, start_idx + per_page - 1)
-
-            # Execute query
-            result = query.execute()
-            sources = result.data if result.data else []
+            end_idx = start_idx + per_page
+            sources = filtered_sources[start_idx:end_idx]
 
             # Get source IDs for batch queries
             source_ids = [source["source_id"] for source in sources]
@@ -96,37 +84,21 @@ class KnowledgeItemService:
             chunk_counts = {}
 
             if source_ids:
-                # Batch fetch first URLs
-                urls_result = (
-                    self.supabase.from_("archon_crawled_pages")
-                    .select("source_id, url")
-                    .in_("source_id", source_ids)
-                    .execute()
-                )
-
-                # Group URLs by source_id (take first one for each)
-                for item in urls_result.data or []:
-                    if item["source_id"] not in first_urls:
-                        first_urls[item["source_id"]] = item["url"]
-
-                # Get code example counts per source - NO CONTENT, just counts!
-                # Fetch counts individually for each source
+                # Batch fetch first URLs using repository
                 for source_id in source_ids:
-                    count_result = (
-                        self.supabase.from_("archon_code_examples")
-                        .select("id", count="exact", head=True)
-                        .eq("source_id", source_id)
-                        .execute()
-                    )
-                    code_example_counts[source_id] = (
-                        count_result.count if hasattr(count_result, "count") else 0
-                    )
+                    pages = await self.repository.list_pages_by_source(source_id, limit=1)
+                    if pages:
+                        first_urls[source_id] = pages[0].get("url", f"source://{source_id}")
 
-                # Ensure all sources have a count (default to 0)
+                # Get code example counts per source
                 for source_id in source_ids:
-                    if source_id not in code_example_counts:
-                        code_example_counts[source_id] = 0
-                    chunk_counts[source_id] = 0  # Default to 0 to avoid timeout
+                    count = await self.repository.get_code_example_count_by_source(source_id)
+                    code_example_counts[source_id] = count
+
+                # Get page counts per source (chunks)
+                for source_id in source_ids:
+                    count = await self.repository.get_page_count_by_source(source_id)
+                    chunk_counts[source_id] = count
 
                 safe_logfire_info(f"Code example counts: {code_example_counts}")
 
@@ -143,7 +115,7 @@ class KnowledgeItemService:
                     display_url = source_url
                 else:
                     display_url = first_urls.get(source_id, f"source://{source_id}")
-                
+
                 code_examples_count = code_example_counts.get(source_id, 0)
                 chunks_count = chunk_counts.get(source_id, 0)
 
@@ -212,20 +184,14 @@ class KnowledgeItemService:
         try:
             safe_logfire_info(f"Getting knowledge item | source_id={source_id}")
 
-            # Get the source record
-            result = (
-                self.supabase.from_("archon_sources")
-                .select("*")
-                .eq("source_id", source_id)
-                .single()
-                .execute()
-            )
+            # Get the source record using repository
+            source = await self.repository.get_source_by_id(source_id)
 
-            if not result.data:
+            if not source:
                 return None
 
             # Transform the source to item format
-            item = await self._transform_source_to_item(result.data)
+            item = await self._transform_source_to_item(source)
             return item
 
         except Exception as e:
@@ -252,6 +218,12 @@ class KnowledgeItemService:
                 f"Updating knowledge item | source_id={source_id} | updates={updates}"
             )
 
+            # Get current source
+            current_source = await self.repository.get_source_by_id(source_id)
+            if not current_source:
+                safe_logfire_error(f"Knowledge item not found | source_id={source_id}")
+                return False, {"error": f"Knowledge item {source_id} not found"}
+
             # Prepare update data
             update_data = {}
 
@@ -271,29 +243,22 @@ class KnowledgeItemService:
             metadata_updates = {k: v for k, v in updates.items() if k in metadata_fields}
 
             if metadata_updates:
-                # Get current metadata
-                current_response = (
-                    self.supabase.table("archon_sources")
-                    .select("metadata")
-                    .eq("source_id", source_id)
-                    .execute()
-                )
-                if current_response.data:
-                    current_metadata = current_response.data[0].get("metadata", {})
-                    current_metadata.update(metadata_updates)
-                    update_data["metadata"] = current_metadata
-                else:
-                    update_data["metadata"] = metadata_updates
+                # Get current metadata and merge
+                current_metadata = current_source.get("metadata", {})
+                current_metadata.update(metadata_updates)
+                update_data["metadata"] = current_metadata
 
-            # Perform the update
-            result = (
-                self.supabase.table("archon_sources")
-                .update(update_data)
-                .eq("source_id", source_id)
-                .execute()
-            )
+            # Build the upsert data
+            upsert_data = {
+                "source_id": source_id,
+                **current_source,
+                **update_data,
+            }
 
-            if result.data:
+            # Perform the update using upsert_source
+            result = await self.repository.upsert_source(upsert_data)
+
+            if result:
                 safe_logfire_info(f"Knowledge item updated successfully | source_id={source_id}")
                 return True, {
                     "success": True,
@@ -301,8 +266,8 @@ class KnowledgeItemService:
                     "source_id": source_id,
                 }
             else:
-                safe_logfire_error(f"Knowledge item not found | source_id={source_id}")
-                return False, {"error": f"Knowledge item {source_id} not found"}
+                safe_logfire_error(f"Failed to update knowledge item | source_id={source_id}")
+                return False, {"error": f"Failed to update knowledge item {source_id}"}
 
         except Exception as e:
             safe_logfire_error(
@@ -318,23 +283,22 @@ class KnowledgeItemService:
             Dict containing sources list and count
         """
         try:
-            # Query the sources table
-            result = self.supabase.from_("archon_sources").select("*").order("source_id").execute()
+            # Get all sources using repository
+            all_sources = await self.repository.list_sources()
 
             # Format the sources
             sources = []
-            if result.data:
-                for source in result.data:
-                    sources.append({
-                        "source_id": source.get("source_id"),
-                        "title": source.get("title", source.get("summary", "Untitled")),
-                        "summary": source.get("summary"),
-                        "metadata": source.get("metadata", {}),
-                        "total_words": source.get("total_words", source.get("total_word_count", 0)),
-                        "update_frequency": source.get("update_frequency", 7),
-                        "created_at": source.get("created_at"),
-                        "updated_at": source.get("updated_at", source.get("created_at")),
-                    })
+            for source in all_sources:
+                sources.append({
+                    "source_id": source.get("source_id"),
+                    "title": source.get("title", source.get("summary", "Untitled")),
+                    "summary": source.get("summary"),
+                    "metadata": source.get("metadata", {}),
+                    "total_words": source.get("total_words", source.get("total_word_count", 0)),
+                    "update_frequency": source.get("update_frequency", 7),
+                    "created_at": source.get("created_at"),
+                    "updated_at": source.get("updated_at", source.get("created_at")),
+                })
 
             return {"success": True, "sources": sources, "count": len(sources)}
 
@@ -402,16 +366,10 @@ class KnowledgeItemService:
     async def _get_first_page_url(self, source_id: str) -> str:
         """Get the first page URL for a source."""
         try:
-            pages_response = (
-                self.supabase.from_("archon_crawled_pages")
-                .select("url")
-                .eq("source_id", source_id)
-                .limit(1)
-                .execute()
-            )
+            pages = await self.repository.list_pages_by_source(source_id, limit=1)
 
-            if pages_response.data:
-                return pages_response.data[0].get("url", f"source://{source_id}")
+            if pages:
+                return pages[0].get("url", f"source://{source_id}")
 
         except Exception:
             pass
@@ -421,14 +379,8 @@ class KnowledgeItemService:
     async def _get_code_examples(self, source_id: str) -> list[dict[str, Any]]:
         """Get code examples for a source."""
         try:
-            code_examples_response = (
-                self.supabase.from_("archon_code_examples")
-                .select("id, content, summary, metadata")
-                .eq("source_id", source_id)
-                .execute()
-            )
-
-            return code_examples_response.data if code_examples_response.data else []
+            code_examples = await self.repository.get_code_examples_by_source(source_id)
+            return code_examples if code_examples else []
 
         except Exception:
             return []
@@ -463,17 +415,118 @@ class KnowledgeItemService:
         """Get the actual number of chunks for a source."""
         try:
             # Count the actual rows in crawled_pages for this source
-            result = (
-                self.supabase.table("archon_crawled_pages")
-                .select("*", count="exact")
-                .eq("source_id", source_id)
-                .execute()
-            )
-
-            # Return the count of pages (chunks)
-            return result.count if result.count else 0
+            count = await self.repository.get_page_count_by_source(source_id)
+            return count
 
         except Exception as e:
             # If we can't get chunk count, return 0
             safe_logfire_info(f"Failed to get chunk count for {source_id}: {e}")
             return 0
+
+    async def get_chunks_for_source(
+        self,
+        source_id: str,
+        domain_filter: str | None = None,
+        limit: int = 20,
+        offset: int = 0
+    ) -> dict[str, Any]:
+        """
+        Get paginated document chunks for a specific source.
+
+        Args:
+            source_id: The source ID to get chunks for
+            domain_filter: Optional domain filter for URLs (not yet implemented)
+            limit: Maximum number of chunks to return
+            offset: Number of chunks to skip for pagination
+
+        Returns:
+            Dict with chunks, total count, and pagination info
+        """
+        try:
+            # Get total count for this source
+            total = await self.repository.get_page_count_by_source(source_id)
+
+            # Get paginated chunks using repository method
+            # Note: list_crawled_pages_by_source returns archon_crawled_pages data
+            chunks = await self.repository.list_crawled_pages_by_source(
+                source_id=source_id,
+                limit=limit,
+                offset=offset
+            )
+
+            # Apply domain filtering if provided (manual filter since repository doesn't support it yet)
+            if domain_filter:
+                chunks = [
+                    chunk for chunk in chunks
+                    if domain_filter.lower() in chunk.get("url", "").lower()
+                ]
+                # Recalculate total for filtered results (approximation)
+                total = len(chunks)
+
+            safe_logfire_info(
+                f"Retrieved {len(chunks)} chunks for source {source_id} | total={total}"
+            )
+
+            return {
+                "chunks": chunks,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "has_more": offset + limit < total,
+            }
+
+        except Exception as e:
+            safe_logfire_error(
+                f"Failed to get chunks for source | error={str(e)} | source_id={source_id}"
+            )
+            raise
+
+    async def get_code_examples_for_source(
+        self,
+        source_id: str,
+        limit: int = 20,
+        offset: int = 0
+    ) -> dict[str, Any]:
+        """
+        Get paginated code examples for a specific source.
+
+        Args:
+            source_id: The source ID to get code examples for
+            limit: Maximum number of examples to return
+            offset: Number of examples to skip for pagination
+
+        Returns:
+            Dict with code examples, total count, and pagination info
+        """
+        try:
+            # Get total count using repository
+            total = await self.repository.get_code_example_count_by_source(source_id)
+
+            # Get paginated code examples
+            # Note: repository method doesn't support offset, so we'll fetch and slice
+            # This is a limitation we should address in the repository later
+            all_examples = await self.repository.get_code_examples_by_source(
+                source_id=source_id,
+                limit=limit + offset  # Fetch enough to support offset
+            )
+
+            # Manual offset handling (not ideal, but works for now)
+            code_examples = all_examples[offset:offset + limit] if all_examples else []
+
+            safe_logfire_info(
+                f"Retrieved {len(code_examples)} code examples for source {source_id} | total={total}"
+            )
+
+            return {
+                "code_examples": code_examples,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "has_more": offset + limit < total,
+            }
+
+        except Exception as e:
+            safe_logfire_error(
+                f"Failed to get code examples for source | error={str(e)} | source_id={source_id}"
+            )
+            raise

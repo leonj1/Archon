@@ -5,10 +5,13 @@ Handles the storage of complete documentation pages in the archon_page_metadata 
 Pages are stored BEFORE chunking to maintain full context for agent retrieval.
 """
 
-from typing import Any
+from typing import Any, Optional
 
 from postgrest.exceptions import APIError
 
+from src.server.utils import get_supabase_client
+from ...repositories.database_repository import DatabaseRepository
+from ...repositories.supabase_repository import SupabaseDatabaseRepository
 from ...config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from .helpers.llms_full_parser import parse_llms_full_sections
 
@@ -23,14 +26,20 @@ class PageStorageOperations:
     This enables agents to retrieve complete documentation pages instead of just chunks.
     """
 
-    def __init__(self, supabase_client):
+    def __init__(self, repository: Optional[DatabaseRepository] = None, supabase_client=None):
         """
-        Initialize page storage operations.
+        Initialize with optional repository or supabase client.
 
         Args:
-            supabase_client: The Supabase client for database operations
+            repository: DatabaseRepository instance (preferred)
+            supabase_client: Legacy supabase client (for backward compatibility)
         """
-        self.supabase_client = supabase_client
+        if repository is not None:
+            self.repository = repository
+        elif supabase_client is not None:
+            self.repository = SupabaseDatabaseRepository(supabase_client)
+        else:
+            self.repository = SupabaseDatabaseRepository(get_supabase_client())
 
     async def store_pages(
         self,
@@ -94,14 +103,10 @@ class PageStorageOperations:
                 safe_logfire_info(
                     f"Upserting {len(pages_to_insert)} pages into archon_page_metadata table"
                 )
-                result = (
-                    self.supabase_client.table("archon_page_metadata")
-                    .upsert(pages_to_insert, on_conflict="url")
-                    .execute()
-                )
+                result = await self.repository.upsert_page_metadata_batch(pages_to_insert)
 
                 # Build url → page_id mapping
-                for page in result.data:
+                for page in result:
                     url_to_page_id[page["url"]] = page["id"]
 
                 safe_logfire_info(
@@ -193,14 +198,10 @@ class PageStorageOperations:
                 safe_logfire_info(
                     f"Upserting {len(pages_to_insert)} section pages into archon_page_metadata"
                 )
-                result = (
-                    self.supabase_client.table("archon_page_metadata")
-                    .upsert(pages_to_insert, on_conflict="url")
-                    .execute()
-                )
+                result = await self.repository.upsert_page_metadata_batch(pages_to_insert)
 
                 # Build url → page_id mapping
-                for page in result.data:
+                for page in result:
                     url_to_page_id[page["url"]] = page["id"]
 
                 safe_logfire_info(
@@ -232,9 +233,7 @@ class PageStorageOperations:
             chunk_count: Number of chunks created from this page
         """
         try:
-            self.supabase_client.table("archon_page_metadata").update(
-                {"chunk_count": chunk_count}
-            ).eq("id", page_id).execute()
+            await self.repository.update_page_chunk_count(page_id, chunk_count)
 
             safe_logfire_info(f"Updated chunk_count={chunk_count} for page_id={page_id}")
 

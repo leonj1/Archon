@@ -6,10 +6,12 @@ Prompts are loaded from the database at startup and cached in memory for
 fast access during agent operations.
 """
 
-# Removed direct logging import - using unified config
 from datetime import datetime
+from typing import Optional
 
 from ..config.logfire_config import get_logger
+from ..repositories.database_repository import DatabaseRepository
+from ..repositories.supabase_repository import SupabaseDatabaseRepository
 from ..utils import get_supabase_client
 
 logger = get_logger(__name__)
@@ -21,12 +23,34 @@ class PromptService:
     _instance = None
     _prompts: dict[str, str] = {}
     _last_loaded: datetime | None = None
+    _repository: Optional[DatabaseRepository] = None
 
-    def __new__(cls):
-        """Ensure singleton pattern."""
+    def __new__(cls, repository: Optional[DatabaseRepository] = None):
+        """
+        Ensure singleton pattern.
+
+        Args:
+            repository: DatabaseRepository instance (only used on first instantiation)
+        """
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
+
+    def __init__(self, repository: Optional[DatabaseRepository] = None, supabase_client=None):
+        """
+        Initialize with optional repository or supabase client.
+
+        Args:
+            repository: DatabaseRepository instance (preferred)
+            supabase_client: Legacy supabase client (for backward compatibility)
+        """
+        if self._repository is None:
+            if repository is not None:
+                self._repository = repository
+            elif supabase_client is not None:
+                self._repository = SupabaseDatabaseRepository(supabase_client)
+            else:
+                self._repository = SupabaseDatabaseRepository(get_supabase_client())
 
     async def load_prompts(self) -> None:
         """
@@ -35,13 +59,12 @@ class PromptService:
         """
         try:
             logger.info("Loading prompts from database...")
-            supabase = get_supabase_client()
 
-            response = supabase.table("archon_prompts").select("*").execute()
+            prompts_data = await self._repository.get_all_prompts()
 
-            if response.data:
+            if prompts_data:
                 self._prompts = {
-                    prompt["prompt_name"]: prompt["prompt"] for prompt in response.data
+                    prompt["prompt_name"]: prompt["prompt"] for prompt in prompts_data
                 }
                 self._last_loaded = datetime.now()
                 logger.info(f"Loaded {len(self._prompts)} prompts into memory")

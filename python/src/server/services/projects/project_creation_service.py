@@ -12,6 +12,8 @@ from typing import Any
 from src.server.utils import get_supabase_client
 
 from ...config.logfire_config import get_logger
+from ...repositories.database_repository import DatabaseRepository
+from ...repositories.supabase_repository import SupabaseDatabaseRepository
 
 logger = get_logger(__name__)
 
@@ -19,9 +21,20 @@ logger = get_logger(__name__)
 class ProjectCreationService:
     """Service class for advanced project creation with AI assistance"""
 
-    def __init__(self, supabase_client=None):
-        """Initialize with optional supabase client"""
-        self.supabase_client = supabase_client or get_supabase_client()
+    def __init__(self, repository: DatabaseRepository | None = None, supabase_client=None):
+        """
+        Initialize with optional repository or supabase client.
+
+        Args:
+            repository: DatabaseRepository instance (preferred)
+            supabase_client: Legacy supabase client (for backward compatibility)
+        """
+        if repository is not None:
+            self.repository = repository
+        elif supabase_client is not None:
+            self.repository = SupabaseDatabaseRepository(supabase_client)
+        else:
+            self.repository = SupabaseDatabaseRepository(get_supabase_client())
 
     async def create_project_with_ai(
         self,
@@ -68,13 +81,8 @@ class ProjectCreationService:
                     project_data[key] = kwargs[key]
 
             # Create the project in database
-            response = self.supabase_client.table("archon_projects").insert(project_data).execute()
-            if hasattr(response, "error") and response.error:
-                raise RuntimeError(f"Supabase insert failed for project '{title}': {response.error}")
-            if not response.data:
-                raise RuntimeError(f"Insert returned no data for project '{title}'")
-
-            project_id = response.data[0]["id"]
+            project = await self.repository.create_project(project_data)
+            project_id = project["id"]
             logger.info(f"Created project {project_id} in database")
 
             # AI processing step
@@ -85,14 +93,8 @@ class ProjectCreationService:
             )
 
             # Final success - fetch complete project data
-            final_project_response = (
-                self.supabase_client.table("archon_projects")
-                .select("*")
-                .eq("id", project_id)
-                .execute()
-            )
-            if final_project_response.data:
-                final_project = final_project_response.data[0]
+            final_project = await self.repository.get_project_by_id(project_id)
+            if final_project:
 
                 # Prepare project data for frontend
                 project_data_for_frontend = {

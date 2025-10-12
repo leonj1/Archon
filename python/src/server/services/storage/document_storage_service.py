@@ -9,6 +9,8 @@ import os
 from typing import Any
 
 from ...config.logfire_config import safe_span, search_logger
+from ...repositories.database_repository import DatabaseRepository
+from ..credential_service import credential_service
 from ..embeddings.contextual_embedding_service import generate_contextual_embeddings_batch
 from ..embeddings.embedding_service import create_embeddings_batch
 
@@ -26,6 +28,7 @@ async def add_documents_to_supabase(
     provider: str | None = None,
     cancellation_check: Any | None = None,
     url_to_page_id: dict[str, str] | None = None,
+    repository: DatabaseRepository | None = None,
 ) -> dict[str, int]:
     """
     Add documents to Supabase with threading optimizations.
@@ -33,7 +36,8 @@ async def add_documents_to_supabase(
     This is the simpler sequential version for smaller batches.
 
     Args:
-        client: Supabase client
+        client: Supabase client (deprecated, use repository)
+        repository: DatabaseRepository instance (preferred)
         urls: List of URLs
         chunk_numbers: List of chunk numbers
         contents: List of document contents
@@ -43,6 +47,13 @@ async def add_documents_to_supabase(
         progress_callback: Optional async callback function for progress reporting
         provider: Optional provider override for embeddings
     """
+    # Handle backward compatibility - if repository not provided, create from client
+    if repository is None:
+        if client is None:
+            raise ValueError("Either repository or client must be provided")
+        from ...repositories.supabase_repository import SupabaseDatabaseRepository
+        repository = SupabaseDatabaseRepository(client)
+
     with safe_span(
         "add_documents_to_supabase", total_documents=len(contents), batch_size=batch_size
     ) as span:
@@ -101,7 +112,7 @@ async def add_documents_to_supabase(
                             raise
 
                     batch_urls = unique_urls[i : i + delete_batch_size]
-                    client.table("archon_crawled_pages").delete().in_("url", batch_urls).execute()
+                    await repository.delete_crawled_pages_by_urls(batch_urls)
                     # Yield control to allow other async operations
                     if i + delete_batch_size < len(unique_urls):
                         await asyncio.sleep(0.05)  # Reduced pause between delete batches
@@ -131,7 +142,7 @@ async def add_documents_to_supabase(
 
                 batch_urls = unique_urls[i : i + fallback_batch_size]
                 try:
-                    client.table("archon_crawled_pages").delete().in_("url", batch_urls).execute()
+                    await repository.delete_crawled_pages_by_urls(batch_urls)
                     await asyncio.sleep(0.05)  # Rate limit to prevent overwhelming
                 except Exception as inner_e:
                     search_logger.error(
@@ -439,7 +450,7 @@ async def add_documents_to_supabase(
                         raise
 
                 try:
-                    client.table("archon_crawled_pages").insert(batch_data).execute()
+                    await repository.insert_crawled_pages_batch(batch_data)
                     total_chunks_stored += len(batch_data)
 
                     # Increment completed batches and report simple progress
@@ -497,7 +508,7 @@ async def add_documents_to_supabase(
                                     raise
 
                             try:
-                                client.table("archon_crawled_pages").insert(record).execute()
+                                await repository.insert_crawled_page(record)
                                 successful_inserts += 1
                                 total_chunks_stored += 1
                             except Exception as individual_error:

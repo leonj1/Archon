@@ -9,7 +9,7 @@ Thread-safe and maintains referential integrity.
 import threading
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from .database_repository import DatabaseRepository
 
@@ -46,12 +46,12 @@ class FakeDatabaseRepository(DatabaseRepository):
     # 1. PAGE METADATA OPERATIONS
     # ========================================================================
 
-    async def get_page_metadata_by_id(self, page_id: str) -> Optional[dict[str, Any]]:
+    async def get_page_metadata_by_id(self, page_id: str) -> dict[str, Any] | None:
         """Retrieve page metadata by page ID."""
         with self.lock:
             return self.page_metadata.get(page_id)
 
-    async def get_page_metadata_by_url(self, url: str) -> Optional[dict[str, Any]]:
+    async def get_page_metadata_by_url(self, url: str) -> dict[str, Any] | None:
         """Retrieve page metadata by URL."""
         with self.lock:
             for page in self.page_metadata.values():
@@ -62,8 +62,8 @@ class FakeDatabaseRepository(DatabaseRepository):
     async def list_pages_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
+        limit: int | None = None,
+        offset: int | None = None
     ) -> list[dict[str, Any]]:
         """List all pages for a given source."""
         with self.lock:
@@ -88,6 +88,44 @@ class FakeDatabaseRepository(DatabaseRepository):
                 if page.get("source_id") == source_id
             )
 
+    async def upsert_page_metadata_batch(
+        self,
+        pages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Insert or update multiple page metadata records in a batch."""
+        with self.lock:
+            result = []
+            for page_data in pages:
+                url = page_data.get("url")
+                # Find existing by URL
+                existing_page_id = None
+                for page_id, page in self.page_metadata.items():
+                    if page.get("url") == url:
+                        existing_page_id = page_id
+                        break
+
+                if existing_page_id:
+                    # Update existing
+                    self.page_metadata[existing_page_id].update(page_data)
+                    result.append(self.page_metadata[existing_page_id])
+                else:
+                    # Insert new
+                    page_id = page_data.get("id") or self._generate_id()
+                    page_data["id"] = page_id
+                    self.page_metadata[page_id] = page_data.copy()
+                    result.append(self.page_metadata[page_id])
+
+            return result
+
+    async def update_page_chunk_count(self, page_id: str, chunk_count: int) -> dict[str, Any] | None:
+        """Update the chunk_count field for a page after chunking is complete."""
+        with self.lock:
+            if page_id not in self.page_metadata:
+                return None
+
+            self.page_metadata[page_id]["chunk_count"] = chunk_count
+            return self.page_metadata[page_id]
+
     # ========================================================================
     # 2. DOCUMENT SEARCH OPERATIONS
     # ========================================================================
@@ -96,7 +134,7 @@ class FakeDatabaseRepository(DatabaseRepository):
         self,
         query_embedding: list[float],
         match_count: int = 5,
-        filter_metadata: Optional[dict[str, Any]] = None
+        filter_metadata: dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
         """Perform vector similarity search (simplified for testing)."""
         with self.lock:
@@ -113,7 +151,7 @@ class FakeDatabaseRepository(DatabaseRepository):
         query: str,
         query_embedding: list[float],
         match_count: int = 5,
-        filter_metadata: Optional[dict[str, Any]] = None
+        filter_metadata: dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
         """Perform hybrid search (simplified for testing)."""
         with self.lock:
@@ -134,7 +172,7 @@ class FakeDatabaseRepository(DatabaseRepository):
     async def get_documents_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None
+        limit: int | None = None
     ) -> list[dict[str, Any]]:
         """Get all document chunks for a source."""
         with self.lock:
@@ -146,7 +184,7 @@ class FakeDatabaseRepository(DatabaseRepository):
                 docs = docs[:limit]
             return docs
 
-    async def get_document_by_id(self, document_id: str) -> Optional[dict[str, Any]]:
+    async def get_document_by_id(self, document_id: str) -> dict[str, Any] | None:
         """Get a specific document by ID."""
         with self.lock:
             return self.documents.get(document_id)
@@ -190,8 +228,8 @@ class FakeDatabaseRepository(DatabaseRepository):
         self,
         query_embedding: list[float],
         match_count: int = 10,
-        filter_metadata: Optional[dict[str, Any]] = None,
-        source_id: Optional[str] = None
+        filter_metadata: dict[str, Any] | None = None,
+        source_id: str | None = None
     ) -> list[dict[str, Any]]:
         """Search for code examples using vector similarity."""
         with self.lock:
@@ -208,7 +246,7 @@ class FakeDatabaseRepository(DatabaseRepository):
     async def get_code_examples_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None
+        limit: int | None = None
     ) -> list[dict[str, Any]]:
         """Get all code examples for a source."""
         with self.lock:
@@ -262,11 +300,22 @@ class FakeDatabaseRepository(DatabaseRepository):
                 del self.code_examples[ex_id]
             return len(to_delete)
 
+    async def delete_code_examples_by_url(self, url: str) -> int:
+        """Delete all code examples for a specific URL."""
+        with self.lock:
+            to_delete = [
+                ex_id for ex_id, ex in self.code_examples.items()
+                if ex.get("url") == url
+            ]
+            for ex_id in to_delete:
+                del self.code_examples[ex_id]
+            return len(to_delete)
+
     # ========================================================================
     # 4. SETTINGS OPERATIONS
     # ========================================================================
 
-    async def get_settings_by_key(self, key: str) -> Optional[Any]:
+    async def get_settings_by_key(self, key: str) -> Any | None:
         """Retrieve a setting value by its key."""
         with self.lock:
             return self.settings.get(key)
@@ -289,6 +338,30 @@ class FakeDatabaseRepository(DatabaseRepository):
                 del self.settings[key]
                 return True
             return False
+
+    async def get_all_setting_records(self) -> list[dict[str, Any]]:
+        """Retrieve all setting records with full details."""
+        with self.lock:
+            # For testing, settings are stored as dict, convert to records
+            return [
+                {"key": key, "value": value}
+                for key, value in self.settings.items()
+            ]
+
+    async def get_setting_records_by_category(self, category: str) -> list[dict[str, Any]]:
+        """Retrieve setting records filtered by category."""
+        with self.lock:
+            # For testing, simplified - return empty list or filter if metadata exists
+            return []
+
+    async def upsert_setting_record(self, setting_data: dict[str, Any]) -> dict[str, Any]:
+        """Insert or update a full setting record."""
+        with self.lock:
+            key = setting_data.get("key")
+            value = setting_data.get("value")
+            if key:
+                self.settings[key] = value
+            return setting_data
 
     # ========================================================================
     # 5. PROJECT OPERATIONS
@@ -320,7 +393,7 @@ class FakeDatabaseRepository(DatabaseRepository):
             projects.sort(key=lambda x: x.get(order_by, ""), reverse=desc)
             return projects
 
-    async def get_project_by_id(self, project_id: str) -> Optional[dict[str, Any]]:
+    async def get_project_by_id(self, project_id: str) -> dict[str, Any] | None:
         """Get a specific project by ID."""
         with self.lock:
             return self.projects.get(project_id)
@@ -329,7 +402,7 @@ class FakeDatabaseRepository(DatabaseRepository):
         self,
         project_id: str,
         update_data: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Update a project with specified fields."""
         with self.lock:
             if project_id not in self.projects:
@@ -364,12 +437,16 @@ class FakeDatabaseRepository(DatabaseRepository):
                     count += 1
             return count
 
-    async def get_project_features(self, project_id: str) -> list[dict[str, Any]]:
-        """Get features from a project's features JSONB field."""
+    async def get_project_features(self, project_id: str) -> list[dict[str, Any]] | None:
+        """Get features from a project's features JSONB field.
+
+        Returns:
+            List of features if project exists, None if project doesn't exist.
+        """
         with self.lock:
             project = self.projects.get(project_id)
             if not project:
-                return []
+                return None
             return project.get("features", [])
 
     # ========================================================================
@@ -382,22 +459,33 @@ class FakeDatabaseRepository(DatabaseRepository):
             task_id = task_data.get("id") or self._generate_id()
             task_data["id"] = task_id
 
+            # Set default values for required fields
             if "created_at" not in task_data:
                 task_data["created_at"] = datetime.now().isoformat()
             if "updated_at" not in task_data:
                 task_data["updated_at"] = datetime.now().isoformat()
+            if "description" not in task_data:
+                task_data["description"] = ""
+            if "assignee" not in task_data:
+                task_data["assignee"] = "User"
+            if "task_order" not in task_data:
+                task_data["task_order"] = 0
+            if "priority" not in task_data:
+                task_data["priority"] = "medium"
+            if "archived" not in task_data:
+                task_data["archived"] = False
 
             self.tasks[task_id] = task_data.copy()
             return self.tasks[task_id]
 
     async def list_tasks(
         self,
-        project_id: Optional[str] = None,
-        status: Optional[str] = None,
-        assignee: Optional[str] = None,
+        project_id: str | None = None,
+        status: str | None = None,
+        assignee: str | None = None,
         include_archived: bool = False,
         exclude_large_fields: bool = False,
-        search_query: Optional[str] = None,
+        search_query: str | None = None,
         order_by: str = "task_order"
     ) -> list[dict[str, Any]]:
         """List tasks with various filters."""
@@ -427,7 +515,7 @@ class FakeDatabaseRepository(DatabaseRepository):
 
             return tasks
 
-    async def get_task_by_id(self, task_id: str) -> Optional[dict[str, Any]]:
+    async def get_task_by_id(self, task_id: str) -> dict[str, Any] | None:
         """Get a specific task by ID."""
         with self.lock:
             return self.tasks.get(task_id)
@@ -436,7 +524,7 @@ class FakeDatabaseRepository(DatabaseRepository):
         self,
         task_id: str,
         update_data: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Update a task with specified fields."""
         with self.lock:
             if task_id not in self.tasks:
@@ -458,7 +546,7 @@ class FakeDatabaseRepository(DatabaseRepository):
         self,
         task_id: str,
         archived_by: str = "system"
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Archive a task (soft delete)."""
         with self.lock:
             if task_id not in self.tasks:
@@ -476,7 +564,7 @@ class FakeDatabaseRepository(DatabaseRepository):
         self,
         project_id: str,
         status: str,
-        task_order_gte: Optional[int] = None
+        task_order_gte: int | None = None
     ) -> list[dict[str, Any]]:
         """Get tasks filtered by project, status, and optionally task_order."""
         with self.lock:
@@ -532,7 +620,7 @@ class FakeDatabaseRepository(DatabaseRepository):
 
     async def list_sources(
         self,
-        knowledge_type: Optional[str] = None
+        knowledge_type: str | None = None
     ) -> list[dict[str, Any]]:
         """List all sources, optionally filtered by knowledge type."""
         with self.lock:
@@ -544,7 +632,51 @@ class FakeDatabaseRepository(DatabaseRepository):
                 ]
             return sources
 
-    async def get_source_by_id(self, source_id: str) -> Optional[dict[str, Any]]:
+    async def list_sources_with_pagination(
+        self,
+        knowledge_type: str | None = None,
+        search_query: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        order_by: str = "updated_at",
+        desc: bool = True,
+        select_fields: str | None = None
+    ) -> tuple[list[dict[str, Any]], int]:
+        """List sources with search, filtering, and pagination."""
+        with self.lock:
+            sources = list(self.sources.values())
+
+            # Apply knowledge type filter
+            if knowledge_type:
+                sources = [
+                    s for s in sources
+                    if s.get("metadata", {}).get("knowledge_type") == knowledge_type
+                ]
+
+            # Apply search filter
+            if search_query:
+                query_lower = search_query.lower()
+                sources = [
+                    s for s in sources
+                    if query_lower in s.get("title", "").lower()
+                    or query_lower in s.get("summary", "").lower()
+                ]
+
+            # Get total count before pagination
+            total = len(sources)
+
+            # Apply ordering
+            sources.sort(key=lambda x: x.get(order_by, ""), reverse=desc)
+
+            # Apply pagination
+            if offset is not None:
+                sources = sources[offset:]
+            if limit is not None:
+                sources = sources[:limit]
+
+            return sources, total
+
+    async def get_source_by_id(self, source_id: str) -> dict[str, Any] | None:
         """Get a specific source by ID."""
         with self.lock:
             return self.sources.get(source_id)
@@ -562,7 +694,7 @@ class FakeDatabaseRepository(DatabaseRepository):
         self,
         source_id: str,
         metadata: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Update source metadata."""
         with self.lock:
             if source_id not in self.sources:
@@ -615,8 +747,8 @@ class FakeDatabaseRepository(DatabaseRepository):
     async def get_crawled_page_by_url(
         self,
         url: str,
-        source_id: Optional[str] = None
-    ) -> Optional[dict[str, Any]]:
+        source_id: str | None = None
+    ) -> dict[str, Any] | None:
         """Get a crawled page by URL."""
         with self.lock:
             for page in self.crawled_pages.values():
@@ -675,8 +807,8 @@ class FakeDatabaseRepository(DatabaseRepository):
     async def list_crawled_pages_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
+        limit: int | None = None,
+        offset: int | None = None
     ) -> list[dict[str, Any]]:
         """List crawled pages for a source."""
         with self.lock:
@@ -692,6 +824,64 @@ class FakeDatabaseRepository(DatabaseRepository):
                 pages = pages[:limit]
 
             return pages
+
+    async def delete_crawled_pages_by_urls(self, urls: list[str]) -> int:
+        """Delete crawled pages by a list of URLs."""
+        with self.lock:
+            if not urls:
+                return 0
+
+            urls_set = set(urls)
+            to_delete = [
+                page_id for page_id, page in self.crawled_pages.items()
+                if page.get("url") in urls_set
+            ]
+            for page_id in to_delete:
+                del self.crawled_pages[page_id]
+            return len(to_delete)
+
+    async def insert_crawled_pages_batch(
+        self,
+        pages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Insert multiple crawled pages in a batch."""
+        with self.lock:
+            if not pages:
+                return []
+
+            inserted = []
+            for page_data in pages:
+                page = await self.insert_crawled_page(page_data)
+                inserted.append(page)
+            return inserted
+
+    async def get_first_url_by_sources(
+        self,
+        source_ids: list[str]
+    ) -> dict[str, str]:
+        """Get the first (oldest) URL for each source."""
+        with self.lock:
+            if not source_ids:
+                return {}
+
+            urls = {}
+
+            # Get all pages for these sources
+            pages = [
+                page for page in self.crawled_pages.values()
+                if page.get("source_id") in source_ids
+            ]
+
+            # Sort by created_at ascending
+            pages.sort(key=lambda x: x.get("created_at", ""))
+
+            # Group by source_id, keeping first URL for each
+            for page in pages:
+                source_id = page["source_id"]
+                if source_id not in urls:
+                    urls[source_id] = page["url"]
+
+            return urls
 
     # ========================================================================
     # 9. DOCUMENT VERSION OPERATIONS
@@ -715,7 +905,7 @@ class FakeDatabaseRepository(DatabaseRepository):
     async def list_document_versions(
         self,
         project_id: str,
-        limit: Optional[int] = None
+        limit: int | None = None
     ) -> list[dict[str, Any]]:
         """List document versions for a project."""
         with self.lock:
@@ -733,7 +923,7 @@ class FakeDatabaseRepository(DatabaseRepository):
     async def get_document_version_by_id(
         self,
         version_id: str
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get a specific document version by ID."""
         with self.lock:
             return self.document_versions.get(version_id)
@@ -754,7 +944,7 @@ class FakeDatabaseRepository(DatabaseRepository):
         self,
         project_id: str,
         source_id: str,
-        notes: Optional[str] = None
+        notes: str | None = None
     ) -> dict[str, Any]:
         """Link a source to a project."""
         with self.lock:
@@ -783,7 +973,7 @@ class FakeDatabaseRepository(DatabaseRepository):
     async def list_project_sources(
         self,
         project_id: str,
-        notes_filter: Optional[str] = None
+        notes_filter: str | None = None
     ) -> list[dict[str, Any]]:
         """List sources linked to a project."""
         with self.lock:
@@ -821,3 +1011,63 @@ class FakeDatabaseRepository(DatabaseRepository):
         # For testing, just return empty list
         # Real implementations would handle specific RPC functions
         return []
+
+    # ========================================================================
+    # 12. PROMPT OPERATIONS
+    # ========================================================================
+
+    async def get_all_prompts(self) -> list[dict[str, Any]]:
+        """Retrieve all prompts (simplified for testing)."""
+        # For testing, return empty list or mock data if needed
+        return []
+
+    # ========================================================================
+    # 13. TABLE COUNT OPERATIONS
+    # ========================================================================
+
+    async def get_table_count(self, table_name: str) -> int:
+        """Get the count of records in a specified table."""
+        with self.lock:
+            # Map table names to storage dictionaries
+            table_map = {
+                "archon_page_metadata": self.page_metadata,
+                "archon_documents": self.documents,
+                "archon_code_examples": self.code_examples,
+                "archon_settings": self.settings,
+                "archon_projects": self.projects,
+                "archon_tasks": self.tasks,
+                "archon_sources": self.sources,
+                "archon_crawled_pages": self.crawled_pages,
+                "archon_document_versions": self.document_versions,
+            }
+            storage = table_map.get(table_name)
+            if storage is None:
+                return 0
+            return len(storage)
+
+    # ========================================================================
+    # 14. MIGRATION OPERATIONS
+    # ========================================================================
+
+    async def get_applied_migrations(self) -> list[dict[str, Any]]:
+        """Retrieve all applied migrations (simplified for testing)."""
+        with self.lock:
+            # For testing, return empty list
+            # In real tests, you could populate this with mock migration data
+            return []
+
+    async def migration_exists(self, migration_name: str) -> bool:
+        """Check if a migration has been applied (simplified for testing)."""
+        with self.lock:
+            # For testing, always return False (no migrations applied)
+            # In real tests, you could check against a mock migrations dictionary
+            return False
+
+    async def record_migration(self, migration_data: dict[str, Any]) -> dict[str, Any]:
+        """Record a migration as applied (simplified for testing)."""
+        with self.lock:
+            # For testing, just return the migration data with an ID
+            migration_id = self._generate_id()
+            migration_data["id"] = migration_id
+            # In a real test, you might store this in a migrations dictionary
+            return migration_data

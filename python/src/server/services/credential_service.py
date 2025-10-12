@@ -12,13 +12,15 @@ import time
 from dataclasses import dataclass
 
 # Removed direct logging import - using unified config
-from typing import Any
+from typing import Any, Optional
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from supabase import Client, create_client
 
+from ..repositories.database_repository import DatabaseRepository
+from ..repositories.supabase_repository import SupabaseDatabaseRepository
+from ..utils import get_supabase_client
 from ..config.logfire_config import get_logger
 
 logger = get_logger(__name__)
@@ -41,45 +43,26 @@ class CredentialItem:
 class CredentialService:
     """Service for managing application credentials and configuration."""
 
-    def __init__(self):
-        self._supabase: Client | None = None
+    def __init__(self, repository: Optional[DatabaseRepository] = None, supabase_client=None):
+        """
+        Initialize with optional repository or supabase client.
+
+        Args:
+            repository: DatabaseRepository instance (preferred)
+            supabase_client: Legacy supabase client (for backward compatibility)
+        """
+        if repository is not None:
+            self.repository = repository
+        elif supabase_client is not None:
+            self.repository = SupabaseDatabaseRepository(supabase_client)
+        else:
+            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+
         self._cache: dict[str, Any] = {}
         self._cache_initialized = False
         self._rag_settings_cache: dict[str, Any] | None = None
         self._rag_cache_timestamp: float | None = None
         self._rag_cache_ttl = 300  # 5 minutes TTL for RAG settings cache
-
-    def _get_supabase_client(self) -> Client:
-        """
-        Get or create a properly configured Supabase client using environment variables.
-        Uses the standard Supabase client initialization.
-        """
-        if self._supabase is None:
-            url = os.getenv("SUPABASE_URL")
-            key = os.getenv("SUPABASE_SERVICE_KEY")
-
-            if not url or not key:
-                raise ValueError(
-                    "SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in environment variables"
-                )
-
-            try:
-                # Initialize with standard Supabase client - no need for custom headers
-                self._supabase = create_client(url, key)
-
-                # Extract project ID from URL for logging purposes only
-                match = re.match(r"https://([^.]+)\.supabase\.co", url)
-                if match:
-                    project_id = match.group(1)
-                    logger.debug(f"Supabase client initialized for project: {project_id}")
-                else:
-                    logger.debug("Supabase client initialized successfully")
-
-            except Exception as e:
-                logger.error(f"Error initializing Supabase client: {e}")
-                raise
-
-        return self._supabase
 
     def _get_encryption_key(self) -> bytes:
         """Generate encryption key from environment variables."""
@@ -126,26 +109,24 @@ class CredentialService:
     async def load_all_credentials(self) -> dict[str, Any]:
         """Load all credentials from database and cache them."""
         try:
-            supabase = self._get_supabase_client()
-
-            # Fetch all credentials
-            result = supabase.table("archon_settings").select("*").execute()
+            # Fetch all credentials using repository method
+            records = await self.repository.get_all_setting_records()
 
             credentials = {}
-            for item in result.data:
+            for item in records:
                 key = item["key"]
-                if item["is_encrypted"] and item["encrypted_value"]:
+                if item.get("is_encrypted") and item.get("encrypted_value"):
                     # For encrypted values, we store the encrypted version
                     # Decryption happens when the value is actually needed
                     credentials[key] = {
                         "encrypted_value": item["encrypted_value"],
                         "is_encrypted": True,
-                        "category": item["category"],
-                        "description": item["description"],
+                        "category": item.get("category"),
+                        "description": item.get("description"),
                     }
                 else:
                     # Plain text values
-                    credentials[key] = item["value"]
+                    credentials[key] = item.get("value")
 
             self._cache = credentials
             self._cache_initialized = True
@@ -197,8 +178,6 @@ class CredentialService:
     ) -> bool:
         """Set a credential value."""
         try:
-            supabase = self._get_supabase_client()
-
             if is_encrypted:
                 encrypted_value = self._encrypt_value(value)
                 data = {
@@ -228,12 +207,8 @@ class CredentialService:
                 # Update cache with plain value
                 self._cache[key] = value
 
-            # Upsert to database with proper conflict handling
-            # Since we validate service key at startup, permission errors here indicate actual database issues
-            supabase.table("archon_settings").upsert(
-                data,
-                on_conflict="key",  # Specify the unique column for conflict resolution
-            ).execute()
+            # Upsert to database using repository method
+            await self.repository.upsert_setting_record(data)
 
             # Invalidate RAG settings cache if this is a rag_strategy setting
             if category == "rag_strategy":
@@ -275,10 +250,8 @@ class CredentialService:
     async def delete_credential(self, key: str) -> bool:
         """Delete a credential."""
         try:
-            supabase = self._get_supabase_client()
-
-            # Since we validate service key at startup, we can directly execute
-            supabase.table("archon_settings").delete().eq("key", key).execute()
+            # Delete from database using repository method
+            await self.repository.delete_setting(key)
 
             # Remove from cache
             if key in self._cache:
@@ -339,22 +312,20 @@ class CredentialService:
                 return self._rag_settings_cache
 
         try:
-            supabase = self._get_supabase_client()
-            result = (
-                supabase.table("archon_settings").select("*").eq("category", category).execute()
-            )
+            # Fetch credentials for category using repository method
+            records = await self.repository.get_setting_records_by_category(category)
 
             credentials = {}
-            for item in result.data:
+            for item in records:
                 key = item["key"]
-                if item["is_encrypted"]:
+                if item.get("is_encrypted"):
                     credentials[key] = {
                         "value": "[ENCRYPTED]",
                         "is_encrypted": True,
-                        "description": item["description"],
+                        "description": item.get("description"),
                     }
                 else:
-                    credentials[key] = item["value"]
+                    credentials[key] = item.get("value")
 
             # Cache rag_strategy results
             if category == "rag_strategy":
@@ -371,28 +342,28 @@ class CredentialService:
     async def list_all_credentials(self) -> list[CredentialItem]:
         """Get all credentials as a list of CredentialItem objects (for Settings UI)."""
         try:
-            supabase = self._get_supabase_client()
-            result = supabase.table("archon_settings").select("*").execute()
+            # Fetch all credentials using repository method
+            records = await self.repository.get_all_setting_records()
 
             credentials = []
-            for item in result.data:
-                if item["is_encrypted"] and item["encrypted_value"]:
+            for item in records:
+                if item.get("is_encrypted") and item.get("encrypted_value"):
                     cred = CredentialItem(
                         key=item["key"],
                         value="[ENCRYPTED]",
                         encrypted_value=None,
-                        is_encrypted=item["is_encrypted"],
-                        category=item["category"],
-                        description=item["description"],
+                        is_encrypted=item.get("is_encrypted", False),
+                        category=item.get("category"),
+                        description=item.get("description"),
                     )
                 else:
                     cred = CredentialItem(
                         key=item["key"],
-                        value=item["value"],
+                        value=item.get("value"),
                         encrypted_value=None,
-                        is_encrypted=item["is_encrypted"],
-                        category=item["category"],
-                        description=item["description"],
+                        is_encrypted=item.get("is_encrypted", False),
+                        category=item.get("category"),
+                        description=item.get("description"),
                     )
                 credentials.append(cred)
 

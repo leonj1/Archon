@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from ..config.logfire_config import get_logger, safe_logfire_error
+from ..repositories.supabase_repository import SupabaseDatabaseRepository
 from ..utils import get_supabase_client
 
 # Get logger for this module
@@ -105,25 +106,14 @@ async def list_pages(
         PageListResponse with list of pages and metadata
     """
     try:
-        client = get_supabase_client()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
 
-        # Build query - select only summary fields (no full_content)
-        query = client.table("archon_page_metadata").select(
-            "id, url, section_title, section_order, word_count, char_count, chunk_count"
-        ).eq("source_id", source_id)
+        page_data = await repository.list_page_metadata_by_source(
+            source_id=source_id,
+            section_title=section
+        )
 
-        # Add section filter if provided
-        if section:
-            query = query.eq("section_title", section)
-
-        # Order by section_order and created_at
-        query = query.order("section_order").order("created_at")
-
-        # Execute query
-        result = query.execute()
-
-        # Use PageSummary (no content handling needed)
-        pages = [PageSummary(**page) for page in result.data]
+        pages = [PageSummary(**page) for page in page_data]
 
         return PageListResponse(pages=pages, total=len(pages), source_id=source_id)
 
@@ -147,16 +137,14 @@ async def get_page_by_url(url: str = Query(..., description="The URL of the page
         PageResponse with complete page data
     """
     try:
-        client = get_supabase_client()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
 
-        # Query by URL
-        result = client.table("archon_page_metadata").select("*").eq("url", url).single().execute()
+        page_data = await repository.get_full_page_metadata_by_url(url)
 
-        if not result.data:
+        if not page_data:
             raise HTTPException(status_code=404, detail=f"Page not found for URL: {url}")
 
-        # Handle large pages
-        page_data = _handle_large_page_content(result.data.copy())
+        page_data = _handle_large_page_content(page_data.copy())
         return PageResponse(**page_data)
 
     except HTTPException:
@@ -179,16 +167,14 @@ async def get_page_by_id(page_id: str):
         PageResponse with complete page data
     """
     try:
-        client = get_supabase_client()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
 
-        # Query by ID
-        result = client.table("archon_page_metadata").select("*").eq("id", page_id).single().execute()
+        page_data = await repository.get_full_page_metadata_by_id(page_id)
 
-        if not result.data:
+        if not page_data:
             raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
 
-        # Handle large pages
-        page_data = _handle_large_page_content(result.data.copy())
+        page_data = _handle_large_page_content(page_data.copy())
         return PageResponse(**page_data)
 
     except HTTPException:

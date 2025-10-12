@@ -29,6 +29,7 @@ from ..services.embeddings.provider_error_adapters import ProviderErrorFactory
 from ..services.knowledge import DatabaseMetricsService, KnowledgeItemService, KnowledgeSummaryService
 from ..services.search.rag_service import RAGService
 from ..services.storage import DocumentStorageService
+from ..repositories.supabase_repository import SupabaseDatabaseRepository
 from ..utils import get_supabase_client
 from ..utils.document_processing import extract_text_from_document
 
@@ -241,8 +242,9 @@ async def get_knowledge_items(
 ):
     """Get knowledge items with pagination and filtering."""
     try:
-        # Use KnowledgeItemService
-        service = KnowledgeItemService(get_supabase_client())
+        # Use KnowledgeItemService with repository
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        service = KnowledgeItemService(repository=repository)
         result = await service.list_items(
             page=page, per_page=per_page, knowledge_type=knowledge_type, search=search
         )
@@ -273,7 +275,8 @@ async def get_knowledge_items_summary(
         # Input guards
         page = max(1, page)
         per_page = min(100, max(1, per_page))
-        service = KnowledgeSummaryService(get_supabase_client())
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        service = KnowledgeSummaryService(repository=repository)
         result = await service.get_summaries(
             page=page, per_page=per_page, knowledge_type=knowledge_type, search=search
         )
@@ -290,8 +293,9 @@ async def get_knowledge_items_summary(
 async def update_knowledge_item(source_id: str, updates: dict):
     """Update a knowledge item's metadata."""
     try:
-        # Use KnowledgeItemService
-        service = KnowledgeItemService(get_supabase_client())
+        # Use KnowledgeItemService with repository
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        service = KnowledgeItemService(repository=repository)
         success, result = await service.update_item(source_id, updates)
 
         if success:
@@ -322,7 +326,8 @@ async def delete_knowledge_item(source_id: str):
         logger.debug("Creating SourceManagementService...")
         from ..services.source_management_service import SourceManagementService
 
-        source_service = SourceManagementService(get_supabase_client())
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        source_service = SourceManagementService(repository=repository)
         logger.debug("Successfully created SourceManagementService")
 
         logger.debug("Calling delete_source function...")
@@ -369,13 +374,13 @@ async def get_knowledge_item_chunks(
 ):
     """
     Get document chunks for a specific knowledge item with pagination.
-    
+
     Args:
         source_id: The source ID
         domain_filter: Optional domain filter for URLs
         limit: Maximum number of chunks to return (default 20, max 100)
         offset: Number of chunks to skip (for pagination)
-    
+
     Returns:
         Paginated chunks with metadata
     """
@@ -390,45 +395,18 @@ async def get_knowledge_item_chunks(
             f"limit={limit} | offset={offset}"
         )
 
-        supabase = get_supabase_client()
+        # Use KnowledgeItemService for database operations
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        service = KnowledgeItemService(repository=repository)
 
-        # First get total count
-        count_query = supabase.from_("archon_crawled_pages").select(
-            "id", count="exact", head=True
+        result = await service.get_chunks_for_source(
+            source_id=source_id,
+            domain_filter=domain_filter,
+            limit=limit,
+            offset=offset
         )
-        count_query = count_query.eq("source_id", source_id)
 
-        if domain_filter:
-            count_query = count_query.ilike("url", f"%{domain_filter}%")
-
-        count_result = count_query.execute()
-        total = count_result.count if hasattr(count_result, "count") else 0
-
-        # Build the main query with pagination
-        query = supabase.from_("archon_crawled_pages").select(
-            "id, source_id, content, metadata, url"
-        )
-        query = query.eq("source_id", source_id)
-
-        # Apply domain filtering if provided
-        if domain_filter:
-            query = query.ilike("url", f"%{domain_filter}%")
-
-        # Deterministic ordering (URL then id)
-        query = query.order("url", desc=False).order("id", desc=False)
-
-        # Apply pagination
-        query = query.range(offset, offset + limit - 1)
-
-        result = query.execute()
-        # Check for error more explicitly to work with mocks
-        if hasattr(result, "error") and result.error is not None:
-            safe_logfire_error(
-                f"Supabase query error | source_id={source_id} | error={result.error}"
-            )
-            raise HTTPException(status_code=500, detail={"error": str(result.error)})
-
-        chunks = result.data if result.data else []
+        chunks = result.get("chunks", [])
 
         # Extract useful fields from metadata to top level for frontend
         # This ensures the API response matches the TypeScript DocumentChunk interface
@@ -496,7 +474,7 @@ async def get_knowledge_item_chunks(
             chunk["knowledge_type"] = metadata.get("knowledge_type")
 
         safe_logfire_info(
-            f"Fetched {len(chunks)} chunks for {source_id} | total={total}"
+            f"Fetched {len(chunks)} chunks for {source_id} | total={result.get('total', 0)}"
         )
 
         return {
@@ -504,10 +482,10 @@ async def get_knowledge_item_chunks(
             "source_id": source_id,
             "domain_filter": domain_filter,
             "chunks": chunks,
-            "total": total,
+            "total": result.get("total", 0),
             "limit": limit,
             "offset": offset,
-            "has_more": offset + limit < total,
+            "has_more": result.get("has_more", False),
         }
 
     except HTTPException:
@@ -527,12 +505,12 @@ async def get_knowledge_item_code_examples(
 ):
     """
     Get code examples for a specific knowledge item with pagination.
-    
+
     Args:
         source_id: The source ID
         limit: Maximum number of examples to return (default 20, max 100)
         offset: Number of examples to skip (for pagination)
-    
+
     Returns:
         Paginated code examples with metadata
     """
@@ -546,35 +524,17 @@ async def get_knowledge_item_code_examples(
             f"Fetching code examples | source_id={source_id} | limit={limit} | offset={offset}"
         )
 
-        supabase = get_supabase_client()
+        # Use KnowledgeItemService for database operations
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        service = KnowledgeItemService(repository=repository)
 
-        # First get total count
-        count_result = (
-            supabase.from_("archon_code_examples")
-            .select("id", count="exact", head=True)
-            .eq("source_id", source_id)
-            .execute()
-        )
-        total = count_result.count if hasattr(count_result, "count") else 0
-
-        # Get paginated code examples
-        result = (
-            supabase.from_("archon_code_examples")
-            .select("id, source_id, content, summary, metadata")
-            .eq("source_id", source_id)
-            .order("id", desc=False)  # Deterministic ordering
-            .range(offset, offset + limit - 1)
-            .execute()
+        result = await service.get_code_examples_for_source(
+            source_id=source_id,
+            limit=limit,
+            offset=offset
         )
 
-        # Check for error to match chunks endpoint pattern
-        if hasattr(result, "error") and result.error is not None:
-            safe_logfire_error(
-                f"Supabase query error (code examples) | source_id={source_id} | error={result.error}"
-            )
-            raise HTTPException(status_code=500, detail={"error": str(result.error)})
-
-        code_examples = result.data if result.data else []
+        code_examples = result.get("code_examples", [])
 
         # Extract title and example_name from metadata to top level for frontend
         # This ensures the API response matches the TypeScript CodeExample interface
@@ -589,19 +549,21 @@ async def get_knowledge_item_code_examples(
             # Note: summary field is already at top level from database
 
         safe_logfire_info(
-            f"Fetched {len(code_examples)} code examples for {source_id} | total={total}"
+            f"Fetched {len(code_examples)} code examples for {source_id} | total={result.get('total', 0)}"
         )
 
         return {
             "success": True,
             "source_id": source_id,
             "code_examples": code_examples,
-            "total": total,
+            "total": result.get("total", 0),
             "limit": limit,
             "offset": offset,
-            "has_more": offset + limit < total,
+            "has_more": result.get("has_more", False),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         safe_logfire_error(
             f"Failed to fetch code examples | error={str(e)} | source_id={source_id}"
@@ -624,7 +586,8 @@ async def refresh_knowledge_item(source_id: str):
         safe_logfire_info(f"Starting knowledge item refresh | source_id={source_id}")
 
         # Get the existing knowledge item
-        service = KnowledgeItemService(get_supabase_client())
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        service = KnowledgeItemService(repository=repository)
         existing_item = await service.get_item(source_id)
 
         if not existing_item:
@@ -674,8 +637,9 @@ async def refresh_knowledge_item(source_id: str):
             )
 
         # Use the same crawl orchestration as regular crawl
+        repository = SupabaseDatabaseRepository(get_supabase_client())
         crawl_service = CrawlingService(
-            crawler=crawler, supabase_client=get_supabase_client()
+            crawler=crawler, repository=repository
         )
         crawl_service.set_progress_id(progress_id)
 
@@ -828,8 +792,8 @@ async def _perform_crawl_with_progress(
                 await tracker.error(f"Failed to initialize crawler: {str(e)}")
                 return
 
-            supabase_client = get_supabase_client()
-            orchestration_service = CrawlingService(crawler, supabase_client)
+            repository = SupabaseDatabaseRepository(get_supabase_client())
+            orchestration_service = CrawlingService(crawler, repository=repository)
             orchestration_service.set_progress_id(progress_id)
 
             # Convert request to dict for service
@@ -1028,7 +992,8 @@ async def _perform_upload_with_progress(
             return
 
         # Use DocumentStorageService to handle the upload
-        doc_storage_service = DocumentStorageService(get_supabase_client())
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        doc_storage_service = DocumentStorageService(repository=repository)
 
         # Generate source_id from filename with UUID to prevent collisions
         source_id = f"file_{filename.replace(' ', '_').replace('.', '_')}_{uuid.uuid4().hex[:8]}"
@@ -1118,7 +1083,8 @@ async def perform_rag_query(request: RagQueryRequest):
 
     try:
         # Use RAGService for unified RAG query with return_mode support
-        search_service = RAGService(get_supabase_client())
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        search_service = RAGService(repository=repository)
         success, result = await search_service.perform_rag_query(
             query=request.query,
             source=request.source,
@@ -1148,7 +1114,8 @@ async def search_code_examples(request: RagQueryRequest):
     """Search for code examples relevant to the query using dedicated code examples service."""
     try:
         # Use RAGService for code examples search
-        search_service = RAGService(get_supabase_client())
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        search_service = RAGService(repository=repository)
         success, result = await search_service.search_code_examples_service(
             query=request.query,
             source_id=request.source,  # This is Optional[str] which matches the method signature
@@ -1190,8 +1157,9 @@ async def search_code_examples_simple(request: RagQueryRequest):
 async def get_available_sources():
     """Get all available sources for RAG queries."""
     try:
-        # Use KnowledgeItemService
-        service = KnowledgeItemService(get_supabase_client())
+        # Use KnowledgeItemService with repository
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        service = KnowledgeItemService(repository=repository)
         result = await service.get_available_sources()
 
         # Parse result if it's a string
@@ -1213,7 +1181,8 @@ async def delete_source(source_id: str):
         # Use SourceManagementService directly
         from ..services.source_management_service import SourceManagementService
 
-        source_service = SourceManagementService(get_supabase_client())
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        source_service = SourceManagementService(repository=repository)
 
         success, result_data = source_service.delete_source(source_id)
 
@@ -1243,8 +1212,9 @@ async def delete_source(source_id: str):
 async def get_database_metrics():
     """Get database metrics and statistics."""
     try:
-        # Use DatabaseMetricsService
-        service = DatabaseMetricsService(get_supabase_client())
+        # Use DatabaseMetricsService with repository
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+        service = DatabaseMetricsService(repository=repository)
         metrics = await service.get_metrics()
         return metrics
     except Exception as e:

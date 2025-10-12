@@ -2,7 +2,7 @@
 Hybrid Search Strategy
 
 Implements hybrid search combining vector similarity search with full-text search
-using PostgreSQL's ts_vector for improved recall and precision in document and 
+using PostgreSQL's ts_vector for improved recall and precision in document and
 code example retrieval.
 
 Strategy combines:
@@ -11,11 +11,12 @@ Strategy combines:
 3. Returns union of both result sets for maximum coverage
 """
 
-from typing import Any
-
-from supabase import Client
+from typing import Any, Optional
 
 from ...config.logfire_config import get_logger, safe_span
+from ...repositories.database_repository import DatabaseRepository
+from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...utils import get_supabase_client
 from ..embeddings.embedding_service import create_embedding
 
 logger = get_logger(__name__)
@@ -24,8 +25,21 @@ logger = get_logger(__name__)
 class HybridSearchStrategy:
     """Strategy class implementing hybrid search combining vector and full-text search"""
 
-    def __init__(self, supabase_client: Client, base_strategy):
-        self.supabase_client = supabase_client
+    def __init__(self, repository: Optional[DatabaseRepository] = None, supabase_client=None, base_strategy=None):
+        """
+        Initialize with optional repository or supabase client.
+
+        Args:
+            repository: DatabaseRepository instance (preferred)
+            supabase_client: Legacy supabase client (for backward compatibility)
+            base_strategy: Base strategy for fallback (not used in current implementation)
+        """
+        if repository is not None:
+            self.repository = repository
+        elif supabase_client is not None:
+            self.repository = SupabaseDatabaseRepository(supabase_client)
+        else:
+            self.repository = SupabaseDatabaseRepository(get_supabase_client())
         self.base_strategy = base_strategy
 
     async def search_documents_hybrid(
@@ -36,7 +50,7 @@ class HybridSearchStrategy:
         filter_metadata: dict | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Perform hybrid search on archon_crawled_pages table using the PostgreSQL 
+        Perform hybrid search on archon_crawled_pages table using the PostgreSQL
         hybrid search function that combines vector and full-text search.
 
         Args:
@@ -54,8 +68,8 @@ class HybridSearchStrategy:
                 filter_json = filter_metadata or {}
                 source_filter = filter_json.pop("source", None) if "source" in filter_json else None
 
-                # Call the hybrid search PostgreSQL function
-                response = self.supabase_client.rpc(
+                # Call the hybrid search PostgreSQL function via repository
+                response = await self.repository.execute_rpc(
                     "hybrid_search_archon_crawled_pages",
                     {
                         "query_embedding": query_embedding,
@@ -64,15 +78,15 @@ class HybridSearchStrategy:
                         "filter": filter_json,
                         "source_filter": source_filter,
                     },
-                ).execute()
+                )
 
-                if not response.data:
+                if not response:
                     logger.debug("No results from hybrid search")
                     return []
 
                 # Format results to match expected structure
                 results = []
-                for row in response.data:
+                for row in response:
                     result = {
                         "id": row["id"],
                         "url": row["url"],
@@ -113,7 +127,7 @@ class HybridSearchStrategy:
         source_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Perform hybrid search on archon_code_examples table using the PostgreSQL 
+        Perform hybrid search on archon_code_examples table using the PostgreSQL
         hybrid search function that combines vector and full-text search.
 
         Args:
@@ -141,8 +155,8 @@ class HybridSearchStrategy:
                 if not final_source_filter and "source" in filter_json:
                     final_source_filter = filter_json.pop("source")
 
-                # Call the hybrid search PostgreSQL function
-                response = self.supabase_client.rpc(
+                # Call the hybrid search PostgreSQL function via repository
+                response = await self.repository.execute_rpc(
                     "hybrid_search_archon_code_examples",
                     {
                         "query_embedding": query_embedding,
@@ -151,15 +165,15 @@ class HybridSearchStrategy:
                         "filter": filter_json,
                         "source_filter": final_source_filter,
                     },
-                ).execute()
+                )
 
-                if not response.data:
+                if not response:
                     logger.debug("No results from hybrid code search")
                     return []
 
                 # Format results to match expected structure
                 results = []
-                for row in response.data:
+                for row in response:
                     result = {
                         "id": row["id"],
                         "url": row["url"],

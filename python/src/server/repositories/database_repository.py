@@ -4,7 +4,7 @@ Database Repository Interface
 Defines the contract for database operations to enable dependency injection
 and decouple service classes from direct database access.
 
-This interface organizes database operations into 11 domains:
+This interface organizes database operations into 14 domains:
 1. Page Metadata Operations
 2. Document Search Operations
 3. Code Examples Operations
@@ -16,10 +16,13 @@ This interface organizes database operations into 11 domains:
 9. Document Version Operations
 10. Project Source Linking Operations
 11. RPC Operations
+12. Prompt Operations
+13. Table Count Operations
+14. Migration Operations
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 
 class DatabaseRepository(ABC):
@@ -35,7 +38,7 @@ class DatabaseRepository(ABC):
     # ========================================================================
 
     @abstractmethod
-    async def get_page_metadata_by_id(self, page_id: str) -> Optional[dict[str, Any]]:
+    async def get_page_metadata_by_id(self, page_id: str) -> dict[str, Any] | None:
         """
         Retrieve page metadata by page ID.
 
@@ -48,7 +51,7 @@ class DatabaseRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_page_metadata_by_url(self, url: str) -> Optional[dict[str, Any]]:
+    async def get_page_metadata_by_url(self, url: str) -> dict[str, Any] | None:
         """
         Retrieve page metadata by URL.
 
@@ -64,8 +67,8 @@ class DatabaseRepository(ABC):
     async def list_pages_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
+        limit: int | None = None,
+        offset: int | None = None
     ) -> list[dict[str, Any]]:
         """
         List all pages for a given source.
@@ -93,6 +96,36 @@ class DatabaseRepository(ABC):
         """
         pass
 
+    @abstractmethod
+    async def upsert_page_metadata_batch(
+        self,
+        pages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """
+        Insert or update multiple page metadata records in a batch.
+
+        Args:
+            pages: List of page metadata dictionaries
+
+        Returns:
+            List of upserted page metadata records with IDs
+        """
+        pass
+
+    @abstractmethod
+    async def update_page_chunk_count(self, page_id: str, chunk_count: int) -> dict[str, Any] | None:
+        """
+        Update the chunk_count field for a page after chunking is complete.
+
+        Args:
+            page_id: The UUID of the page to update
+            chunk_count: Number of chunks created from this page
+
+        Returns:
+            Updated page metadata dict if successful, None otherwise
+        """
+        pass
+
     # ========================================================================
     # 2. DOCUMENT SEARCH OPERATIONS
     # ========================================================================
@@ -102,7 +135,7 @@ class DatabaseRepository(ABC):
         self,
         query_embedding: list[float],
         match_count: int = 5,
-        filter_metadata: Optional[dict[str, Any]] = None
+        filter_metadata: dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
         """
         Perform vector similarity search on documents.
@@ -123,7 +156,7 @@ class DatabaseRepository(ABC):
         query: str,
         query_embedding: list[float],
         match_count: int = 5,
-        filter_metadata: Optional[dict[str, Any]] = None
+        filter_metadata: dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
         """
         Perform hybrid search combining vector and full-text search.
@@ -143,7 +176,7 @@ class DatabaseRepository(ABC):
     async def get_documents_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None
+        limit: int | None = None
     ) -> list[dict[str, Any]]:
         """
         Get all document chunks for a source.
@@ -158,7 +191,7 @@ class DatabaseRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_document_by_id(self, document_id: str) -> Optional[dict[str, Any]]:
+    async def get_document_by_id(self, document_id: str) -> dict[str, Any] | None:
         """
         Get a specific document by ID.
 
@@ -221,8 +254,8 @@ class DatabaseRepository(ABC):
         self,
         query_embedding: list[float],
         match_count: int = 10,
-        filter_metadata: Optional[dict[str, Any]] = None,
-        source_id: Optional[str] = None
+        filter_metadata: dict[str, Any] | None = None,
+        source_id: str | None = None
     ) -> list[dict[str, Any]]:
         """
         Search for code examples using vector similarity.
@@ -242,7 +275,7 @@ class DatabaseRepository(ABC):
     async def get_code_examples_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None
+        limit: int | None = None
     ) -> list[dict[str, Any]]:
         """
         Get all code examples for a source.
@@ -314,12 +347,25 @@ class DatabaseRepository(ABC):
         """
         pass
 
+    @abstractmethod
+    async def delete_code_examples_by_url(self, url: str) -> int:
+        """
+        Delete all code examples for a specific URL.
+
+        Args:
+            url: The URL to delete code examples for
+
+        Returns:
+            Number of code examples deleted
+        """
+        pass
+
     # ========================================================================
     # 4. SETTINGS OPERATIONS
     # ========================================================================
 
     @abstractmethod
-    async def get_settings_by_key(self, key: str) -> Optional[Any]:
+    async def get_settings_by_key(self, key: str) -> Any | None:
         """
         Retrieve a setting value by its key.
 
@@ -368,6 +414,44 @@ class DatabaseRepository(ABC):
         """
         pass
 
+    @abstractmethod
+    async def get_all_setting_records(self) -> list[dict[str, Any]]:
+        """
+        Retrieve all setting records with full details.
+
+        Returns:
+            List of setting dictionaries with all fields (key, value, encrypted_value,
+            is_encrypted, category, description)
+        """
+        pass
+
+    @abstractmethod
+    async def get_setting_records_by_category(self, category: str) -> list[dict[str, Any]]:
+        """
+        Retrieve setting records filtered by category.
+
+        Args:
+            category: The category to filter by
+
+        Returns:
+            List of setting dictionaries with all fields
+        """
+        pass
+
+    @abstractmethod
+    async def upsert_setting_record(self, setting_data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Insert or update a full setting record.
+
+        Args:
+            setting_data: Dictionary with setting fields (key, value, encrypted_value,
+                         is_encrypted, category, description)
+
+        Returns:
+            The upserted setting record
+        """
+        pass
+
     # ========================================================================
     # 5. PROJECT OPERATIONS
     # ========================================================================
@@ -406,7 +490,7 @@ class DatabaseRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_project_by_id(self, project_id: str) -> Optional[dict[str, Any]]:
+    async def get_project_by_id(self, project_id: str) -> dict[str, Any] | None:
         """
         Get a specific project by ID.
 
@@ -423,7 +507,7 @@ class DatabaseRepository(ABC):
         self,
         project_id: str,
         update_data: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Update a project with specified fields.
 
@@ -495,12 +579,12 @@ class DatabaseRepository(ABC):
     @abstractmethod
     async def list_tasks(
         self,
-        project_id: Optional[str] = None,
-        status: Optional[str] = None,
-        assignee: Optional[str] = None,
+        project_id: str | None = None,
+        status: str | None = None,
+        assignee: str | None = None,
         include_archived: bool = False,
         exclude_large_fields: bool = False,
-        search_query: Optional[str] = None,
+        search_query: str | None = None,
         order_by: str = "task_order"
     ) -> list[dict[str, Any]]:
         """
@@ -521,7 +605,7 @@ class DatabaseRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_task_by_id(self, task_id: str) -> Optional[dict[str, Any]]:
+    async def get_task_by_id(self, task_id: str) -> dict[str, Any] | None:
         """
         Get a specific task by ID.
 
@@ -538,7 +622,7 @@ class DatabaseRepository(ABC):
         self,
         task_id: str,
         update_data: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Update a task with specified fields.
 
@@ -569,7 +653,7 @@ class DatabaseRepository(ABC):
         self,
         task_id: str,
         archived_by: str = "system"
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Archive a task (soft delete).
 
@@ -587,7 +671,7 @@ class DatabaseRepository(ABC):
         self,
         project_id: str,
         status: str,
-        task_order_gte: Optional[int] = None
+        task_order_gte: int | None = None
     ) -> list[dict[str, Any]]:
         """
         Get tasks filtered by project, status, and optionally task_order.
@@ -632,7 +716,7 @@ class DatabaseRepository(ABC):
     @abstractmethod
     async def list_sources(
         self,
-        knowledge_type: Optional[str] = None
+        knowledge_type: str | None = None
     ) -> list[dict[str, Any]]:
         """
         List all sources, optionally filtered by knowledge type.
@@ -646,7 +730,35 @@ class DatabaseRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_source_by_id(self, source_id: str) -> Optional[dict[str, Any]]:
+    async def list_sources_with_pagination(
+        self,
+        knowledge_type: str | None = None,
+        search_query: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        order_by: str = "updated_at",
+        desc: bool = True,
+        select_fields: str | None = None
+    ) -> tuple[list[dict[str, Any]], int]:
+        """
+        List sources with search, filtering, and pagination.
+
+        Args:
+            knowledge_type: Optional knowledge type filter
+            search_query: Optional text search in title and summary
+            limit: Maximum number of results
+            offset: Number of results to skip
+            order_by: Field to order by
+            desc: If True, descending order
+            select_fields: Comma-separated fields to select (default: all fields)
+
+        Returns:
+            Tuple of (list of source dictionaries, total count)
+        """
+        pass
+
+    @abstractmethod
+    async def get_source_by_id(self, source_id: str) -> dict[str, Any] | None:
         """
         Get a specific source by ID.
 
@@ -676,7 +788,7 @@ class DatabaseRepository(ABC):
         self,
         source_id: str,
         metadata: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Update source metadata.
 
@@ -710,8 +822,8 @@ class DatabaseRepository(ABC):
     async def get_crawled_page_by_url(
         self,
         url: str,
-        source_id: Optional[str] = None
-    ) -> Optional[dict[str, Any]]:
+        source_id: str | None = None
+    ) -> dict[str, Any] | None:
         """
         Get a crawled page by URL.
 
@@ -773,8 +885,8 @@ class DatabaseRepository(ABC):
     async def list_crawled_pages_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
+        limit: int | None = None,
+        offset: int | None = None
     ) -> list[dict[str, Any]]:
         """
         List crawled pages for a source.
@@ -786,6 +898,51 @@ class DatabaseRepository(ABC):
 
         Returns:
             List of crawled page dictionaries
+        """
+        pass
+
+    @abstractmethod
+    async def delete_crawled_pages_by_urls(self, urls: list[str]) -> int:
+        """
+        Delete crawled pages by a list of URLs.
+
+        Args:
+            urls: List of URLs to delete
+
+        Returns:
+            Number of pages deleted
+        """
+        pass
+
+    @abstractmethod
+    async def insert_crawled_pages_batch(
+        self,
+        pages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """
+        Insert multiple crawled pages in a batch.
+
+        Args:
+            pages: List of page data dictionaries
+
+        Returns:
+            List of inserted pages with IDs
+        """
+        pass
+
+    @abstractmethod
+    async def get_first_url_by_sources(
+        self,
+        source_ids: list[str]
+    ) -> dict[str, str]:
+        """
+        Get the first (oldest) URL for each source.
+
+        Args:
+            source_ids: List of source identifiers
+
+        Returns:
+            Dictionary mapping source_id to first URL
         """
         pass
 
@@ -813,7 +970,7 @@ class DatabaseRepository(ABC):
     async def list_document_versions(
         self,
         project_id: str,
-        limit: Optional[int] = None
+        limit: int | None = None
     ) -> list[dict[str, Any]]:
         """
         List document versions for a project.
@@ -831,7 +988,7 @@ class DatabaseRepository(ABC):
     async def get_document_version_by_id(
         self,
         version_id: str
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Get a specific document version by ID.
 
@@ -865,7 +1022,7 @@ class DatabaseRepository(ABC):
         self,
         project_id: str,
         source_id: str,
-        notes: Optional[str] = None
+        notes: str | None = None
     ) -> dict[str, Any]:
         """
         Link a source to a project.
@@ -902,7 +1059,7 @@ class DatabaseRepository(ABC):
     async def list_project_sources(
         self,
         project_id: str,
-        notes_filter: Optional[str] = None
+        notes_filter: str | None = None
     ) -> list[dict[str, Any]]:
         """
         List sources linked to a project.
@@ -953,5 +1110,77 @@ class DatabaseRepository(ABC):
 
         Returns:
             List of results from the RPC function
+        """
+        pass
+
+    # ========================================================================
+    # 12. PROMPT OPERATIONS
+    # ========================================================================
+
+    @abstractmethod
+    async def get_all_prompts(self) -> list[dict[str, Any]]:
+        """
+        Retrieve all prompts from the archon_prompts table.
+
+        Returns:
+            List of prompt dictionaries with prompt_name and prompt fields
+        """
+        pass
+
+    # ========================================================================
+    # 13. TABLE COUNT OPERATIONS
+    # ========================================================================
+
+    @abstractmethod
+    async def get_table_count(self, table_name: str) -> int:
+        """
+        Get the count of records in a specified table.
+
+        Args:
+            table_name: The name of the table to count records in
+
+        Returns:
+            Number of records in the table
+        """
+        pass
+
+    # ========================================================================
+    # 14. MIGRATION OPERATIONS
+    # ========================================================================
+
+    @abstractmethod
+    async def get_applied_migrations(self) -> list[dict[str, Any]]:
+        """
+        Retrieve all applied migrations from archon_migrations table.
+
+        Returns:
+            List of migration records ordered by applied_at desc
+        """
+        pass
+
+    @abstractmethod
+    async def migration_exists(self, migration_name: str) -> bool:
+        """
+        Check if a migration has been applied.
+
+        Args:
+            migration_name: The name of the migration to check
+
+        Returns:
+            True if migration exists, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    async def record_migration(self, migration_data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Record a migration as applied.
+
+        Args:
+            migration_data: Dictionary containing migration fields
+                (version, migration_name, checksum, applied_by)
+
+        Returns:
+            The created migration record
         """
         pass

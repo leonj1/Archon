@@ -5,8 +5,11 @@ Handles retrieval of database statistics and metrics.
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
+from ...repositories.database_repository import DatabaseRepository
+from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...utils import get_supabase_client
 from ...config.logfire_config import safe_logfire_error, safe_logfire_info
 
 
@@ -15,14 +18,20 @@ class DatabaseMetricsService:
     Service for retrieving database metrics and statistics.
     """
 
-    def __init__(self, supabase_client):
+    def __init__(self, repository: Optional[DatabaseRepository] = None, supabase_client=None):
         """
-        Initialize the database metrics service.
+        Initialize with optional repository or supabase client.
 
         Args:
-            supabase_client: The Supabase client for database operations
+            repository: DatabaseRepository instance (preferred)
+            supabase_client: Legacy supabase client (for backward compatibility)
         """
-        self.supabase = supabase_client
+        if repository is not None:
+            self.repository = repository
+        elif supabase_client is not None:
+            self.repository = SupabaseDatabaseRepository(supabase_client)
+        else:
+            self.repository = SupabaseDatabaseRepository(get_supabase_client())
 
     async def get_metrics(self) -> dict[str, Any]:
         """
@@ -34,31 +43,33 @@ class DatabaseMetricsService:
         try:
             safe_logfire_info("Getting database metrics")
 
-            # Get counts from various tables
             metrics = {}
 
-            # Sources count
-            sources_result = (
-                self.supabase.table("archon_sources").select("*", count="exact").execute()
-            )
-            metrics["sources_count"] = sources_result.count if sources_result.count else 0
+            # Sources count - get all sources and count them
+            sources = await self.repository.list_sources()
+            metrics["sources_count"] = len(sources)
 
-            # Crawled pages count
-            pages_result = (
-                self.supabase.table("archon_crawled_pages").select("*", count="exact").execute()
-            )
-            metrics["pages_count"] = pages_result.count if pages_result.count else 0
+            # Crawled pages count - sum up pages across all sources
+            pages_count = 0
+            for source in sources:
+                source_id = source.get("source_id")
+                if source_id:
+                    source_page_count = await self.repository.get_page_count_by_source(source_id)
+                    pages_count += source_page_count
+            metrics["pages_count"] = pages_count
 
-            # Code examples count
+            # Code examples count - sum up code examples across all sources
+            code_examples_count = 0
             try:
-                code_examples_result = (
-                    self.supabase.table("archon_code_examples").select("*", count="exact").execute()
-                )
-                metrics["code_examples_count"] = (
-                    code_examples_result.count if code_examples_result.count else 0
-                )
-            except:
-                metrics["code_examples_count"] = 0
+                for source in sources:
+                    source_id = source.get("source_id")
+                    if source_id:
+                        source_code_count = await self.repository.get_code_example_count_by_source(source_id)
+                        code_examples_count += source_code_count
+            except Exception:
+                # If code examples table doesn't exist or errors, set to 0
+                code_examples_count = 0
+            metrics["code_examples_count"] = code_examples_count
 
             # Add timestamp
             metrics["timestamp"] = datetime.now().isoformat()
@@ -90,31 +101,30 @@ class DatabaseMetricsService:
         try:
             stats = {}
 
-            # Get knowledge type distribution
-            knowledge_types_result = (
-                self.supabase.table("archon_sources").select("metadata->knowledge_type").execute()
-            )
+            # Get all sources to extract knowledge type distribution
+            sources = await self.repository.list_sources()
 
-            if knowledge_types_result.data:
+            if sources:
                 type_counts = {}
-                for row in knowledge_types_result.data:
-                    ktype = row.get("knowledge_type", "unknown")
+                for source in sources:
+                    metadata = source.get("metadata", {})
+                    ktype = metadata.get("knowledge_type", "unknown")
                     type_counts[ktype] = type_counts.get(ktype, 0) + 1
                 stats["knowledge_type_distribution"] = type_counts
 
-            # Get recent activity
-            recent_sources = (
-                self.supabase.table("archon_sources")
-                .select("source_id, created_at")
-                .order("created_at", desc=True)
-                .limit(5)
-                .execute()
-            )
-
-            stats["recent_sources"] = [
-                {"source_id": s["source_id"], "created_at": s["created_at"]}
-                for s in (recent_sources.data or [])
-            ]
+                # Get recent activity - sort by created_at and take first 5
+                sorted_sources = sorted(
+                    sources,
+                    key=lambda s: s.get("created_at", ""),
+                    reverse=True
+                )
+                stats["recent_sources"] = [
+                    {"source_id": s["source_id"], "created_at": s["created_at"]}
+                    for s in sorted_sources[:5]
+                ]
+            else:
+                stats["knowledge_type_distribution"] = {}
+                stats["recent_sources"] = []
 
             return stats
 

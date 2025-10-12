@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 # Import logging
 from ..config.logfire_config import logfire
+from ..repositories.supabase_repository import SupabaseDatabaseRepository
 from ..services.credential_service import credential_service, initialize_credentials
 from ..utils import get_supabase_client
 
@@ -283,38 +284,15 @@ async def database_metrics():
     """Get database metrics and statistics."""
     try:
         logfire.info("Getting database metrics")
-        supabase_client = get_supabase_client()
+        repository = SupabaseDatabaseRepository(get_supabase_client())
 
-        # Get various table counts
-        tables_info = {}
-
-        # Get projects count
-        projects_response = (
-            supabase_client.table("archon_projects").select("id", count="exact").execute()
-        )
-        tables_info["projects"] = (
-            projects_response.count if projects_response.count is not None else 0
-        )
-
-        # Get tasks count
-        tasks_response = supabase_client.table("archon_tasks").select("id", count="exact").execute()
-        tables_info["tasks"] = tasks_response.count if tasks_response.count is not None else 0
-
-        # Get crawled pages count
-        pages_response = (
-            supabase_client.table("archon_crawled_pages").select("id", count="exact").execute()
-        )
-        tables_info["crawled_pages"] = (
-            pages_response.count if pages_response.count is not None else 0
-        )
-
-        # Get settings count
-        settings_response = (
-            supabase_client.table("archon_settings").select("id", count="exact").execute()
-        )
-        tables_info["settings"] = (
-            settings_response.count if settings_response.count is not None else 0
-        )
+        # Get various table counts using repository
+        tables_info = {
+            "projects": await repository.get_table_count("archon_projects"),
+            "tasks": await repository.get_table_count("archon_tasks"),
+            "crawled_pages": await repository.get_table_count("archon_crawled_pages"),
+            "settings": await repository.get_table_count("archon_settings"),
+        }
 
         total_records = sum(tables_info.values())
         logfire.info(

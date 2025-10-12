@@ -8,6 +8,9 @@ Optimized for frequent polling and card displays.
 from typing import Any, Optional
 
 from ...config.logfire_config import safe_logfire_info, safe_logfire_error
+from ...repositories.database_repository import DatabaseRepository
+from ...repositories.supabase_repository import SupabaseDatabaseRepository
+from ...utils import get_supabase_client
 
 
 class KnowledgeSummaryService:
@@ -16,14 +19,17 @@ class KnowledgeSummaryService:
     Designed for efficient polling with minimal data transfer.
     """
 
-    def __init__(self, supabase_client):
+    def __init__(self, repository: Optional[DatabaseRepository] = None):
         """
-        Initialize the knowledge summary service.
+        Initialize with optional repository.
 
         Args:
-            supabase_client: The Supabase client for database operations
+            repository: DatabaseRepository instance
         """
-        self.supabase = supabase_client
+        if repository is not None:
+            self.repository = repository
+        else:
+            self.repository = SupabaseDatabaseRepository(get_supabase_client())
 
     async def get_summaries(
         self,
@@ -34,64 +40,37 @@ class KnowledgeSummaryService:
     ) -> dict[str, Any]:
         """
         Get lightweight summaries of knowledge items.
-        
+
         Returns only essential data needed for card displays:
         - Basic metadata (title, url, type, tags)
         - Counts only (no actual content)
         - Minimal processing overhead
-        
+
         Args:
             page: Page number (1-based)
             per_page: Items per page
             knowledge_type: Optional filter by knowledge type
             search: Optional search term
-            
+
         Returns:
             Dict with minimal item summaries and pagination info
         """
         try:
             safe_logfire_info(f"Fetching knowledge summaries | page={page} | per_page={per_page}")
-            
-            # Build base query - select only needed fields, including source_url
-            query = self.supabase.from_("archon_sources").select(
-                "source_id, title, summary, metadata, source_url, created_at, updated_at"
-            )
-            
-            # Apply filters
-            if knowledge_type:
-                query = query.contains("metadata", {"knowledge_type": knowledge_type})
-            
-            if search:
-                search_pattern = f"%{search}%"
-                query = query.or_(
-                    f"title.ilike.{search_pattern},summary.ilike.{search_pattern}"
-                )
-            
-            # Get total count
-            count_query = self.supabase.from_("archon_sources").select(
-                "*", count="exact", head=True
-            )
-            
-            if knowledge_type:
-                count_query = count_query.contains("metadata", {"knowledge_type": knowledge_type})
-            
-            if search:
-                search_pattern = f"%{search}%"
-                count_query = count_query.or_(
-                    f"title.ilike.{search_pattern},summary.ilike.{search_pattern}"
-                )
-            
-            count_result = count_query.execute()
-            total = count_result.count if hasattr(count_result, "count") else 0
-            
-            # Apply pagination
+
+            # Calculate pagination offsets
             start_idx = (page - 1) * per_page
-            query = query.range(start_idx, start_idx + per_page - 1)
-            query = query.order("updated_at", desc=True)
-            
-            # Execute main query
-            result = query.execute()
-            sources = result.data if result.data else []
+
+            # Use repository method for filtering, searching, and pagination
+            sources, total = await self.repository.list_sources_with_pagination(
+                knowledge_type=knowledge_type,
+                search_query=search,
+                limit=per_page,
+                offset=start_idx,
+                order_by="updated_at",
+                desc=True,
+                select_fields="source_id, title, summary, metadata, source_url, created_at, updated_at"
+            )
             
             # Get source IDs for batch operations
             source_ids = [s["source_id"] for s in sources]
@@ -167,30 +146,23 @@ class KnowledgeSummaryService:
     async def _get_document_counts_batch(self, source_ids: list[str]) -> dict[str, int]:
         """
         Get document counts for multiple sources in a single query.
-        
+
         Args:
             source_ids: List of source IDs
-            
+
         Returns:
             Dict mapping source_id to document count
         """
         try:
-            # Use a raw SQL query for efficient counting
-            # Group by source_id and count
             counts = {}
-            
-            # For now, use individual queries but optimize later with raw SQL
+
+            # Use repository method for each source
             for source_id in source_ids:
-                result = (
-                    self.supabase.from_("archon_crawled_pages")
-                    .select("id", count="exact", head=True)
-                    .eq("source_id", source_id)
-                    .execute()
-                )
-                counts[source_id] = result.count if hasattr(result, "count") else 0
-            
+                count = await self.repository.get_page_count_by_source(source_id)
+                counts[source_id] = count
+
             return counts
-            
+
         except Exception as e:
             safe_logfire_error(f"Failed to get document counts | error={str(e)}")
             return {sid: 0 for sid in source_ids}
@@ -198,28 +170,23 @@ class KnowledgeSummaryService:
     async def _get_code_example_counts_batch(self, source_ids: list[str]) -> dict[str, int]:
         """
         Get code example counts for multiple sources efficiently.
-        
+
         Args:
             source_ids: List of source IDs
-            
+
         Returns:
             Dict mapping source_id to code example count
         """
         try:
             counts = {}
-            
-            # For now, use individual queries but can optimize with raw SQL later
+
+            # Use repository method for each source
             for source_id in source_ids:
-                result = (
-                    self.supabase.from_("archon_code_examples")
-                    .select("id", count="exact", head=True)
-                    .eq("source_id", source_id)
-                    .execute()
-                )
-                counts[source_id] = result.count if hasattr(result, "count") else 0
-            
+                count = await self.repository.get_code_example_count_by_source(source_id)
+                counts[source_id] = count
+
             return counts
-            
+
         except Exception as e:
             safe_logfire_error(f"Failed to get code example counts | error={str(e)}")
             return {sid: 0 for sid in source_ids}
@@ -227,37 +194,24 @@ class KnowledgeSummaryService:
     async def _get_first_urls_batch(self, source_ids: list[str]) -> dict[str, str]:
         """
         Get first URL for each source in a batch.
-        
+
         Args:
             source_ids: List of source IDs
-            
+
         Returns:
             Dict mapping source_id to first URL
         """
         try:
-            # Get all first URLs in one query
-            result = (
-                self.supabase.from_("archon_crawled_pages")
-                .select("source_id, url")
-                .in_("source_id", source_ids)
-                .order("created_at", desc=False)
-                .execute()
-            )
-            
-            # Group by source_id, keeping first URL for each
-            urls = {}
-            for item in result.data or []:
-                source_id = item["source_id"]
-                if source_id not in urls:
-                    urls[source_id] = item["url"]
-            
+            # Use repository method to get first URLs
+            urls = await self.repository.get_first_url_by_sources(source_ids)
+
             # Provide defaults for any missing
             for source_id in source_ids:
                 if source_id not in urls:
                     urls[source_id] = f"source://{source_id}"
-            
+
             return urls
-            
+
         except Exception as e:
             safe_logfire_error(f"Failed to get first URLs | error={str(e)}")
             return {sid: f"source://{sid}" for sid in source_ids}

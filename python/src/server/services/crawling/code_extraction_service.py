@@ -7,10 +7,13 @@ Handles extraction, processing, and storage of code examples from documents.
 import asyncio
 import re
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Optional
 
 from ...config.logfire_config import safe_logfire_error, safe_logfire_info
+from ...repositories.database_repository import DatabaseRepository
+from ...repositories.supabase_repository import SupabaseDatabaseRepository
 from ...services.credential_service import credential_service
+from ...utils import get_supabase_client
 from ..storage.code_storage_service import (
     add_code_examples_to_supabase,
     generate_code_summaries_batch,
@@ -56,14 +59,27 @@ class CodeExtractionService:
         },
     }
 
-    def __init__(self, supabase_client):
+    def __init__(self, repository: Optional[DatabaseRepository] = None, supabase_client=None):
         """
-        Initialize the code extraction service.
+        Initialize with optional repository or supabase client.
 
         Args:
-            supabase_client: The Supabase client for database operations
+            repository: DatabaseRepository instance (preferred)
+            supabase_client: Legacy supabase client (for backward compatibility)
         """
-        self.supabase_client = supabase_client
+        if repository is not None:
+            self.repository = repository
+        elif supabase_client is not None:
+            self.repository = SupabaseDatabaseRepository(supabase_client)
+        else:
+            self.repository = SupabaseDatabaseRepository(get_supabase_client())
+
+        # Keep reference to client for code_storage_service compatibility
+        if supabase_client is not None:
+            self.supabase_client = supabase_client
+        else:
+            self.supabase_client = get_supabase_client()
+
         self._settings_cache = {}
 
     async def _get_setting(self, key: str, default: Any) -> Any:

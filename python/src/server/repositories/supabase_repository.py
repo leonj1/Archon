@@ -6,12 +6,12 @@ All methods are production-ready with proper error handling and logging.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from supabase import Client
 
-from .database_repository import DatabaseRepository
 from ..config.logfire_config import get_logger
+from .database_repository import DatabaseRepository
 
 logger = get_logger(__name__)
 
@@ -37,7 +37,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
     # 1. PAGE METADATA OPERATIONS
     # ========================================================================
 
-    async def get_page_metadata_by_id(self, page_id: str) -> Optional[dict[str, Any]]:
+    async def get_page_metadata_by_id(self, page_id: str) -> dict[str, Any] | None:
         """Retrieve page metadata by page ID from archon_page_metadata table."""
         try:
             result = (
@@ -56,7 +56,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
             logger.error(f"Failed to get page metadata by ID {page_id}: {e}")
             raise
 
-    async def get_page_metadata_by_url(self, url: str) -> Optional[dict[str, Any]]:
+    async def get_page_metadata_by_url(self, url: str) -> dict[str, Any] | None:
         """Retrieve page metadata by URL from archon_page_metadata table."""
         try:
             result = (
@@ -78,8 +78,8 @@ class SupabaseDatabaseRepository(DatabaseRepository):
     async def list_pages_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
+        limit: int | None = None,
+        offset: int | None = None
     ) -> list[dict[str, Any]]:
         """List all pages for a given source."""
         try:
@@ -117,6 +117,112 @@ class SupabaseDatabaseRepository(DatabaseRepository):
             logger.error(f"Failed to get page count for source {source_id}: {e}")
             raise
 
+    async def upsert_page_metadata_batch(
+        self,
+        pages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Insert or update multiple page metadata records in a batch."""
+        try:
+            if not pages:
+                return []
+
+            result = (
+                self.supabase_client.table("archon_page_metadata")
+                .upsert(pages, on_conflict="url")
+                .execute()
+            )
+
+            return result.data if result.data else []
+
+        except Exception as e:
+            logger.error(f"Failed to batch upsert {len(pages)} page metadata records: {e}")
+            raise
+
+    async def update_page_chunk_count(self, page_id: str, chunk_count: int) -> dict[str, Any] | None:
+        """Update the chunk_count field for a page after chunking is complete."""
+        try:
+            result = (
+                self.supabase_client.table("archon_page_metadata")
+                .update({"chunk_count": chunk_count})
+                .eq("id", page_id)
+                .execute()
+            )
+
+            if result.data and len(result.data) > 0:
+                return result.data[0]
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to update chunk_count for page {page_id}: {e}")
+            raise
+
+    async def list_page_metadata_by_source(
+        self,
+        source_id: str,
+        section_title: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        List page metadata for a given source with optional section filtering.
+        Returns summary fields only (no full_content).
+        """
+        try:
+            query = (
+                self.supabase_client.table("archon_page_metadata")
+                .select("id, url, section_title, section_order, word_count, char_count, chunk_count")
+                .eq("source_id", source_id)
+            )
+
+            if section_title:
+                query = query.eq("section_title", section_title)
+
+            query = query.order("section_order").order("created_at")
+
+            result = query.execute()
+            return result.data if result.data else []
+
+        except Exception as e:
+            logger.error(f"Failed to list page metadata for source {source_id}: {e}")
+            raise
+
+    async def get_full_page_metadata_by_url(self, url: str) -> dict[str, Any] | None:
+        """
+        Retrieve complete page metadata by URL including full_content.
+        """
+        try:
+            result = (
+                self.supabase_client.table("archon_page_metadata")
+                .select("*")
+                .eq("url", url)
+                .maybe_single()
+                .execute()
+            )
+
+            return result.data if result and result.data else None
+
+        except Exception as e:
+            logger.error(f"Failed to get full page metadata by URL {url}: {e}")
+            raise
+
+    async def get_full_page_metadata_by_id(self, page_id: str) -> dict[str, Any] | None:
+        """
+        Retrieve complete page metadata by ID including full_content.
+        """
+        try:
+            result = (
+                self.supabase_client.table("archon_page_metadata")
+                .select("*")
+                .eq("id", page_id)
+                .maybe_single()
+                .execute()
+            )
+
+            return result.data if result and result.data else None
+
+        except Exception as e:
+            logger.error(f"Failed to get full page metadata by ID {page_id}: {e}")
+            raise
+
     # ========================================================================
     # 2. DOCUMENT SEARCH OPERATIONS
     # ========================================================================
@@ -125,7 +231,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
         self,
         query_embedding: list[float],
         match_count: int = 5,
-        filter_metadata: Optional[dict[str, Any]] = None
+        filter_metadata: dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
         """Perform vector similarity search on documents using Supabase RPC."""
         try:
@@ -152,7 +258,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
         query: str,
         query_embedding: list[float],
         match_count: int = 5,
-        filter_metadata: Optional[dict[str, Any]] = None
+        filter_metadata: dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
         """Perform hybrid search combining vector and full-text search."""
         try:
@@ -178,7 +284,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
     async def get_documents_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None
+        limit: int | None = None
     ) -> list[dict[str, Any]]:
         """Get all document chunks for a source."""
         try:
@@ -198,7 +304,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
             logger.error(f"Failed to get documents by source {source_id}: {e}")
             raise
 
-    async def get_document_by_id(self, document_id: str) -> Optional[dict[str, Any]]:
+    async def get_document_by_id(self, document_id: str) -> dict[str, Any] | None:
         """Get a specific document by ID."""
         try:
             result = (
@@ -280,8 +386,8 @@ class SupabaseDatabaseRepository(DatabaseRepository):
         self,
         query_embedding: list[float],
         match_count: int = 10,
-        filter_metadata: Optional[dict[str, Any]] = None,
-        source_id: Optional[str] = None
+        filter_metadata: dict[str, Any] | None = None,
+        source_id: str | None = None
     ) -> list[dict[str, Any]]:
         """Search for code examples using vector similarity."""
         try:
@@ -308,7 +414,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
     async def get_code_examples_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None
+        limit: int | None = None
     ) -> list[dict[str, Any]]:
         """Get all code examples for a source."""
         try:
@@ -403,11 +509,29 @@ class SupabaseDatabaseRepository(DatabaseRepository):
             logger.error(f"Failed to delete code examples by source {source_id}: {e}")
             raise
 
+    async def delete_code_examples_by_url(self, url: str) -> int:
+        """Delete all code examples for a specific URL."""
+        try:
+            result = (
+                self.supabase_client.table("archon_code_examples")
+                .delete()
+                .eq("url", url)
+                .execute()
+            )
+
+            deleted_count = len(result.data) if result.data else 0
+            logger.info(f"Deleted {deleted_count} code examples for URL {url}")
+            return deleted_count
+
+        except Exception as e:
+            logger.error(f"Failed to delete code examples by URL {url}: {e}")
+            raise
+
     # ========================================================================
     # 4. SETTINGS OPERATIONS
     # ========================================================================
 
-    async def get_settings_by_key(self, key: str) -> Optional[Any]:
+    async def get_settings_by_key(self, key: str) -> Any | None:
         """Retrieve a setting value by its key from archon_settings table."""
         try:
             result = (
@@ -477,6 +601,55 @@ class SupabaseDatabaseRepository(DatabaseRepository):
             logger.error(f"Failed to delete setting {key}: {e}")
             raise
 
+    async def get_all_setting_records(self) -> list[dict[str, Any]]:
+        """Retrieve all setting records with full details."""
+        try:
+            result = (
+                self.supabase_client.table("archon_settings")
+                .select("*")
+                .execute()
+            )
+
+            return result.data if result.data else []
+
+        except Exception as e:
+            logger.error(f"Failed to get all setting records: {e}")
+            raise
+
+    async def get_setting_records_by_category(self, category: str) -> list[dict[str, Any]]:
+        """Retrieve setting records filtered by category."""
+        try:
+            result = (
+                self.supabase_client.table("archon_settings")
+                .select("*")
+                .eq("category", category)
+                .execute()
+            )
+
+            return result.data if result.data else []
+
+        except Exception as e:
+            logger.error(f"Failed to get setting records by category {category}: {e}")
+            raise
+
+    async def upsert_setting_record(self, setting_data: dict[str, Any]) -> dict[str, Any]:
+        """Insert or update a full setting record."""
+        try:
+            result = (
+                self.supabase_client.table("archon_settings")
+                .upsert(setting_data, on_conflict="key")
+                .execute()
+            )
+
+            if not result.data:
+                raise ValueError("Upsert returned no data")
+
+            return result.data[0]
+
+        except Exception as e:
+            logger.error(f"Failed to upsert setting record: {e}")
+            raise
+
     # ========================================================================
     # 5. PROJECT OPERATIONS
     # ========================================================================
@@ -523,7 +696,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
             logger.error(f"Failed to list projects: {e}")
             raise
 
-    async def get_project_by_id(self, project_id: str) -> Optional[dict[str, Any]]:
+    async def get_project_by_id(self, project_id: str) -> dict[str, Any] | None:
         """Get a specific project by ID."""
         try:
             result = (
@@ -544,7 +717,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
         self,
         project_id: str,
         update_data: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Update a project with specified fields."""
         try:
             update_data["updated_at"] = datetime.now().isoformat()
@@ -656,12 +829,12 @@ class SupabaseDatabaseRepository(DatabaseRepository):
 
     async def list_tasks(
         self,
-        project_id: Optional[str] = None,
-        status: Optional[str] = None,
-        assignee: Optional[str] = None,
+        project_id: str | None = None,
+        status: str | None = None,
+        assignee: str | None = None,
         include_archived: bool = False,
         exclude_large_fields: bool = False,
-        search_query: Optional[str] = None,
+        search_query: str | None = None,
         order_by: str = "task_order"
     ) -> list[dict[str, Any]]:
         """List tasks with various filters."""
@@ -712,7 +885,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
             logger.error(f"Failed to list tasks: {e}")
             raise
 
-    async def get_task_by_id(self, task_id: str) -> Optional[dict[str, Any]]:
+    async def get_task_by_id(self, task_id: str) -> dict[str, Any] | None:
         """Get a specific task by ID."""
         try:
             result = (
@@ -733,7 +906,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
         self,
         task_id: str,
         update_data: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Update a task with specified fields."""
         try:
             update_data["updated_at"] = datetime.now().isoformat()
@@ -777,7 +950,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
         self,
         task_id: str,
         archived_by: str = "system"
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Archive a task (soft delete)."""
         try:
             archive_data = {
@@ -808,7 +981,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
         self,
         project_id: str,
         status: str,
-        task_order_gte: Optional[int] = None
+        task_order_gte: int | None = None
     ) -> list[dict[str, Any]]:
         """Get tasks filtered by project, status, and optionally task_order."""
         try:
@@ -898,7 +1071,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
 
     async def list_sources(
         self,
-        knowledge_type: Optional[str] = None
+        knowledge_type: str | None = None
     ) -> list[dict[str, Any]]:
         """List all sources, optionally filtered by knowledge type."""
         try:
@@ -914,7 +1087,70 @@ class SupabaseDatabaseRepository(DatabaseRepository):
             logger.error(f"Failed to list sources: {e}")
             raise
 
-    async def get_source_by_id(self, source_id: str) -> Optional[dict[str, Any]]:
+    async def list_sources_with_pagination(
+        self,
+        knowledge_type: str | None = None,
+        search_query: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        order_by: str = "updated_at",
+        desc: bool = True,
+        select_fields: str | None = None
+    ) -> tuple[list[dict[str, Any]], int]:
+        """List sources with search, filtering, and pagination."""
+        try:
+            # Build select fields
+            fields = select_fields if select_fields else "*"
+
+            # Build main query
+            query = self.supabase_client.table("archon_sources").select(fields)
+
+            # Apply knowledge type filter
+            if knowledge_type:
+                query = query.contains("metadata", {"knowledge_type": knowledge_type})
+
+            # Apply search filter
+            if search_query:
+                search_pattern = f"%{search_query}%"
+                query = query.or_(
+                    f"title.ilike.{search_pattern},summary.ilike.{search_pattern}"
+                )
+
+            # Build count query with same filters
+            count_query = self.supabase_client.table("archon_sources").select("*", count="exact", head=True)
+
+            if knowledge_type:
+                count_query = count_query.contains("metadata", {"knowledge_type": knowledge_type})
+
+            if search_query:
+                search_pattern = f"%{search_query}%"
+                count_query = count_query.or_(
+                    f"title.ilike.{search_pattern},summary.ilike.{search_pattern}"
+                )
+
+            # Get total count
+            count_result = count_query.execute()
+            total = count_result.count if hasattr(count_result, "count") else 0
+
+            # Apply pagination
+            if limit is not None and offset is not None:
+                end_idx = offset + limit - 1
+                query = query.range(offset, end_idx)
+
+            # Apply ordering
+            query = query.order(order_by, desc=desc)
+
+            # Execute main query
+            result = query.execute()
+            sources = result.data if result.data else []
+
+            return sources, total
+
+        except Exception as e:
+            logger.error(f"Failed to list sources with pagination: {e}")
+            raise
+
+    async def get_source_by_id(self, source_id: str) -> dict[str, Any] | None:
         """Get a specific source by ID."""
         try:
             result = (
@@ -953,7 +1189,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
         self,
         source_id: str,
         metadata: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Update source metadata."""
         try:
             # Get existing metadata
@@ -1006,8 +1242,8 @@ class SupabaseDatabaseRepository(DatabaseRepository):
     async def get_crawled_page_by_url(
         self,
         url: str,
-        source_id: Optional[str] = None
-    ) -> Optional[dict[str, Any]]:
+        source_id: str | None = None
+    ) -> dict[str, Any] | None:
         """Get a crawled page by URL."""
         try:
             query = (
@@ -1089,8 +1325,8 @@ class SupabaseDatabaseRepository(DatabaseRepository):
     async def list_crawled_pages_by_source(
         self,
         source_id: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
+        limit: int | None = None,
+        offset: int | None = None
     ) -> list[dict[str, Any]]:
         """List crawled pages for a source."""
         try:
@@ -1111,6 +1347,80 @@ class SupabaseDatabaseRepository(DatabaseRepository):
 
         except Exception as e:
             logger.error(f"Failed to list crawled pages for source {source_id}: {e}")
+            raise
+
+    async def delete_crawled_pages_by_urls(self, urls: list[str]) -> int:
+        """Delete crawled pages by a list of URLs."""
+        try:
+            if not urls:
+                return 0
+
+            result = (
+                self.supabase_client.table("archon_crawled_pages")
+                .delete()
+                .in_("url", urls)
+                .execute()
+            )
+
+            deleted_count = len(result.data) if result.data else 0
+            logger.info(f"Deleted {deleted_count} crawled pages by URL list")
+            return deleted_count
+
+        except Exception as e:
+            logger.error(f"Failed to delete crawled pages by URLs: {e}")
+            raise
+
+    async def insert_crawled_pages_batch(
+        self,
+        pages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Insert multiple crawled pages in a batch."""
+        try:
+            if not pages:
+                return []
+
+            result = (
+                self.supabase_client.table("archon_crawled_pages")
+                .insert(pages)
+                .execute()
+            )
+
+            return result.data if result.data else []
+
+        except Exception as e:
+            logger.error(f"Failed to batch insert {len(pages)} crawled pages: {e}")
+            raise
+
+    async def get_first_url_by_sources(
+        self,
+        source_ids: list[str]
+    ) -> dict[str, str]:
+        """Get the first (oldest) URL for each source."""
+        try:
+            if not source_ids:
+                return {}
+
+            # Get all pages for these sources ordered by created_at ascending
+            result = (
+                self.supabase_client.table("archon_crawled_pages")
+                .select("source_id, url")
+                .in_("source_id", source_ids)
+                .order("created_at", desc=False)
+                .execute()
+            )
+
+            urls = {}
+
+            # Group by source_id, keeping first URL for each
+            for item in result.data or []:
+                source_id = item["source_id"]
+                if source_id not in urls:
+                    urls[source_id] = item["url"]
+
+            return urls
+
+        except Exception as e:
+            logger.error(f"Failed to get first URLs for sources: {e}")
             raise
 
     # ========================================================================
@@ -1145,7 +1455,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
     async def list_document_versions(
         self,
         project_id: str,
-        limit: Optional[int] = None
+        limit: int | None = None
     ) -> list[dict[str, Any]]:
         """List document versions for a project."""
         try:
@@ -1169,7 +1479,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
     async def get_document_version_by_id(
         self,
         version_id: str
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get a specific document version by ID."""
         try:
             result = (
@@ -1213,7 +1523,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
         self,
         project_id: str,
         source_id: str,
-        notes: Optional[str] = None
+        notes: str | None = None
     ) -> dict[str, Any]:
         """Link a source to a project."""
         try:
@@ -1267,7 +1577,7 @@ class SupabaseDatabaseRepository(DatabaseRepository):
     async def list_project_sources(
         self,
         project_id: str,
-        notes_filter: Optional[str] = None
+        notes_filter: str | None = None
     ) -> list[dict[str, Any]]:
         """List sources linked to a project."""
         try:
@@ -1329,4 +1639,98 @@ class SupabaseDatabaseRepository(DatabaseRepository):
 
         except Exception as e:
             logger.error(f"Failed to execute RPC {function_name}: {e}")
+            raise
+
+    # ========================================================================
+    # 12. PROMPT OPERATIONS
+    # ========================================================================
+
+    async def get_all_prompts(self) -> list[dict[str, Any]]:
+        """Retrieve all prompts from the archon_prompts table."""
+        try:
+            result = (
+                self.supabase_client.table("archon_prompts")
+                .select("*")
+                .execute()
+            )
+
+            return result.data if result.data else []
+
+        except Exception as e:
+            logger.error(f"Failed to get all prompts: {e}")
+            raise
+
+    # ========================================================================
+    # 13. TABLE COUNT OPERATIONS
+    # ========================================================================
+
+    async def get_table_count(self, table_name: str) -> int:
+        """Get the count of records in a specified table."""
+        try:
+            result = (
+                self.supabase_client.table(table_name)
+                .select("id", count="exact")
+                .execute()
+            )
+
+            return result.count if result.count is not None else 0
+
+        except Exception as e:
+            logger.error(f"Failed to get count for table {table_name}: {e}")
+            raise
+
+    # ========================================================================
+    # 14. MIGRATION OPERATIONS
+    # ========================================================================
+
+    async def get_applied_migrations(self) -> list[dict[str, Any]]:
+        """Retrieve all applied migrations from archon_migrations table."""
+        try:
+            result = (
+                self.supabase_client.table("archon_migrations")
+                .select("*")
+                .order("applied_at", desc=True)
+                .execute()
+            )
+
+            return result.data if result.data else []
+
+        except Exception as e:
+            logger.error(f"Failed to get applied migrations: {e}")
+            raise
+
+    async def migration_exists(self, migration_name: str) -> bool:
+        """Check if a migration has been applied."""
+        try:
+            result = (
+                self.supabase_client.table("archon_migrations")
+                .select("id")
+                .eq("migration_name", migration_name)
+                .maybe_single()
+                .execute()
+            )
+
+            return result.data is not None
+
+        except Exception as e:
+            logger.error(f"Failed to check migration existence for {migration_name}: {e}")
+            raise
+
+    async def record_migration(self, migration_data: dict[str, Any]) -> dict[str, Any]:
+        """Record a migration as applied."""
+        try:
+            result = (
+                self.supabase_client.table("archon_migrations")
+                .insert(migration_data)
+                .execute()
+            )
+
+            if not result.data:
+                raise ValueError("Insert returned no data")
+
+            logger.info(f"Recorded migration {migration_data.get('migration_name')}")
+            return result.data[0]
+
+        except Exception as e:
+            logger.error(f"Failed to record migration: {e}")
             raise

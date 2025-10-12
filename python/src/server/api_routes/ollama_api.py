@@ -16,6 +16,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from ..config.logfire_config import get_logger
+from ..repositories.supabase_repository import SupabaseDatabaseRepository
 from ..services.llm_provider_service import validate_provider_instance
 from ..services.ollama.embedding_router import embedding_router
 from ..services.ollama.model_discovery_service import model_discovery_service
@@ -422,8 +423,8 @@ async def discover_and_store_models_endpoint(request: ModelDiscoveryAndStoreRequ
 
         from ..utils import get_supabase_client
 
-        # Store using direct database insert
-        supabase = get_supabase_client()
+        # Initialize repository for database operations
+        repository = SupabaseDatabaseRepository(get_supabase_client())
 
         stored_models = []
         instances_checked = 0
@@ -472,14 +473,11 @@ async def discover_and_store_models_endpoint(request: ModelDiscoveryAndStoreRequ
             "total_count": len(stored_models)
         }
 
-        # Upsert into archon_settings table
-        result = supabase.table("archon_settings").upsert({
-            "key": "ollama_discovered_models",
-            "value": json.dumps(models_data),
-            "category": "ollama",
-            "description": "Discovered Ollama models with compatibility information",
-            "updated_at": datetime.now().isoformat()
-        }).execute()
+        # Upsert into archon_settings table using repository
+        await repository.upsert_setting(
+            key="ollama_discovered_models",
+            value=json.dumps(models_data)
+        )
 
         logger.info(f"Stored {len(stored_models)} models from {instances_checked} instances")
 
@@ -508,11 +506,12 @@ async def get_stored_models_endpoint() -> ModelListResponse:
         logger.info("Retrieving stored Ollama models")
 
         from ..utils import get_supabase_client
-        supabase = get_supabase_client()
 
-        # Get stored models from archon_settings
-        result = supabase.table("archon_settings").select("value").eq("key", "ollama_discovered_models").execute()
-        models_setting = result.data[0]["value"] if result.data else None
+        # Initialize repository for database operations
+        repository = SupabaseDatabaseRepository(get_supabase_client())
+
+        # Get stored models from archon_settings using repository
+        models_setting = await repository.get_settings_by_key("ollama_discovered_models")
 
         if not models_setting:
             return ModelListResponse(
@@ -969,7 +968,8 @@ async def discover_models_with_real_details(request: ModelDiscoveryAndStoreReque
 
         from ..utils import get_supabase_client
 
-        supabase = get_supabase_client()
+        # Initialize repository for database operations
+        repository = SupabaseDatabaseRepository(get_supabase_client())
         stored_models = []
         instances_checked = 0
 
@@ -1116,12 +1116,11 @@ async def discover_models_with_real_details(request: ModelDiscoveryAndStoreReque
         embedding_models_with_dims = [m for m in stored_models if m.get('model_type') == 'embedding' and m.get('embedding_dimensions')]
         logger.info(f"Storing {len(embedding_models_with_dims)} embedding models with dimensions: {[(m['name'], m.get('embedding_dimensions')) for m in embedding_models_with_dims]}")
 
-        # Update the stored models
-        result = supabase.table("archon_settings").update({
-            "value": json.dumps(models_data),
-            "description": "Real Ollama model data from API endpoints",
-            "updated_at": datetime.now().isoformat()
-        }).eq("key", "ollama_discovered_models").execute()
+        # Update the stored models using repository
+        await repository.upsert_setting(
+            key="ollama_discovered_models",
+            value=json.dumps(models_data)
+        )
 
         logger.info(f"Stored {len(stored_models)} models with real data from {instances_checked} instances")
 
