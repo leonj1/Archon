@@ -1078,7 +1078,7 @@ async def perform_rag_query(request: RagQueryRequest):
     try:
         # Use RAGService for unified RAG query with return_mode support
         repository = get_repository()
-        search_service = RAGService(repository=repository)
+        search_service = RAGService(database_repository=repository)
         success, result = await search_service.perform_rag_query(
             query=request.query,
             source=request.source,
@@ -1108,7 +1108,7 @@ async def search_code_examples(request: RagQueryRequest):
     try:
         # Use RAGService for code examples search
         repository = get_repository()
-        search_service = RAGService(repository=repository)
+        search_service = RAGService(database_repository=repository)
         success, result = await search_service.search_code_examples_service(
             query=request.query,
             source_id=request.source,  # This is Optional[str] which matches the method signature

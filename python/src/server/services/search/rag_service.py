@@ -16,7 +16,7 @@ import os
 from typing import Any, Optional
 
 from ...config.logfire_config import get_logger, safe_span
-from ...repositories import DatabaseRepository, SupabaseDatabaseRepository
+from ...repositories import DatabaseRepository
 from ..embeddings.embedding_service import create_embedding
 from .agentic_rag_strategy import AgenticRAGStrategy
 
@@ -35,37 +35,31 @@ class RAGService:
     enabling better testability and separation of concerns.
     """
 
-    def __init__(self, database_repository: Optional[DatabaseRepository] = None):
+    def __init__(self, database_repository: DatabaseRepository):
         """
         Initialize RAG service with dependency injection.
-        
+
         Args:
             database_repository: DatabaseRepository implementation for database operations.
-                                If None, creates a default SupabaseDatabaseRepository.
+                                Required - must be provided by caller.
         """
-        # Use injected repository or create default
+        # Always require repository to be passed in
         if database_repository is None:
-            supabase_client = get_supabase_client()
-            self.db_repository = SupabaseDatabaseRepository(supabase_client)
-        else:
-            self.db_repository = database_repository
-        
-        # Store supabase_client for backward compatibility with strategies
+            raise ValueError("database_repository is required - RAGService must be initialized with a repository")
+
+        self.db_repository = database_repository
+
+        # Store supabase_client for backward compatibility with strategies that haven't been refactored yet
         # Note: Strategies should eventually be refactored to use repository pattern too
-        self.supabase_client = (
-            database_repository.supabase_client 
-            if hasattr(database_repository, 'supabase_client') 
-            else get_supabase_client()
-        )
+        # For SQLite-based repositories, this will be None and strategies must handle it
+        self.supabase_client = getattr(database_repository, 'supabase_client', None)
 
         # Initialize base strategy with repository (always needed)
         self.base_strategy = BaseSearchStrategy(self.db_repository)
 
-        # Initialize optional strategies
-        # Note: These strategies still use supabase_client for backward compatibility
-        # They should be refactored to use repository pattern in future iterations
-        self.hybrid_strategy = HybridSearchStrategy(self.supabase_client, self.base_strategy)
-        self.agentic_strategy = AgenticRAGStrategy(self.supabase_client, self.base_strategy)
+        # Initialize optional strategies with repository (SQLite-compatible)
+        self.hybrid_strategy = HybridSearchStrategy(repository=self.db_repository, base_strategy=self.base_strategy)
+        self.agentic_strategy = AgenticRAGStrategy(supabase_client=self.supabase_client, base_strategy=self.base_strategy)
 
         # Initialize reranking strategy based on settings
         self.reranking_strategy = None

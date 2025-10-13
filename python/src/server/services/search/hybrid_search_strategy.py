@@ -29,13 +29,12 @@ class HybridSearchStrategy:
 
         Args:
             repository: DatabaseRepository instance (preferred)
-            supabase_client: Legacy supabase client (for backward compatibility)
+            supabase_client: Legacy parameter for backward compatibility (ignored)
             base_strategy: Base strategy for fallback (not used in current implementation)
         """
+        # Use provided repository or get default (SQLite or Supabase based on config)
         if repository is not None:
             self.repository = repository
-        elif supabase_client is not None:
-            self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
             self.repository = get_repository()
         self.base_strategy = base_strategy

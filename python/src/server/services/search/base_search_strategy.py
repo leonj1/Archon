@@ -5,10 +5,10 @@ Implements the foundational vector similarity search that all other strategies b
 This is the core semantic search functionality.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from ...config.logfire_config import get_logger, safe_span
-from ...repositories import DatabaseRepository, SupabaseDatabaseRepository
+from ...repositories import DatabaseRepository
 
 logger = get_logger(__name__)
 
@@ -18,20 +18,19 @@ SIMILARITY_THRESHOLD = 0.05
 class BaseSearchStrategy:
     """Base strategy implementing fundamental vector similarity search"""
 
-    def __init__(self, database_repository: Optional[DatabaseRepository] = None):
+    def __init__(self, database_repository: DatabaseRepository):
         """
         Initialize with dependency injection.
-        
+
         Args:
             database_repository: DatabaseRepository implementation for database operations.
-                                If None, creates a default SupabaseDatabaseRepository.
+                                Required - must be provided by caller.
         """
-        # Use injected repository or create default
+        # Always require repository to be passed in
         if database_repository is None:
-            supabase_client = get_supabase_client()
-            self.db_repository = SupabaseDatabaseRepository(supabase_client)
-        else:
-            self.db_repository = database_repository
+            raise ValueError("database_repository is required - BaseSearchStrategy must be initialized with a repository")
+
+        self.db_repository = database_repository
 
     async def vector_search(
         self,
