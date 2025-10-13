@@ -79,6 +79,8 @@ stop:
 	@$(COMPOSE) --profile backend --profile frontend --profile full down
 	@echo "✓ Services stopped"
 
+restart: stop start
+
 # Run all tests
 test: test-fe test-be
 
