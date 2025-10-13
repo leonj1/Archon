@@ -85,6 +85,7 @@ mcp = [
     "supabase==2.15.1",
     "logfire>=0.30.0",
     "fastapi>=0.104.0",
+    "aiosqlite>=0.17.0",
 ]
 
 # Agents container dependencies
