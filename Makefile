@@ -82,10 +82,7 @@ stop:
 	@echo "✓ Services stopped"
 
 # Quick restart without rebuild
-restart:
-	@echo "Restarting services..."
-	@$(COMPOSE) restart
-	@echo "✓ Services restarted"
+restart: stop start
 
 # Full restart with rebuild
 restart-rebuild: stop start

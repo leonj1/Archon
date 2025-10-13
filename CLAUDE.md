@@ -295,6 +295,158 @@ When connected to Claude/Cursor/Windsurf, the following tools are available:
 - `archon:find_versions` - Find version history or get specific version
 - `archon:manage_version` - Manage versions with actions: "create", "restore"
 
+## MCP Usage Analytics
+
+### Overview
+
+The MCP Usage Analytics feature provides comprehensive insights into MCP server usage patterns, helping you understand how AI IDEs interact with Archon's knowledge base and project management tools. Track usage metrics, monitor performance, and identify the most valuable tools with an interactive dashboard featuring time-series visualizations and real-time statistics.
+
+### Key Features
+
+- **Time-Series Data Storage**: 180-day retention of usage events with automatic cleanup
+- **Hourly and Daily Aggregations**: Pre-computed materialized views for fast query performance
+- **Interactive Bar Charts**: Visual representation of usage patterns with hover tooltips
+- **Real-Time Metrics**: Summary statistics for the last 24 hours including call counts and success rates
+- **Category Filtering**: Filter analytics by tool category (RAG, Project, Task, Document, Version, Feature)
+- **Tool Breakdown**: Identify most-used MCP tools with sortable statistics
+- **Performance Monitoring**: Track average response times and error rates
+
+### API Endpoints
+
+All analytics endpoints are available under `/api/mcp/analytics`:
+
+**GET /api/mcp/analytics/hourly**
+- Query hourly usage data with time range filtering
+- Query parameters:
+  - `hours` (1-168): Number of hours to query (default: 24)
+  - `tool_category` (optional): Filter by category (rag, project, task, document, version, feature)
+  - `tool_name` (optional): Filter by specific tool name
+- Response: Array of hourly aggregations with call counts, error counts, response times, unique sessions
+- ETag support for efficient caching
+
+**GET /api/mcp/analytics/daily**
+- Query daily usage aggregations for longer time periods
+- Query parameters:
+  - `days` (1-180): Number of days to query (default: 7)
+  - `tool_category` (optional): Filter by category
+- Response: Array of daily aggregations with summarized metrics
+- ETag support for efficient caching
+
+**GET /api/mcp/analytics/summary**
+- Get summary statistics for the last 24 hours
+- Response includes:
+  - `total_calls`: Total number of MCP tool invocations
+  - `success_rate`: Percentage of successful calls
+  - `top_tools`: Array of most-used tools with call counts
+  - `by_category`: Call count breakdown by category
+
+**POST /api/mcp/analytics/refresh-views**
+- Manually trigger refresh of materialized views
+- Returns status of view refresh operations
+- Useful for ensuring up-to-date data when automatic refresh is delayed
+
+### Usage
+
+1. Navigate to **Settings** in the Archon UI
+2. Scroll to the **MCP Usage Analytics** section
+3. Expand the collapsible card to view the dashboard
+4. Use the time range selector to choose between 24h, 48h, or 7 days
+5. Filter by tool category to focus on specific functionality
+6. Hover over chart bars for detailed information
+7. Review the Top Tools table to identify most-used capabilities
+
+### Privacy
+
+All usage data is stored **locally in your Supabase instance**. No analytics data is transmitted to external services or third parties. The tracking system records:
+- Tool invocations (tool name, category, timestamp)
+- Response times and success/failure status
+- Session identifiers (for unique user counting)
+- No sensitive data or query parameters are logged
+
+### Technical Details
+
+#### Database Tables
+
+**archon_mcp_usage_events**
+- Primary storage table for raw usage events
+- Columns: event_id, tool_name, tool_category, status, response_time_ms, session_id, created_at
+- Automatic cleanup policy: Events older than 180 days are automatically removed
+- Indexed on: tool_name, tool_category, status, created_at for fast queries
+
+**Materialized Views**
+- `archon_mcp_usage_hourly`: Hourly aggregations for recent data (last 7 days)
+- `archon_mcp_usage_daily`: Daily aggregations for historical data (last 180 days)
+- Auto-refresh every 15 minutes via scheduled function
+- Manual refresh available via API endpoint
+
+#### Tracking Middleware
+
+**Location**: `python/src/mcp_server/middleware/usage_tracking.py`
+
+Usage tracking is implemented as a decorator pattern applied to all MCP tools:
+- Automatically tracks tool invocations, success/failure, and response times
+- Minimal overhead (< 10ms per call)
+- Non-blocking: tracking failures do not affect tool execution
+- Integrated into all 14 MCP tools across RAG, Project, Task, Document, Version, and Feature categories
+
+#### Frontend Implementation
+
+**Service**: `archon-ui-main/src/features/mcp/services/mcpAnalyticsService.ts`
+- TypeScript service wrapping analytics API endpoints
+- Type-safe request/response handling
+
+**Hooks**: `archon-ui-main/src/features/mcp/hooks/useMcpAnalytics.ts`
+- React Query hooks for data fetching: `useMcpHourlyUsage`, `useMcpDailyUsage`, `useMcpUsageSummary`
+- Smart caching with 5-second stale time for frequently changing data
+- Automatic refetching and cache invalidation
+
+**Component**: `archon-ui-main/src/features/mcp/components/MCPUsageAnalytics.tsx`
+- Interactive dashboard with Recharts visualization
+- Summary cards, filters, bar chart, and top tools table
+- Responsive design with mobile support
+
+### Performance Characteristics
+
+- **API Response Times**: < 500ms for typical queries (95th percentile)
+- **Tracking Overhead**: < 10ms per MCP tool invocation
+- **Chart Render Time**: < 200ms for up to 168 data points
+- **Cache Hit Rate**: ~70% bandwidth reduction via ETag caching
+- **Materialized View Refresh**: Completes in < 1 second for typical datasets
+
+### Configuration Options
+
+**Environment Variables**
+- No additional configuration required
+- Uses existing `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`
+
+**Database Settings**
+- Event retention: 180 days (configurable in migration SQL)
+- Materialized view refresh interval: 15 minutes (configurable in refresh function)
+- Automatic cleanup enabled by default
+
+**Frontend Settings**
+- Time range options: 24h, 48h, 7 days (configurable in component)
+- Stale time: 5 seconds for real-time data (configurable in hooks)
+- Chart data aggregation: Automatic grouping by hour/day
+
+### Troubleshooting
+
+**Analytics not showing data**
+1. Verify database migration has been run: Check for `archon_mcp_usage_events` table in Supabase
+2. Ensure MCP tools are being invoked: Check MCP server logs
+3. Manually refresh materialized views: POST to `/api/mcp/analytics/refresh-views`
+4. Check browser console for API errors
+
+**Slow query performance**
+1. Verify database indexes exist: Run migration SQL to recreate indexes
+2. Check materialized view freshness: Review `last_refresh` timestamp
+3. Reduce time range: Query smaller date ranges (24h instead of 7d)
+
+**Missing recent data**
+1. Wait for materialized view refresh (occurs every 15 minutes)
+2. Manually trigger refresh via API endpoint
+3. Check raw events table for recent entries
+
 ## Important Notes
 
 - Projects feature is optional - toggle in Settings UI

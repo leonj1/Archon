@@ -10,8 +10,9 @@ from typing import Any
 from urllib.parse import urljoin
 
 import httpx
-from mcp.server.fastmcp import Context, FastMCP
 
+from mcp.server.fastmcp import Context, FastMCP
+from src.mcp_server.middleware import usage_tracker
 from src.mcp_server.utils.error_handling import MCPErrorFormatter
 from src.mcp_server.utils.timeout_config import get_default_timeout
 from src.server.config.service_discovery import get_api_url
@@ -52,6 +53,7 @@ def register_task_tools(mcp: FastMCP):
     """Register consolidated task management tools with the MCP server."""
 
     @mcp.tool()
+    @usage_tracker.track_tool('find_tasks', 'task')
     async def find_tasks(
         ctx: Context,
         query: str | None = None,  # Add search capability
@@ -197,6 +199,7 @@ def register_task_tools(mcp: FastMCP):
             return MCPErrorFormatter.from_exception(e, "list tasks")
 
     @mcp.tool()
+    @usage_tracker.track_tool('manage_task', 'task')
     async def manage_task(
         ctx: Context,
         action: str,  # "create" | "update" | "delete"

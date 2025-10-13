@@ -20,6 +20,7 @@ from mcp.server.fastmcp import Context, FastMCP
 
 # Import service discovery for HTTP communication
 from src.server.config.service_discovery import get_api_url
+from src.mcp_server.middleware import usage_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ def register_rag_tools(mcp: FastMCP):
     """Register all RAG tools with the MCP server."""
 
     @mcp.tool()
+    @usage_tracker.track_tool('rag_get_available_sources', 'rag')
     async def rag_get_available_sources(ctx: Context) -> str:
         """
         Get list of available sources in the knowledge base.
@@ -76,6 +78,7 @@ def register_rag_tools(mcp: FastMCP):
             return json.dumps({"success": False, "error": str(e)}, indent=2)
 
     @mcp.tool()
+    @usage_tracker.track_tool('rag_search_knowledge_base', 'rag')
     async def rag_search_knowledge_base(
         ctx: Context,
         query: str,
@@ -152,6 +155,7 @@ def register_rag_tools(mcp: FastMCP):
             return json.dumps({"success": False, "results": [], "error": str(e)}, indent=2)
 
     @mcp.tool()
+    @usage_tracker.track_tool('rag_search_code_examples', 'rag')
     async def rag_search_code_examples(
         ctx: Context, query: str, source_id: str | None = None, match_count: int = 5
     ) -> str:
@@ -215,6 +219,7 @@ def register_rag_tools(mcp: FastMCP):
             return json.dumps({"success": False, "results": [], "error": str(e)}, indent=2)
 
     @mcp.tool()
+    @usage_tracker.track_tool('rag_list_pages_for_source', 'rag')
     async def rag_list_pages_for_source(
         ctx: Context, source_id: str, section: str | None = None
     ) -> str:
@@ -294,6 +299,7 @@ def register_rag_tools(mcp: FastMCP):
             )
 
     @mcp.tool()
+    @usage_tracker.track_tool('rag_read_full_page', 'rag')
     async def rag_read_full_page(
         ctx: Context, page_id: str | None = None, url: str | None = None
     ) -> str:

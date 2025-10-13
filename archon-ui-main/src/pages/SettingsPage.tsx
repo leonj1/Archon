@@ -12,6 +12,7 @@ import {
   Bug,
   Info,
   Database,
+  Activity,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "../features/shared/hooks/useToast";
@@ -34,6 +35,7 @@ import {
 import { UpdateBanner } from "../features/settings/version/components/UpdateBanner";
 import { VersionStatusCard } from "../features/settings/version/components/VersionStatusCard";
 import { MigrationStatusCard } from "../features/settings/migrations/components/MigrationStatusCard";
+import { MCPUsageAnalytics } from "../features/mcp/components/MCPUsageAnalytics";
 
 export const SettingsPage = () => {
   const [ragSettings, setRagSettings] = useState<RagSettings>({
@@ -209,6 +211,17 @@ export const SettingsPage = () => {
               defaultExpanded={true}
             >
               <DatabaseSection />
+            </CollapsibleSettingsCard>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <CollapsibleSettingsCard
+              title="MCP Usage Analytics"
+              icon={Activity}
+              accentColor="blue"
+              storageKey="settings-mcp-analytics"
+              defaultExpanded={false}
+            >
+              <MCPUsageAnalytics />
             </CollapsibleSettingsCard>
           </motion.div>
           <motion.div variants={itemVariants}>
