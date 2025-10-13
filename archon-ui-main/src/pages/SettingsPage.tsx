@@ -206,7 +206,7 @@ export const SettingsPage = () => {
               icon={Database}
               accentColor="blue"
               storageKey="database-info"
-              defaultExpanded={false}
+              defaultExpanded={true}
             >
               <DatabaseSection />
             </CollapsibleSettingsCard>
