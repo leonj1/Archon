@@ -20,3 +20,8 @@ projects.db
 refactor_db.py
 cli_tools.py
 
+# SQLite databases
+data/archon.db
+data/*.db
+*.db
+
