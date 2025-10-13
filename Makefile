@@ -5,7 +5,7 @@ SHELL := /bin/bash
 # Docker compose command - prefer newer 'docker compose' plugin over standalone 'docker-compose'
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
-.PHONY: help dev dev-docker stop test test-fe test-be test-be-unit test-be-coverage test-be-build test-be-interactive lint lint-fe lint-be clean install check
+.PHONY: help dev dev-docker stop restart restart-rebuild test test-fe test-be test-be-unit test-be-coverage test-be-build test-be-interactive lint lint-fe lint-be clean install check
 
 help:
 	@echo "Archon Development Commands"
@@ -14,6 +14,8 @@ help:
 	@echo "  make dev               - Backend in Docker, frontend local (recommended)"
 	@echo "  make dev-docker        - Everything in Docker"
 	@echo "  make stop              - Stop all services"
+	@echo "  make restart           - Quick restart (no rebuild)"
+	@echo "  make restart-rebuild   - Restart with full rebuild"
 	@echo "  make clean             - Remove containers and volumes"
 	@echo ""
 	@echo "Testing:"
@@ -79,7 +81,14 @@ stop:
 	@$(COMPOSE) --profile backend --profile frontend --profile full down
 	@echo "✓ Services stopped"
 
-restart: stop start
+# Quick restart without rebuild
+restart:
+	@echo "Restarting services..."
+	@$(COMPOSE) restart
+	@echo "✓ Services restarted"
+
+# Full restart with rebuild
+restart-rebuild: stop start
 
 # Run all tests
 test: test-fe test-be
