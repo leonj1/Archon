@@ -305,6 +305,146 @@ async def get_24h_summary(
         ) from None
 
 
+@router.get("/knowledge-bases")
+async def get_knowledge_base_analytics(
+    response: Response,
+    hours: int = Query(default=24, ge=1, le=168, description="Number of hours to look back (1-168)"),
+    if_none_match: str | None = Header(None),
+):
+    """
+    Get knowledge base usage statistics by joining MCP events with sources.
+
+    Returns top 10 knowledge bases by query count, including:
+    - source_id, source_name
+    - query_count, unique_queries
+    - avg_response_time_ms, success_rate
+    - percentage_of_total
+
+    Args:
+        hours: Number of hours to look back (1-168, default 24)
+
+    Returns:
+        JSON with knowledge base analytics for the specified time period
+    """
+    try:
+        logger.debug(f"Getting knowledge base analytics | hours={hours} | etag={if_none_match}")
+
+        # Calculate start time
+        start_time = datetime.now(UTC) - timedelta(hours=hours)
+
+        # Query SQLite database
+        db_path = get_db_path()
+        async with aiosqlite.connect(db_path) as conn:
+            conn.row_factory = aiosqlite.Row
+
+            # Get knowledge base statistics
+            cursor = await conn.execute(
+                """
+                SELECT
+                    e.source_id,
+                    COALESCE(s.source_display_name, s.title, s.source_url, e.source_id) as source_name,
+                    COUNT(*) as query_count,
+                    COUNT(DISTINCT e.query_text) as unique_queries,
+                    CAST(AVG(e.response_time_ms) AS INTEGER) as avg_response_time_ms,
+                    ROUND(AVG(CASE WHEN e.success = 1 THEN 100.0 ELSE 0.0 END), 1) as success_rate
+                FROM archon_mcp_usage_events e
+                LEFT JOIN archon_sources s ON e.source_id = s.source_id
+                WHERE e.timestamp >= ?
+                  AND e.source_id IS NOT NULL
+                GROUP BY e.source_id, source_name
+                ORDER BY query_count DESC
+                LIMIT 10
+                """,
+                (start_time.isoformat(),),
+            )
+            rows = await cursor.fetchall()
+            kb_data = [dict(row) for row in rows]
+
+            # Calculate total queries for percentage
+            total_queries = sum(item["query_count"] for item in kb_data)
+
+            # Add percentage_of_total to each item
+            for item in kb_data:
+                item["percentage_of_total"] = (
+                    round((item["query_count"] / total_queries) * 100, 1) if total_queries > 0 else 0.0
+                )
+
+        # Handle empty state
+        if not kb_data:
+            logger.debug("No knowledge base queries found in time range")
+            response_data = {
+                "success": True,
+                "data": [],
+                "total_queries": 0,
+                "period": {
+                    "hours": hours,
+                    "start_time": start_time.isoformat(),
+                    "end_time": datetime.now(UTC).isoformat(),
+                },
+            }
+
+            # Generate ETag for empty state
+            current_etag = generate_etag(response_data)
+
+            # Check if client's ETag matches
+            if check_etag(if_none_match, current_etag):
+                response.status_code = http_status.HTTP_304_NOT_MODIFIED
+                response.headers["ETag"] = current_etag
+                response.headers["Cache-Control"] = "no-cache, must-revalidate"
+                logger.debug(f"Knowledge base analytics unchanged (empty), returning 304 | etag={current_etag}")
+                return None
+
+            # Set headers for empty state
+            response.headers["ETag"] = current_etag
+            response.headers["Last-Modified"] = datetime.now(UTC).isoformat()
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+
+            return response_data
+
+        # Generate ETag from stable data
+        etag_data = {
+            "kb_analytics": kb_data,
+            "total_queries": total_queries,
+            "hours": hours,
+        }
+        current_etag = generate_etag(etag_data)
+
+        # Check if client's ETag matches
+        if check_etag(if_none_match, current_etag):
+            response.status_code = http_status.HTTP_304_NOT_MODIFIED
+            response.headers["ETag"] = current_etag
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            logger.debug(f"Knowledge base analytics unchanged, returning 304 | etag={current_etag}")
+            return None
+
+        # Set headers for successful response
+        response.headers["ETag"] = current_etag
+        response.headers["Last-Modified"] = datetime.now(UTC).isoformat()
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+
+        logger.debug(
+            f"Knowledge base analytics retrieved | count={len(kb_data)} | total_queries={total_queries} | hours={hours} | etag={current_etag}"
+        )
+
+        return {
+            "success": True,
+            "data": kb_data,
+            "total_queries": total_queries,
+            "period": {
+                "hours": hours,
+                "start_time": start_time.isoformat(),
+                "end_time": datetime.now(UTC).isoformat(),
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get knowledge base analytics | error={str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"success": False, "error": f"Failed to retrieve knowledge base analytics: {str(e)}"},
+        ) from None
+
+
 @router.post("/refresh-views")
 async def refresh_aggregation_tables():
     """

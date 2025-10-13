@@ -1,4 +1,5 @@
 import { callAPIWithETag } from "@/features/shared/api/apiClient";
+import type { KnowledgeBaseAnalyticsResponse } from "../types/analytics";
 
 export interface HourlyUsageData {
   hour_bucket: string;
@@ -82,6 +83,22 @@ class MCPAnalyticsService {
       return response;
     } catch (error) {
       console.error("Failed to get usage summary:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch knowledge base analytics with source breakdown
+   */
+  async getKnowledgeBaseAnalytics(hours: number = 24): Promise<KnowledgeBaseAnalyticsResponse> {
+    try {
+      const params = new URLSearchParams({ hours: hours.toString() });
+      const response = await callAPIWithETag<KnowledgeBaseAnalyticsResponse>(
+        `/api/mcp/analytics/knowledge-bases?${params.toString()}`
+      );
+      return response;
+    } catch (error) {
+      console.error("Failed to get knowledge base analytics:", error);
       throw error;
     }
   }

@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { Activity, TrendingUp, AlertCircle, RefreshCw } from "lucide-react";
 import { useMcpHourlyUsage, useMcpUsageSummary } from "../hooks/useMcpAnalytics";
+import { KnowledgeBaseUsageCard } from "./KnowledgeBaseUsageCard";
 import { Card } from "@/features/ui/primitives/card";
 import {
   Select,
@@ -282,6 +283,9 @@ export const MCPUsageAnalytics: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Knowledge Base Usage Card */}
+      <KnowledgeBaseUsageCard hours={timeRange} />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">

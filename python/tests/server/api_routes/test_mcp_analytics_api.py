@@ -9,7 +9,7 @@ Tests all 4 endpoints:
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -708,3 +708,476 @@ def test_summary_handles_missing_tool_names(client, mock_supabase):
         assert summary["unique_tools"] == 1  # Only valid_tool
         assert len(summary["tool_usage"]) == 1
         assert summary["tool_usage"][0]["tool_name"] == "valid_tool"
+
+
+# ============================================================================
+# GET /api/mcp/analytics/knowledge-bases
+# ============================================================================
+
+
+@pytest.fixture
+def mock_kb_analytics_data():
+    """Mock knowledge base analytics data."""
+    return [
+        {
+            "source_id": "src_001",
+            "source_name": "Anthropic Documentation",
+            "query_count": 150,
+            "unique_queries": 45,
+            "avg_response_time_ms": 320,
+            "success_rate": 95.5,
+            "percentage_of_total": 50.0,
+        },
+        {
+            "source_id": "src_002",
+            "source_name": "React Documentation",
+            "query_count": 90,
+            "unique_queries": 30,
+            "avg_response_time_ms": 280,
+            "success_rate": 98.0,
+            "percentage_of_total": 30.0,
+        },
+        {
+            "source_id": "src_003",
+            "source_name": "Python Best Practices",
+            "query_count": 60,
+            "unique_queries": 25,
+            "avg_response_time_ms": 350,
+            "success_rate": 92.5,
+            "percentage_of_total": 20.0,
+        },
+    ]
+
+
+def test_get_knowledge_base_analytics_success(client, mock_kb_analytics_data):
+    """Test successful knowledge base analytics retrieval."""
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+
+        # Mock cursor.fetchall() to return knowledge base data
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in kb.items() if k != "percentage_of_total"}  # percentage calculated in code
+            for kb in mock_kb_analytics_data
+        ])
+
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=24")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["success"] is True
+        assert "data" in data
+        assert "total_queries" in data
+        assert "period" in data
+
+        # Verify total queries
+        assert data["total_queries"] == 300  # 150 + 90 + 60
+
+        # Verify period information
+        assert data["period"]["hours"] == 24
+        assert "start_time" in data["period"]
+        assert "end_time" in data["period"]
+
+        # Verify data structure
+        assert len(data["data"]) == 3
+        first_kb = data["data"][0]
+        assert "source_id" in first_kb
+        assert "source_name" in first_kb
+        assert "query_count" in first_kb
+        assert "unique_queries" in first_kb
+        assert "avg_response_time_ms" in first_kb
+        assert "success_rate" in first_kb
+        assert "percentage_of_total" in first_kb
+
+
+def test_get_knowledge_base_analytics_empty(client):
+    """Test empty state when no knowledge bases queried."""
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+
+        # Mock empty result
+        mock_cursor.fetchall = AsyncMock(return_value=[])
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=24")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["success"] is True
+        assert data["data"] == []
+        assert data["total_queries"] == 0
+        assert "period" in data
+
+
+def test_get_knowledge_base_analytics_custom_hours(client, mock_kb_analytics_data):
+    """Test knowledge base analytics with custom time ranges."""
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in kb.items() if k != "percentage_of_total"}
+            for kb in mock_kb_analytics_data
+        ])
+
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        # Test 48 hours
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=48")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["period"]["hours"] == 48
+
+        # Test 168 hours (1 week)
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=168")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["period"]["hours"] == 168
+
+
+def test_get_knowledge_base_analytics_validation(client):
+    """Test parameter validation for hours parameter."""
+    # Test hours < 1
+    response = client.get("/api/mcp/analytics/knowledge-bases?hours=0")
+    assert response.status_code == 422
+
+    # Test hours > 168
+    response = client.get("/api/mcp/analytics/knowledge-bases?hours=200")
+    assert response.status_code == 422
+
+    # Test valid boundary values
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall = AsyncMock(return_value=[])
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        # Test hours = 1 (minimum valid)
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=1")
+        assert response.status_code == 200
+
+        # Test hours = 168 (maximum valid)
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=168")
+        assert response.status_code == 200
+
+
+def test_get_knowledge_base_analytics_etag(client, mock_kb_analytics_data):
+    """Test ETag caching for knowledge base analytics."""
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in kb.items() if k != "percentage_of_total"}
+            for kb in mock_kb_analytics_data
+        ])
+
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        # First request
+        response1 = client.get("/api/mcp/analytics/knowledge-bases?hours=24")
+        assert response1.status_code == 200
+        etag = response1.headers.get("ETag")
+        assert etag is not None
+        assert "cache-control" in response1.headers
+        assert response1.headers["cache-control"] == "no-cache, must-revalidate"
+
+        # Second request with If-None-Match
+        response2 = client.get(
+            "/api/mcp/analytics/knowledge-bases?hours=24",
+            headers={"If-None-Match": etag}
+        )
+        assert response2.status_code == 304
+        assert response2.headers.get("ETag") == etag
+
+
+def test_get_knowledge_base_analytics_etag_empty_state(client):
+    """Test ETag generation for empty state."""
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+
+        # Mock empty result
+        mock_cursor.fetchall = AsyncMock(return_value=[])
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        # Request
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=24")
+        assert response.status_code == 200
+
+        # Verify ETag is present
+        etag = response.headers.get("ETag")
+        assert etag is not None
+        assert "cache-control" in response.headers
+        assert response.headers["cache-control"] == "no-cache, must-revalidate"
+
+        # Verify empty data
+        data = response.json()
+        assert data["success"] is True
+        assert data["data"] == []
+        assert data["total_queries"] == 0
+
+
+def test_get_knowledge_base_analytics_percentage_calculation(client):
+    """Test that percentage_of_total is correctly calculated."""
+    kb_data = [
+        {
+            "source_id": "src_001",
+            "source_name": "Source A",
+            "query_count": 100,
+            "unique_queries": 10,
+            "avg_response_time_ms": 300,
+            "success_rate": 95.0,
+        },
+        {
+            "source_id": "src_002",
+            "source_name": "Source B",
+            "query_count": 50,
+            "unique_queries": 5,
+            "avg_response_time_ms": 350,
+            "success_rate": 90.0,
+        },
+        {
+            "source_id": "src_003",
+            "source_name": "Source C",
+            "query_count": 50,
+            "unique_queries": 8,
+            "avg_response_time_ms": 320,
+            "success_rate": 98.0,
+        },
+    ]
+
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+
+        mock_cursor.fetchall = AsyncMock(return_value=kb_data)
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=24")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Total = 200, so percentages should be 50%, 25%, 25%
+        assert data["total_queries"] == 200
+        assert data["data"][0]["percentage_of_total"] == 50.0
+        assert data["data"][1]["percentage_of_total"] == 25.0
+        assert data["data"][2]["percentage_of_total"] == 25.0
+
+
+def test_get_knowledge_base_analytics_sorting(client):
+    """Test that results are sorted by query_count descending."""
+    kb_data = [
+        {
+            "source_id": "src_high",
+            "source_name": "High Usage",
+            "query_count": 200,
+            "unique_queries": 20,
+            "avg_response_time_ms": 300,
+            "success_rate": 95.0,
+        },
+        {
+            "source_id": "src_low",
+            "source_name": "Low Usage",
+            "query_count": 50,
+            "unique_queries": 5,
+            "avg_response_time_ms": 350,
+            "success_rate": 90.0,
+        },
+    ]
+
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+
+        # Return unsorted data
+        mock_cursor.fetchall = AsyncMock(return_value=kb_data)
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=24")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify highest query count is first
+        assert data["data"][0]["source_id"] == "src_high"
+        assert data["data"][0]["query_count"] == 200
+
+
+def test_get_knowledge_base_analytics_response_structure(client, mock_kb_analytics_data):
+    """Test that response has all required fields."""
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in kb.items() if k != "percentage_of_total"}
+            for kb in mock_kb_analytics_data
+        ])
+
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=24")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify top-level structure
+        assert "success" in data
+        assert "data" in data
+        assert "total_queries" in data
+        assert "period" in data
+
+        # Verify types
+        assert isinstance(data["success"], bool)
+        assert isinstance(data["data"], list)
+        assert isinstance(data["total_queries"], int)
+        assert isinstance(data["period"], dict)
+
+        # Verify period structure
+        assert "hours" in data["period"]
+        assert "start_time" in data["period"]
+        assert "end_time" in data["period"]
+
+        # Verify knowledge base item structure
+        if data["data"]:
+            kb = data["data"][0]
+            assert "source_id" in kb
+            assert "source_name" in kb
+            assert "query_count" in kb
+            assert "unique_queries" in kb
+            assert "avg_response_time_ms" in kb
+            assert "success_rate" in kb
+            assert "percentage_of_total" in kb
+
+
+def test_get_knowledge_base_analytics_database_error(client):
+    """Test error handling when database query fails."""
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_connect.side_effect = Exception("Database connection failed")
+
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=24")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert data["detail"]["success"] is False
+        assert "Failed to retrieve knowledge base analytics" in data["detail"]["error"]
+
+
+def test_get_knowledge_base_analytics_limit_to_top_10(client):
+    """Test that only top 10 knowledge bases are returned."""
+    # Create 15 knowledge bases
+    many_kb_data = [
+        {
+            "source_id": f"src_{i:03d}",
+            "source_name": f"Source {i}",
+            "query_count": 100 - i,  # Descending order
+            "unique_queries": 10,
+            "avg_response_time_ms": 300,
+            "success_rate": 95.0,
+        }
+        for i in range(15)
+    ]
+
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+
+        # Database query should already be limited to 10 by LIMIT clause
+        mock_cursor.fetchall = AsyncMock(return_value=many_kb_data[:10])
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=24")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify only 10 results
+        assert len(data["data"]) == 10
+
+
+def test_get_knowledge_base_analytics_source_name_fallback(client):
+    """Test source name fallback logic (display_name -> title -> url -> source_id)."""
+    kb_data = [
+        {
+            "source_id": "src_001",
+            "source_name": "Display Name",  # Has display name
+            "query_count": 100,
+            "unique_queries": 10,
+            "avg_response_time_ms": 300,
+            "success_rate": 95.0,
+        },
+        {
+            "source_id": "src_002",
+            "source_name": "src_002",  # Fallback to source_id (no other fields)
+            "query_count": 50,
+            "unique_queries": 5,
+            "avg_response_time_ms": 350,
+            "success_rate": 90.0,
+        },
+    ]
+
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+
+        mock_cursor.fetchall = AsyncMock(return_value=kb_data)
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        response = client.get("/api/mcp/analytics/knowledge-bases?hours=24")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify source names are properly resolved
+        assert data["data"][0]["source_name"] == "Display Name"
+        assert data["data"][1]["source_name"] == "src_002"
+
+
+def test_get_knowledge_base_analytics_default_hours_parameter(client):
+    """Test that default hours parameter is 24."""
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall = AsyncMock(return_value=[])
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        # Request without hours parameter
+        response = client.get("/api/mcp/analytics/knowledge-bases")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["period"]["hours"] == 24

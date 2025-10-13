@@ -217,6 +217,7 @@ dev = [
     { name = "ruff" },
 ]
 mcp = [
+    { name = "aiosqlite" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "logfire" },
@@ -313,6 +314,7 @@ dev = [
     { name = "ruff", specifier = ">=0.12.5" },
 ]
 mcp = [
+    { name = "aiosqlite", specifier = ">=0.17.0" },
     { name = "fastapi", specifier = ">=0.104.0" },
     { name = "httpx", specifier = ">=0.24.0" },
     { name = "logfire", specifier = ">=0.30.0" },
