@@ -1336,9 +1336,19 @@ class SQLiteDatabaseRepository(DatabaseRepository):
         """Delete a source and all related data."""
         async with self._get_connection() as conn:
             # Delete in order due to foreign key constraints
+            # Only delete from tables that have source_id column
             await conn.execute("DELETE FROM archon_code_examples WHERE source_id = ?", (source_id,))
             await conn.execute("DELETE FROM archon_crawled_pages WHERE source_id = ?", (source_id,))
-            await conn.execute("DELETE FROM archon_page_metadata WHERE source_id = ?", (source_id,))
+            
+            # Check if archon_page_metadata has source_id column before attempting delete
+            cursor = await conn.execute("PRAGMA table_info(archon_page_metadata)")
+            columns = await cursor.fetchall()
+            has_source_id = any(col[1] == 'source_id' for col in columns)
+            
+            if has_source_id:
+                await conn.execute("DELETE FROM archon_page_metadata WHERE source_id = ?", (source_id,))
+            
+            # Continue with other tables
             await conn.execute("DELETE FROM archon_project_sources WHERE source_id = ?", (source_id,))
             
             cursor = await conn.execute("""

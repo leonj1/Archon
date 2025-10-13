@@ -318,7 +318,7 @@ async def delete_knowledge_item(source_id: str):
         logger.debug("Successfully created SourceManagementService")
 
         logger.debug("Calling delete_source function...")
-        success, result_data = source_service.delete_source(source_id)
+        success, result_data = await source_service.delete_source(source_id)
         logger.debug(f"delete_source returned: success={success}, data={result_data}")
 
         # Convert to expected format
@@ -1174,7 +1174,7 @@ async def delete_source(source_id: str):
         repository = get_repository()
         source_service = SourceManagementService(repository=repository)
 
-        success, result_data = source_service.delete_source(source_id)
+        success, result_data = await source_service.delete_source(source_id)
 
         if success:
             safe_logfire_info(f"Source deleted successfully | source_id={source_id}")
