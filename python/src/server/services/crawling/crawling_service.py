@@ -83,6 +83,8 @@ class CrawlingService:
         if repository is not None:
             self.repository = repository
         elif supabase_client is not None:
+            # Lazy import to avoid dependency issues in tests
+            from ...repositories.supabase_repository import SupabaseDatabaseRepository
             self.repository = SupabaseDatabaseRepository(supabase_client)
         else:
             self.repository = get_repository()

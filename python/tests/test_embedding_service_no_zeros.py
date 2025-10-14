@@ -106,26 +106,31 @@ class TestNoZeroEmbeddings:
                 new_callable=AsyncMock,
                 return_value="text-embedding-ada-002",
             ):
-                # Mock credential service to return batch size of 2
+                # Mock credential service
                 with patch(
-                    "src.server.services.embeddings.embedding_service.credential_service.get_credentials_by_category",
+                    "src.server.services.credential_service.credential_service.get_active_provider",
                     new_callable=AsyncMock,
-                    return_value={"EMBEDDING_BATCH_SIZE": "2"},
+                    return_value={"provider": "openai"},
                 ):
-                    # Process 4 texts (batch size will be 2)
-                    texts = ["text1", "text2", "text3", "text4"]
-                    result = await create_embeddings_batch(texts)
+                    with patch(
+                        "src.server.services.credential_service.credential_service.get_credentials_by_category",
+                        new_callable=AsyncMock,
+                        return_value={"EMBEDDING_BATCH_SIZE": "2"},
+                    ):
+                        # Process 4 texts (batch size will be 2)
+                        texts = ["text1", "text2", "text3", "text4"]
+                        result = await create_embeddings_batch(texts)
 
-                    # Check result structure
-                    assert isinstance(result, EmbeddingBatchResult)
-                    assert result.success_count == 2  # First batch succeeded
-                    assert result.failure_count == 2  # Second batch failed
-                    assert len(result.embeddings) == 2
-                    assert len(result.failed_items) == 2
+                        # Check result structure
+                        assert isinstance(result, EmbeddingBatchResult)
+                        assert result.success_count == 2  # First batch succeeded
+                        assert result.failure_count == 2  # Second batch failed
+                        assert len(result.embeddings) == 2
+                        assert len(result.failed_items) == 2
 
-                    # Verify no zero embeddings were created
-                    for embedding in result.embeddings:
-                        assert not all(v == 0.0 for v in embedding)
+                        # Verify no zero embeddings were created
+                        for embedding in result.embeddings:
+                            assert not all(v == 0.0 for v in embedding)
 
     @pytest.mark.asyncio
     async def test_configurable_embedding_dimensions(self) -> None:
@@ -149,22 +154,27 @@ class TestNoZeroEmbeddings:
                 new_callable=AsyncMock,
                 return_value="text-embedding-3-large",
             ):
-                # Mock credential service to return custom dimensions
+                # Mock credential service
                 with patch(
-                    "src.server.services.embeddings.embedding_service.credential_service.get_credentials_by_category",
+                    "src.server.services.credential_service.credential_service.get_active_provider",
                     new_callable=AsyncMock,
-                    return_value={"EMBEDDING_DIMENSIONS": "3072"},
+                    return_value={"provider": "openai"},
                 ):
-                    result = await create_embeddings_batch(["test text"])
+                    with patch(
+                        "src.server.services.credential_service.credential_service.get_credentials_by_category",
+                        new_callable=AsyncMock,
+                        return_value={"EMBEDDING_DIMENSIONS": "3072"},
+                    ):
+                        result = await create_embeddings_batch(["test text"])
 
-                    # Verify the dimensions parameter was passed correctly
-                    mock_create.assert_called_once()
-                    call_args = mock_create.call_args
-                    assert call_args.kwargs["dimensions"] == 3072
+                        # Verify the dimensions parameter was passed correctly
+                        mock_create.assert_called_once()
+                        call_args = mock_create.call_args
+                        assert call_args.kwargs["dimensions"] == 3072
 
-                    # Verify result
-                    assert result.success_count == 1
-                    assert len(result.embeddings[0]) == 3072
+                        # Verify result
+                        assert result.success_count == 1
+                        assert len(result.embeddings[0]) == 3072
 
     @pytest.mark.asyncio
     async def test_default_embedding_dimensions(self) -> None:
@@ -188,22 +198,27 @@ class TestNoZeroEmbeddings:
                 new_callable=AsyncMock,
                 return_value="text-embedding-3-small",
             ):
-                # Mock credential service to return empty settings (no dimensions specified)
+                # Mock credential service
                 with patch(
-                    "src.server.services.embeddings.embedding_service.credential_service.get_credentials_by_category",
+                    "src.server.services.credential_service.credential_service.get_active_provider",
                     new_callable=AsyncMock,
-                    return_value={},
+                    return_value={"provider": "openai"},
                 ):
-                    result = await create_embeddings_batch(["test text"])
+                    with patch(
+                        "src.server.services.credential_service.credential_service.get_credentials_by_category",
+                        new_callable=AsyncMock,
+                        return_value={},
+                    ):
+                        result = await create_embeddings_batch(["test text"])
 
-                    # Verify the default dimensions parameter was used
-                    mock_create.assert_called_once()
-                    call_args = mock_create.call_args
-                    assert call_args.kwargs["dimensions"] == 1536
+                        # Verify the default dimensions parameter was used
+                        mock_create.assert_called_once()
+                        call_args = mock_create.call_args
+                        assert call_args.kwargs["dimensions"] == 1536
 
-                    # Verify result
-                    assert result.success_count == 1
-                    assert len(result.embeddings[0]) == 1536
+                        # Verify result
+                        assert result.success_count == 1
+                        assert len(result.embeddings[0]) == 1536
 
     @pytest.mark.asyncio
     async def test_batch_quota_exhausted_stops_process(self) -> None:
@@ -223,14 +238,24 @@ class TestNoZeroEmbeddings:
                 new_callable=AsyncMock,
                 return_value="text-embedding-ada-002",
             ):
-                texts = ["text1", "text2", "text3", "text4"]
-                result = await create_embeddings_batch(texts)
+                with patch(
+                    "src.server.services.credential_service.credential_service.get_active_provider",
+                    new_callable=AsyncMock,
+                    return_value={"provider": "openai"},
+                ):
+                    with patch(
+                        "src.server.services.credential_service.credential_service.get_credentials_by_category",
+                        new_callable=AsyncMock,
+                        return_value={},
+                    ):
+                        texts = ["text1", "text2", "text3", "text4"]
+                        result = await create_embeddings_batch(texts)
 
-                # All should fail due to quota
-                assert result.success_count == 0
-                assert result.failure_count == 4
-                assert len(result.embeddings) == 0
-                assert all("quota" in item["error"].lower() for item in result.failed_items)
+                        # All should fail due to quota
+                        assert result.success_count == 0
+                        assert result.failure_count == 4
+                        assert len(result.embeddings) == 0
+                        assert all("quota" in item["error"].lower() for item in result.failed_items)
 
     @pytest.mark.asyncio
     async def test_no_zero_vectors_in_results(self) -> None:
@@ -257,14 +282,29 @@ class TestNoZeroEmbeddings:
             mock_ctx.__aenter__.return_value.embeddings.create.side_effect = Exception("Test error")
             mock_client.return_value = mock_ctx
 
-            result = await create_embeddings_batch([test_text])
-            # Should return result with failures, not zeros
-            assert isinstance(result, EmbeddingBatchResult)
-            assert len(result.embeddings) == 0
-            assert result.failure_count == 1
-            # Verify no zero embeddings in the result
-            for embedding in result.embeddings:
-                assert not is_zero_embedding(embedding)
+            with patch(
+                "src.server.services.credential_service.credential_service.get_active_provider",
+                new_callable=AsyncMock,
+                return_value={"provider": "openai"},
+            ):
+                with patch(
+                    "src.server.services.credential_service.credential_service.get_credentials_by_category",
+                    new_callable=AsyncMock,
+                    return_value={},
+                ):
+                    with patch(
+                        "src.server.services.embeddings.embedding_service.get_embedding_model",
+                        new_callable=AsyncMock,
+                        return_value="text-embedding-ada-002",
+                    ):
+                        result = await create_embeddings_batch([test_text])
+                        # Should return result with failures, not zeros
+                        assert isinstance(result, EmbeddingBatchResult)
+                        assert len(result.embeddings) == 0
+                        assert result.failure_count == 1
+                        # Verify no zero embeddings in the result
+                        for embedding in result.embeddings:
+                            assert not is_zero_embedding(embedding)
 
 
 class TestEmbeddingBatchResult:

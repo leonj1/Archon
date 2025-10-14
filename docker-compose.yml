@@ -107,6 +107,7 @@ services:
     ports:
       - "${ARCHON_MCP_PORT:-8051}:${ARCHON_MCP_PORT:-8051}"
     environment:
+      - ARCHON_SQLITE_PATH=/data/archon.db
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - LOGFIRE_TOKEN=${LOGFIRE_TOKEN:-}
@@ -122,10 +123,12 @@ services:
       - ARCHON_AGENTS_PORT=${ARCHON_AGENTS_PORT:-8052}
     networks:
       - app-network
+    volumes:
+      - ./data:/data # SQLite database for MCP usage tracking
     depends_on:
       archon-server:
         condition: service_healthy
-      
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

@@ -150,13 +150,13 @@ class TestTaskServiceOptimization:
     """Test TaskService with exclude_large_fields parameter."""
     
     @patch('src.server.utils.get_supabase_client')
-    def test_list_tasks_with_large_fields(self, mock_supabase):
+    @pytest.mark.asyncio
+    async def test_list_tasks_with_large_fields(self, mock_supabase):
         """Test backward compatibility - default includes large fields."""
-        mock_client = Mock()
-        mock_supabase.return_value = mock_client
-        
-        mock_response = Mock()
-        mock_response.data = [{
+        from unittest.mock import AsyncMock
+        mock_repository = AsyncMock()
+
+        mock_repository.list_tasks.return_value = [{
             "id": "task-1",
             "project_id": "proj-1",
             "title": "Test Task",
@@ -170,36 +170,22 @@ class TestTaskServiceOptimization:
             "created_at": "2024-01-01",
             "updated_at": "2024-01-01"
         }]
-        
-        # Setup mock chain
-        mock_table = Mock()
-        mock_select = Mock()
-        mock_or = Mock()
-        mock_order1 = Mock()
-        mock_order2 = Mock()
-        
-        mock_order2.execute.return_value = mock_response
-        mock_order1.order.return_value = mock_order2
-        mock_or.order.return_value = mock_order1
-        mock_select.neq().or_.return_value = mock_or
-        mock_table.select.return_value = mock_select
-        mock_client.table.return_value = mock_table
-        
-        service = TaskService(mock_client)
-        success, result = service.list_tasks()
-        
+
+        service = TaskService(repository=mock_repository)
+        success, result = await service.list_tasks()
+
         assert success
         assert "sources" in result["tasks"][0]
         assert "code_examples" in result["tasks"][0]
     
     @patch('src.server.utils.get_supabase_client')
-    def test_list_tasks_exclude_large_fields(self, mock_supabase):
+    @pytest.mark.asyncio
+    async def test_list_tasks_exclude_large_fields(self, mock_supabase):
         """Test excluding large fields returns counts instead."""
-        mock_client = Mock()
-        mock_supabase.return_value = mock_client
-        
-        mock_response = Mock()
-        mock_response.data = [{
+        from unittest.mock import AsyncMock
+        mock_repository = AsyncMock()
+
+        mock_repository.list_tasks.return_value = [{
             "id": "task-1",
             "project_id": "proj-1",
             "title": "Test Task",
@@ -213,24 +199,10 @@ class TestTaskServiceOptimization:
             "created_at": "2024-01-01",
             "updated_at": "2024-01-01"
         }]
-        
-        # Setup mock chain
-        mock_table = Mock()
-        mock_select = Mock()
-        mock_or = Mock()
-        mock_order1 = Mock()
-        mock_order2 = Mock()
-        
-        mock_order2.execute.return_value = mock_response
-        mock_order1.order.return_value = mock_order2
-        mock_or.order.return_value = mock_order1
-        mock_select.neq().or_.return_value = mock_or
-        mock_table.select.return_value = mock_select
-        mock_client.table.return_value = mock_table
-        
-        service = TaskService(mock_client)
-        success, result = service.list_tasks(exclude_large_fields=True)
-        
+
+        service = TaskService(repository=mock_repository)
+        success, result = await service.list_tasks(exclude_large_fields=True)
+
         assert success
         task = result["tasks"][0]
         assert "sources" not in task
@@ -244,13 +216,15 @@ class TestDocumentServiceOptimization:
     """Test DocumentService with include_content parameter."""
     
     @patch('src.server.utils.get_supabase_client')
-    def test_list_documents_metadata_only(self, mock_supabase):
+    @pytest.mark.asyncio
+    async def test_list_documents_metadata_only(self, mock_supabase):
         """Test default returns metadata only."""
-        mock_client = Mock()
-        mock_supabase.return_value = mock_client
-        
-        mock_response = Mock()
-        mock_response.data = [{
+        from unittest.mock import AsyncMock
+        mock_repository = AsyncMock()
+
+        # Use AsyncMock's return_value for async methods
+        mock_repository.get_project_by_id = AsyncMock(return_value={
+            "id": "project-1",
             "docs": [{
                 "id": "doc-1",
                 "title": "Test Doc",
@@ -261,21 +235,11 @@ class TestDocumentServiceOptimization:
                 "tags": ["test"],
                 "author": "Test Author"
             }]
-        }]
-        
-        # Setup mock chain
-        mock_table = Mock()
-        mock_select = Mock()
-        mock_eq = Mock()
-        
-        mock_eq.execute.return_value = mock_response
-        mock_select.eq.return_value = mock_eq
-        mock_table.select.return_value = mock_select
-        mock_client.table.return_value = mock_table
-        
-        service = DocumentService(mock_client)
-        success, result = service.list_documents("project-1")  # Default include_content=False
-        
+        })
+
+        service = DocumentService(repository=mock_repository)
+        success, result = await service.list_documents("project-1")  # Default include_content=False
+
         assert success
         doc = result["documents"][0]
         assert "content" not in doc
@@ -284,34 +248,26 @@ class TestDocumentServiceOptimization:
         assert doc["title"] == "Test Doc"
     
     @patch('src.server.utils.get_supabase_client')
-    def test_list_documents_with_content(self, mock_supabase):
+    @pytest.mark.asyncio
+    async def test_list_documents_with_content(self, mock_supabase):
         """Test include_content=True returns full documents."""
-        mock_client = Mock()
-        mock_supabase.return_value = mock_client
-        
-        mock_response = Mock()
-        mock_response.data = [{
+        from unittest.mock import AsyncMock
+        mock_repository = AsyncMock()
+
+        # Use AsyncMock's return_value for async methods
+        mock_repository.get_project_by_id = AsyncMock(return_value={
+            "id": "project-1",
             "docs": [{
                 "id": "doc-1",
                 "title": "Test Doc",
                 "content": {"huge": "content"},
                 "document_type": "spec"
             }]
-        }]
-        
-        # Setup mock chain
-        mock_table = Mock()
-        mock_select = Mock()
-        mock_eq = Mock()
-        
-        mock_eq.execute.return_value = mock_response
-        mock_select.eq.return_value = mock_eq
-        mock_table.select.return_value = mock_select
-        mock_client.table.return_value = mock_table
-        
-        service = DocumentService(mock_client)
-        success, result = service.list_documents("project-1", include_content=True)
-        
+        })
+
+        service = DocumentService(repository=mock_repository)
+        success, result = await service.list_documents("project-1", include_content=True)
+
         assert success
         doc = result["documents"][0]
         assert "content" in doc

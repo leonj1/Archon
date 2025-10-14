@@ -34,7 +34,7 @@ class TestDocumentStorageMetrics:
         with patch('src.server.services.crawling.document_storage_operations.safe_logfire_info') as mock_log:
             mock_log.side_effect = lambda msg: logged_messages.append(msg)
             
-            with patch('src.server.services.crawling.document_storage_operations.add_documents_to_supabase'):
+            with patch('src.server.services.storage.document_storage_service.add_documents_to_database'):
                 # Test data with mix of empty and non-empty documents
                 crawl_results = [
                     {"url": "https://example.com/page1", "markdown": "Content 1"},
@@ -83,7 +83,7 @@ class TestDocumentStorageMetrics:
         with patch('src.server.services.crawling.document_storage_operations.safe_logfire_info') as mock_log:
             mock_log.side_effect = lambda msg: logged_messages.append(msg)
             
-            with patch('src.server.services.crawling.document_storage_operations.add_documents_to_supabase'):
+            with patch('src.server.services.storage.document_storage_service.add_documents_to_database'):
                 # All documents are empty
                 crawl_results = [
                     {"url": "https://example.com/page1", "markdown": ""},
@@ -131,7 +131,7 @@ class TestDocumentStorageMetrics:
         with patch('src.server.services.crawling.document_storage_operations.safe_logfire_info') as mock_log:
             mock_log.side_effect = lambda msg: logged_messages.append(msg)
             
-            with patch('src.server.services.crawling.document_storage_operations.add_documents_to_supabase'):
+            with patch('src.server.services.storage.document_storage_service.add_documents_to_database'):
                 crawl_results = [
                     {"url": "https://example.com/page", "markdown": "Long content here..."},
                 ]
@@ -175,7 +175,7 @@ class TestDocumentStorageMetrics:
         doc_storage._create_source_records = AsyncMock()
         
         with patch('src.server.services.crawling.document_storage_operations.safe_logfire_info'):
-            with patch('src.server.services.crawling.document_storage_operations.add_documents_to_supabase'):
+            with patch('src.server.services.storage.document_storage_service.add_documents_to_database'):
                 # Mix of documents with various content states
                 crawl_results = [
                     {"url": "https://example.com/1", "markdown": "Content"},

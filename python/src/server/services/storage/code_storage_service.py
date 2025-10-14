@@ -9,6 +9,7 @@ import json
 import os
 import re
 import time
+import warnings
 from collections import defaultdict, deque
 from collections.abc import Callable
 from difflib import SequenceMatcher
@@ -1113,7 +1114,7 @@ async def generate_code_summaries_batch(
                 fallback_summaries.append(fallback)
             return fallback_summaries
 
-async def add_code_examples_to_supabase(
+async def add_code_examples_to_database(
     repository: DatabaseRepository,
     urls: list[str],
     chunk_numbers: list[int],
@@ -1393,3 +1394,19 @@ async def add_code_examples_to_supabase(
             "code_total_batches": (total_items + batch_size - 1) // batch_size,
             "code_current_batch": (total_items + batch_size - 1) // batch_size,
         })
+
+
+# Deprecated alias for backward compatibility
+async def add_code_examples_to_supabase(*args, **kwargs):
+    """
+    Deprecated: Use add_code_examples_to_database() instead.
+
+    This function is maintained for backward compatibility only and will be
+    removed in a future version.
+    """
+    warnings.warn(
+        "add_code_examples_to_supabase() is deprecated. Use add_code_examples_to_database() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return await add_code_examples_to_database(*args, **kwargs)

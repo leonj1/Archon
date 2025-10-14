@@ -14,7 +14,7 @@ from ...repositories.database_repository import DatabaseRepository
 from ...repositories.repository_factory import get_repository
 from ...services.credential_service import credential_service
 from ..storage.code_storage_service import (
-    add_code_examples_to_supabase,
+    add_code_examples_to_database,
     generate_code_summaries_batch,
 )
 
@@ -1775,8 +1775,8 @@ class CodeExtractionService:
             storage_progress_callback = storage_callback
 
         try:
-            await add_code_examples_to_supabase(
-                client=self.supabase_client,
+            await add_code_examples_to_database(
+                repository=self.repository,
                 urls=storage_data["urls"],
                 chunk_numbers=storage_data["chunk_numbers"],
                 code_examples=storage_data["examples"],

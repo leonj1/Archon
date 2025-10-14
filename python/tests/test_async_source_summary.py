@@ -307,27 +307,36 @@ class TestAsyncSourceSummary:
         """Test that errors in update_source_info trigger fallback correctly."""
         mock_supabase = Mock()
         mock_supabase.table.return_value.upsert.return_value.execute.return_value = Mock()
-        
+
         doc_storage = DocumentStorageOperations(mock_supabase)
-        
+
         # Mock to raise an exception
         def failing_update_source_info(**kwargs):
             raise RuntimeError("Database connection failed")
-        
+
         doc_storage.doc_storage_service.smart_chunk_text = Mock(
             return_value=["chunk1"]
         )
-        
+
         error_messages = []
         fallback_called = False
-        
-        def track_fallback_upsert(data):
+
+        # Mock the repository's upsert_source method to track fallback calls
+        async def track_fallback_upsert(data):
             nonlocal fallback_called
             fallback_called = True
-            return Mock(execute=Mock())
-        
-        mock_supabase.table.return_value.upsert.side_effect = track_fallback_upsert
-        
+            return None
+
+        doc_storage.repository.upsert_source = AsyncMock(side_effect=track_fallback_upsert)
+
+        # Mock the repository's get_source_by_id to return a valid source after fallback
+        async def mock_get_source_by_id(source_id):
+            if fallback_called:
+                return {"source_id": source_id, "title": source_id}
+            return None
+
+        doc_storage.repository.get_source_by_id = AsyncMock(side_effect=mock_get_source_by_id)
+
         with patch('src.server.services.crawling.document_storage_operations.extract_source_summary',
                    return_value="Test summary"):
             with patch('src.server.services.crawling.document_storage_operations.update_source_info',
@@ -335,12 +344,12 @@ class TestAsyncSourceSummary:
                 with patch('src.server.services.crawling.document_storage_operations.safe_logfire_info'):
                     with patch('src.server.services.crawling.document_storage_operations.safe_logfire_error') as mock_error:
                         mock_error.side_effect = lambda msg: error_messages.append(msg)
-                        
+
                         all_metadatas = [{"source_id": "test_fail", "word_count": 100}]
                         all_contents = ["chunk1"]
                         source_word_counts = {"test_fail": 100}
                         request = {"knowledge_type": "technical", "tags": ["test"]}
-                        
+
                         await doc_storage._create_source_records(
                             all_metadatas,
                             all_contents,
@@ -349,11 +358,11 @@ class TestAsyncSourceSummary:
                             "https://example.com",
                             "Example Site"
                         )
-                        
+
                         # Verify error was logged
                         assert any("Failed to create/update source record" in msg for msg in error_messages)
                         assert any("Database connection failed" in msg for msg in error_messages)
-                        
+
                         # Verify fallback was attempted
                         assert fallback_called, "Fallback upsert should be called"
 
@@ -400,7 +409,7 @@ class TestAsyncSourceSummary:
                     )
                     
                     # Verify all kwargs were passed correctly
-                    assert captured_kwargs["client"] == mock_supabase
+                    assert captured_kwargs["repository"] == doc_storage.repository
                     assert captured_kwargs["source_id"] == "test_kwargs"
                     assert captured_kwargs["summary"] == "Generated summary"
                     assert captured_kwargs["word_count"] == 250

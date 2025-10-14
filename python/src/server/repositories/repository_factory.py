@@ -2,10 +2,10 @@
 Repository Factory
 
 Provides centralized management of repository instances with support for
-different database backends (Supabase, Fake for testing, future SQLite, etc.).
+different database backends (SQLite, Supabase, Fake for testing).
 
 Usage:
-    # Get the default configured repository
+    # Get the default configured repository (SQLite)
     from repositories import get_repository
     repo = get_repository()
 
@@ -20,9 +20,9 @@ Usage:
 
 Configuration:
     Set ARCHON_DB_BACKEND environment variable to choose backend:
-    - "supabase" (default): Production Supabase backend
+    - "sqlite" (default): Lightweight file-based SQLite backend
+    - "supabase" (legacy): Production PostgreSQL backend via Supabase
     - "fake": In-memory fake repository for testing
-    - "sqlite": Future SQLite backend (not yet implemented)
 """
 
 import os
@@ -64,7 +64,7 @@ class RepositoryFactory:
 
         Args:
             backend: Database backend to use. If None, uses ARCHON_DB_BACKEND
-                    environment variable or defaults to "supabase"
+                    environment variable or defaults to "sqlite"
 
         Returns:
             DatabaseRepository instance configured for the specified backend
@@ -74,13 +74,13 @@ class RepositoryFactory:
             RuntimeError: If backend initialization fails
 
         Examples:
-            # Use default backend (from env or supabase)
+            # Use default backend (from env or sqlite)
             repo = factory.get_repository()
 
             # Use fake backend for testing
             repo = factory.get_repository(backend="fake")
 
-            # Use specific backend
+            # Use specific backend (legacy Supabase)
             repo = factory.get_repository(backend="supabase")
         """
         # Determine which backend to use
@@ -103,7 +103,7 @@ class RepositoryFactory:
         else:
             raise ValueError(
                 f"Unknown backend: {backend}. "
-                f"Supported backends: supabase, fake, sqlite"
+                f"Supported backends: sqlite (default), supabase, fake"
             )
 
         self._backend = backend
@@ -127,18 +127,18 @@ class RepositoryFactory:
         Get backend type from environment variable.
 
         Returns:
-            Backend type from ARCHON_DB_BACKEND or "supabase" as default
+            Backend type from ARCHON_DB_BACKEND or "sqlite" as default
         """
-        backend = os.getenv("ARCHON_DB_BACKEND", "supabase").lower()
+        backend = os.getenv("ARCHON_DB_BACKEND", "sqlite").lower()
 
         # Validate the backend value
         valid_backends = ("supabase", "fake", "sqlite")
         if backend not in valid_backends:
             logger.warning(
                 f"Invalid ARCHON_DB_BACKEND value: {backend}. "
-                f"Defaulting to 'supabase'. Valid options: {', '.join(valid_backends)}"
+                f"Defaulting to 'sqlite'. Valid options: {', '.join(valid_backends)}"
             )
-            return "supabase"
+            return "sqlite"
 
         return backend  # type: ignore
 
@@ -211,7 +211,7 @@ def get_repository(backend: Optional[BackendType] = None) -> DatabaseRepository:
 
     Args:
         backend: Optional backend type. If None, uses ARCHON_DB_BACKEND
-                environment variable or defaults to "supabase"
+                environment variable or defaults to "sqlite"
 
     Returns:
         DatabaseRepository instance
@@ -221,7 +221,7 @@ def get_repository(backend: Optional[BackendType] = None) -> DatabaseRepository:
         RuntimeError: If backend initialization fails
 
     Examples:
-        # In services - use default backend
+        # In services - use default backend (SQLite)
         from repositories import get_repository
 
         class MyService:
@@ -234,7 +234,7 @@ def get_repository(backend: Optional[BackendType] = None) -> DatabaseRepository:
             service = MyService(repository=repo)
             # ... test code ...
 
-        # Force specific backend
+        # Force specific backend (legacy Supabase)
         repo = get_repository(backend="supabase")
     """
     return _factory.get_repository(backend)

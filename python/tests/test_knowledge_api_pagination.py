@@ -11,73 +11,77 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 
-def test_knowledge_summary_endpoint(client, mock_supabase_client):
+def test_knowledge_summary_endpoint(client):
     """Test the lightweight summary endpoint returns minimal data."""
-    # Mock data for summary endpoint
-    mock_sources = [
-        {
-            "source_id": "test-source-1",
-            "title": "Test Source 1",
-            "summary": "Test summary 1",
-            "metadata": {"knowledge_type": "technical", "tags": ["test"]},
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        },
-        {
-            "source_id": "test-source-2",
-            "title": "Test Source 2",
-            "summary": "Test summary 2",
-            "metadata": {"knowledge_type": "business", "tags": ["docs"]},
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        }
-    ]
-    
-    # Setup mock responses
-    mock_execute = MagicMock()
-    mock_execute.data = mock_sources
-    mock_execute.count = 2
-    
-    # Setup chaining for the queries
-    mock_select = MagicMock()
-    mock_select.execute.return_value = mock_execute
-    mock_select.eq.return_value = mock_select
-    mock_select.or_.return_value = mock_select
-    mock_select.range.return_value = mock_select
-    mock_select.order.return_value = mock_select
-    
-    mock_from = MagicMock()
-    mock_from.select.return_value = mock_select
-    
-    mock_supabase_client.from_.return_value = mock_from
-    
-    # Make request to summary endpoint
-    response = client.get("/api/knowledge-items/summary?page=1&per_page=10")
-    
-    assert response.status_code == 200
-    data = response.json()
-    
-    # Verify response structure
-    assert "items" in data
-    assert "total" in data
-    assert "page" in data
-    assert "per_page" in data
-    
-    # Verify items have minimal fields only
-    if len(data["items"]) > 0:
-        item = data["items"][0]
-        # Should have summary fields
-        assert "source_id" in item
-        assert "title" in item
-        assert "url" in item
-        assert "document_count" in item
-        assert "code_examples_count" in item
-        assert "knowledge_type" in item
-        
-        # Should NOT have full content
-        assert "content" not in item
-        assert "chunks" not in item
-        assert "code_examples" not in item
+    # Use patch.dict to set environment variable to use fake backend
+    import os
+    with patch.dict(os.environ, {"ARCHON_DB_BACKEND": "fake"}):
+        from src.server.repositories.repository_factory import reset_factory, get_repository
+
+        # Reset factory to pick up new environment variable
+        reset_factory()
+
+        # Get fake repository and populate with test data
+        fake_repo = get_repository(backend="fake")
+
+        # Patch get_repository in all the places it's used
+        with patch('src.server.repositories.repository_factory.get_repository', return_value=fake_repo):
+            with patch('src.server.api_routes.knowledge_api.get_repository', return_value=fake_repo):
+                with patch('src.server.services.knowledge.knowledge_summary_service.get_repository', return_value=fake_repo):
+                    # Add test data to the fake repository
+                    import asyncio
+
+                    async def setup_test_data():
+                        # Create test sources using upsert_source
+                        await fake_repo.upsert_source({
+                            "source_id": "test-source-1",
+                            "title": "Test Source 1",
+                            "summary": "Test summary 1",
+                            "metadata": {"knowledge_type": "technical", "tags": ["test"]},
+                            "source_url": "https://example.com/1",
+                            "created_at": "2024-01-01T00:00:00",
+                            "updated_at": "2024-01-01T00:00:00"
+                        })
+                        await fake_repo.upsert_source({
+                            "source_id": "test-source-2",
+                            "title": "Test Source 2",
+                            "summary": "Test summary 2",
+                            "metadata": {"knowledge_type": "business", "tags": ["docs"]},
+                            "source_url": "https://example.com/2",
+                            "created_at": "2024-01-01T00:00:00",
+                            "updated_at": "2024-01-01T00:00:00"
+                        })
+
+                    # Run async setup
+                    asyncio.run(setup_test_data())
+
+                    # Make request to summary endpoint
+                    response = client.get("/api/knowledge-items/summary?page=1&per_page=10")
+
+                    assert response.status_code == 200
+                    data = response.json()
+
+                    # Verify response structure
+                    assert "items" in data
+                    assert "total" in data
+                    assert "page" in data
+                    assert "per_page" in data
+
+                    # Verify items have minimal fields only
+                    if len(data["items"]) > 0:
+                        item = data["items"][0]
+                        # Should have summary fields
+                        assert "source_id" in item
+                        assert "title" in item
+                        assert "url" in item
+                        assert "document_count" in item
+                        assert "code_examples_count" in item
+                        assert "knowledge_type" in item
+
+                        # Should NOT have full content
+                        assert "content" not in item
+                        assert "chunks" not in item
+                        assert "code_examples" not in item
 
 
 @pytest.mark.skip(reason="Mock contamination issue - works in isolation")
@@ -321,78 +325,90 @@ def test_pagination_limit_validation(client, mock_supabase_client):
     assert data["offset"] == 0
 
 
-def test_summary_search_filter(client, mock_supabase_client):
+def test_summary_search_filter(client):
     """Test summary endpoint with search filtering."""
-    mock_sources = [
-        {
-            "source_id": "test-source-1",
-            "title": "Python Documentation",
-            "summary": "Python guide",
-            "metadata": {"knowledge_type": "technical"},
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        }
-    ]
-    
-    mock_execute = MagicMock()
-    mock_execute.data = mock_sources
-    mock_execute.count = 1
-    
-    mock_select = MagicMock()
-    mock_select.execute.return_value = mock_execute
-    mock_select.eq.return_value = mock_select
-    mock_select.or_.return_value = mock_select
-    mock_select.range.return_value = mock_select
-    mock_select.order.return_value = mock_select
-    
-    mock_from = MagicMock()
-    mock_from.select.return_value = mock_select
-    
-    mock_supabase_client.from_.return_value = mock_from
-    
-    # Test with search term
-    response = client.get("/api/knowledge-items/summary?search=python")
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "items" in data
+    # Use patch.dict to set environment variable to use fake backend
+    import os
+    with patch.dict(os.environ, {"ARCHON_DB_BACKEND": "fake"}):
+        from src.server.repositories.repository_factory import reset_factory, get_repository
+
+        # Reset factory to pick up new environment variable
+        reset_factory()
+
+        # Get fake repository and populate with test data
+        fake_repo = get_repository(backend="fake")
+
+        # Patch get_repository in all the places it's used
+        with patch('src.server.repositories.repository_factory.get_repository', return_value=fake_repo):
+            with patch('src.server.api_routes.knowledge_api.get_repository', return_value=fake_repo):
+                with patch('src.server.services.knowledge.knowledge_summary_service.get_repository', return_value=fake_repo):
+                    # Add test data to the fake repository
+                    import asyncio
+
+                    async def setup_test_data():
+                        # Create test sources using upsert_source
+                        await fake_repo.upsert_source({
+                            "source_id": "test-source-1",
+                            "title": "Python Documentation",
+                            "summary": "Python guide",
+                            "metadata": {"knowledge_type": "technical"},
+                            "source_url": "https://example.com/python",
+                            "created_at": "2024-01-01T00:00:00",
+                            "updated_at": "2024-01-01T00:00:00"
+                        })
+
+                    # Run async setup
+                    asyncio.run(setup_test_data())
+
+                    # Test with search term
+                    response = client.get("/api/knowledge-items/summary?search=python")
+
+                    assert response.status_code == 200
+                    data = response.json()
+                    assert "items" in data
 
 
-def test_summary_knowledge_type_filter(client, mock_supabase_client):
+def test_summary_knowledge_type_filter(client):
     """Test summary endpoint with knowledge type filtering."""
-    mock_sources = [
-        {
-            "source_id": "test-source-1",
-            "title": "Technical Doc",
-            "summary": "Tech guide",
-            "metadata": {"knowledge_type": "technical"},
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        }
-    ]
-    
-    mock_execute = MagicMock()
-    mock_execute.data = mock_sources
-    mock_execute.count = 1
-    
-    mock_select = MagicMock()
-    mock_select.execute.return_value = mock_execute
-    mock_select.eq.return_value = mock_select
-    mock_select.or_.return_value = mock_select
-    mock_select.range.return_value = mock_select
-    mock_select.order.return_value = mock_select
-    
-    mock_from = MagicMock()
-    mock_from.select.return_value = mock_select
-    
-    mock_supabase_client.from_.return_value = mock_from
-    
-    # Test with knowledge type filter
-    response = client.get("/api/knowledge-items/summary?knowledge_type=technical")
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "items" in data
+    # Use patch.dict to set environment variable to use fake backend
+    import os
+    with patch.dict(os.environ, {"ARCHON_DB_BACKEND": "fake"}):
+        from src.server.repositories.repository_factory import reset_factory, get_repository
+
+        # Reset factory to pick up new environment variable
+        reset_factory()
+
+        # Get fake repository and populate with test data
+        fake_repo = get_repository(backend="fake")
+
+        # Patch get_repository in all the places it's used
+        with patch('src.server.repositories.repository_factory.get_repository', return_value=fake_repo):
+            with patch('src.server.api_routes.knowledge_api.get_repository', return_value=fake_repo):
+                with patch('src.server.services.knowledge.knowledge_summary_service.get_repository', return_value=fake_repo):
+                    # Add test data to the fake repository
+                    import asyncio
+
+                    async def setup_test_data():
+                        # Create test sources using upsert_source
+                        await fake_repo.upsert_source({
+                            "source_id": "test-source-1",
+                            "title": "Technical Doc",
+                            "summary": "Tech guide",
+                            "metadata": {"knowledge_type": "technical"},
+                            "source_url": "https://example.com/technical",
+                            "created_at": "2024-01-01T00:00:00",
+                            "updated_at": "2024-01-01T00:00:00"
+                        })
+
+                    # Run async setup
+                    asyncio.run(setup_test_data())
+
+                    # Test with knowledge type filter
+                    response = client.get("/api/knowledge-items/summary?knowledge_type=technical")
+
+                    assert response.status_code == 200
+                    data = response.json()
+                    assert "items" in data
 
 
 @pytest.mark.skip(reason="Mock contamination issue - works in isolation")

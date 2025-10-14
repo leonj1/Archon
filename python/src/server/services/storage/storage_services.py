@@ -9,7 +9,7 @@ from typing import Any
 
 from ...config.logfire_config import get_logger, safe_span
 from .base_storage_service import BaseStorageService
-from .document_storage_service import add_documents_to_supabase
+from .document_storage_service import add_documents_to_database
 
 logger = get_logger(__name__)
 
@@ -133,8 +133,7 @@ class DocumentStorageService(BaseStorageService):
                 await report_progress("Storing document chunks...", 70)
 
                 # Store documents
-                await add_documents_to_supabase(
-                    client=self.supabase_client,
+                await add_documents_to_database(
                     urls=urls,
                     chunk_numbers=chunk_numbers,
                     contents=contents,
@@ -145,6 +144,7 @@ class DocumentStorageService(BaseStorageService):
                     enable_parallel_batches=True,
                     provider=None,  # Use configured provider
                     cancellation_check=cancellation_check,
+                    repository=self.repository,
                 )
 
                 # Extract code examples if requested
@@ -157,8 +157,8 @@ class DocumentStorageService(BaseStorageService):
                         
                         # Import code extraction service
                         from ..crawling.code_extraction_service import CodeExtractionService
-                        
-                        code_service = CodeExtractionService(self.supabase_client)
+
+                        code_service = CodeExtractionService(self.repository)
                         
                         # Create crawl_results format expected by code extraction service
                         # markdown: cleaned plaintext (HTML->markdown for HTML files, raw content otherwise)
@@ -298,7 +298,7 @@ class DocumentStorageService(BaseStorageService):
     ) -> tuple[bool, dict[str, Any]]:
         """
         Store code examples. This is kept for backward compatibility.
-        The actual implementation should use add_code_examples_to_supabase directly.
+        The actual implementation should use add_code_examples_to_database directly.
 
         Args:
             code_examples: List of code examples
@@ -313,7 +313,7 @@ class DocumentStorageService(BaseStorageService):
             # This method exists for backward compatibility
             # The actual storage should be done through the proper service functions
             logger.warning(
-                "store_code_examples is deprecated. Use add_code_examples_to_supabase directly."
+                "store_code_examples is deprecated. Use add_code_examples_to_database directly."
             )
 
             return True, {"code_examples_stored": len(code_examples)}

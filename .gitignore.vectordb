@@ -1,0 +1,8 @@
+# Vector Database Local Storage
+# Add this to your main .gitignore file
+
+# Qdrant data directory (created by docker-compose.vectordb.yml)
+qdrant_storage/
+
+# Qdrant logs (if any)
+*.qdrant.log

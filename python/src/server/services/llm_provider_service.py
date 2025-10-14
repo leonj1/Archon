@@ -13,6 +13,7 @@ from typing import Any
 import openai
 
 from ..config.logfire_config import get_logger
+from .credential_service import credential_service
 
 logger = get_logger(__name__)
 
@@ -320,9 +321,6 @@ async def get_llm_client(
     Yields:
         openai.AsyncOpenAI: An OpenAI-compatible client configured for the selected provider
     """
-    # Import locally to avoid circular imports
-    from .credential_service import credential_service
-    
     client = None
     provider_name: str | None = None
     api_key = None
@@ -388,11 +386,21 @@ async def get_llm_client(
         logger.info(f"Creating LLM client for provider: {safe_provider_name}")
 
         if provider_name == "openai":
+            # Fallback to environment variable if not in database
+            if not api_key:
+                import os
+                api_key = os.getenv("OPENAI_API_KEY")
+                if api_key:
+                    logger.info("Using OpenAI API key from environment variable")
+
             if api_key:
-                client = openai.AsyncOpenAI(api_key=api_key)
+                client = openai.AsyncOpenAI(
+                    api_key=api_key,
+                    timeout=60.0,  # 60 second timeout for API calls
+                )
                 logger.info("OpenAI client created successfully")
             else:
-                logger.warning("OpenAI API key not found, attempting Ollama fallback")
+                logger.warning("OpenAI API key not found in database or environment, attempting Ollama fallback")
                 try:
                     ollama_base_url = await _get_optimal_ollama_instance(
                         instance_type="embedding" if use_embedding_provider else "chat",
@@ -406,6 +414,7 @@ async def get_llm_client(
                     client = openai.AsyncOpenAI(
                         api_key="ollama",
                         base_url=ollama_base_url,
+                        timeout=60.0,
                     )
                     logger.info(
                         f"Ollama fallback client created successfully with base URL: {ollama_base_url}"
@@ -430,6 +439,7 @@ async def get_llm_client(
             client = openai.AsyncOpenAI(
                 api_key="ollama",  # Required but unused by Ollama
                 base_url=ollama_base_url,
+                timeout=60.0,
             )
             logger.info(f"Ollama client created successfully with base URL: {ollama_base_url}")
 
@@ -440,6 +450,7 @@ async def get_llm_client(
             client = openai.AsyncOpenAI(
                 api_key=api_key,
                 base_url=base_url or "https://generativelanguage.googleapis.com/v1beta/openai/",
+                timeout=60.0,
             )
             logger.info("Google Gemini client created successfully")
 
@@ -450,6 +461,7 @@ async def get_llm_client(
             client = openai.AsyncOpenAI(
                 api_key=api_key,
                 base_url=base_url or "https://openrouter.ai/api/v1",
+                timeout=60.0,
             )
             logger.info("OpenRouter client created successfully")
 
@@ -460,6 +472,7 @@ async def get_llm_client(
             client = openai.AsyncOpenAI(
                 api_key=api_key,
                 base_url=base_url or "https://api.anthropic.com/v1",
+                timeout=60.0,
             )
             logger.info("Anthropic client created successfully")
 
@@ -484,6 +497,7 @@ async def get_llm_client(
             client = openai.AsyncOpenAI(
                 api_key=api_key,
                 base_url=base_url or "https://api.x.ai/v1",
+                timeout=60.0,
             )
             logger.info("Grok client created successfully")
 
@@ -552,9 +566,6 @@ async def _get_optimal_ollama_instance(instance_type: str | None = None,
     Returns:
         Best available Ollama instance URL
     """
-    # Import locally to avoid circular imports
-    from .credential_service import credential_service
-    
     # If override URL provided, use it directly
     if base_url_override:
         return base_url_override if base_url_override.endswith('/v1') else f"{base_url_override}/v1"
@@ -598,9 +609,6 @@ async def get_embedding_model(provider: str | None = None) -> str:
     Returns:
         str: The embedding model to use
     """
-    # Import locally to avoid circular imports
-    from .credential_service import credential_service
-    
     try:
         # Get provider configuration
         if provider:
@@ -1124,9 +1132,6 @@ async def get_embedding_model_with_routing(provider: str | None = None, instance
     Returns:
         Tuple of (model_name, instance_url) for embedding operations
     """
-    # Import locally to avoid circular imports
-    from .credential_service import credential_service
-    
     try:
         # Get base embedding model
         model_name = await get_embedding_model(provider)

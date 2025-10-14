@@ -5,7 +5,7 @@ SHELL := /bin/bash
 # Docker compose command - prefer newer 'docker compose' plugin over standalone 'docker-compose'
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
-.PHONY: help dev dev-docker stop restart restart-rebuild test test-fe test-be test-be-unit test-be-coverage test-be-build test-be-interactive lint lint-fe lint-be clean install check
+.PHONY: help dev dev-docker stop restart restart-rebuild test test-fe test-be test-be-unit test-be-coverage test-be-build test-be-interactive test-integration-sqlite-qdrant lint lint-fe lint-be clean install check
 
 help:
 	@echo "Archon Development Commands"
@@ -26,6 +26,7 @@ help:
 	@echo "  make test-be-coverage  - Run backend tests with coverage report"
 	@echo "  make test-be-build     - Build/rebuild test Docker image"
 	@echo "  make test-be-interactive - Open shell in test container"
+	@echo "  make test-integration-sqlite-qdrant - Run SQLite + Qdrant integration test"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make lint              - Run all linters"
@@ -93,7 +94,7 @@ test: test-fe test-be
 # Run frontend tests
 test-fe:
 	@echo "Running frontend tests..."
-	@cd archon-ui-main && npm test
+	@cd archon-ui-main && npm run test:run
 
 # Run backend tests in Docker container
 test-be:
@@ -126,6 +127,27 @@ test-be-build:
 test-be-interactive:
 	@echo "Starting interactive shell in test container..."
 	@cd python && $(COMPOSE) -f docker-compose.test.yml run --rm test bash
+
+# Run full SQLite + Qdrant + Crawling integration test
+test-integration-sqlite-qdrant:
+	@echo "Running full SQLite + Qdrant + Crawling integration test..."
+	@echo "Checking for OPENAI_API_KEY..."
+	@test -n "$$OPENAI_API_KEY" || { echo "Error: OPENAI_API_KEY environment variable not set"; exit 1; }
+	@echo "✓ OPENAI_API_KEY found"
+	@echo ""
+	@echo "⏱️  Note: This test will crawl https://github.com/The-Pocket/PocketFlow and may take 2-5 minutes"
+	@echo ""
+	@cd python && uv run --group all pytest tests/integration/test_sqlite_qdrant_crawl_mcp.py -v -s --timeout=300
+	@echo "✓ Integration test complete"
+
+# Run simplified SQLite + Qdrant test (no actual crawling)
+test-integration-sqlite-qdrant-simple:
+	@echo "Running simplified SQLite + Qdrant integration test..."
+	@echo "Checking for OPENAI_API_KEY..."
+	@test -n "$$OPENAI_API_KEY" || { echo "Error: OPENAI_API_KEY environment variable not set"; exit 1; }
+	@echo "✓ OPENAI_API_KEY found"
+	@cd python && uv run --group all pytest tests/integration/test_sqlite_qdrant_crawl_mcp_simple.py -v -s
+	@echo "✓ Integration test complete"
 
 # Run all linters
 lint: lint-fe lint-be

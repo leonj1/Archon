@@ -220,7 +220,17 @@ async def get_knowledge_sources():
     try:
         # Use repository to get actual sources
         repository = get_repository()
+
+        # Ensure repository is initialized (for SQLite)
+        if hasattr(repository, 'initialize'):
+            await repository.initialize()
+
         sources = await repository.list_sources()
+
+        # Ensure we always return an array
+        if sources is None:
+            return []
+
         return sources
     except Exception as e:
         safe_logfire_error(f"Failed to get knowledge sources | error={str(e)}")

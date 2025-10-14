@@ -81,7 +81,7 @@ class SQLiteDatabaseRepository(DatabaseRepository):
                 import os
                 migration_path = os.path.join(
                     os.path.dirname(os.path.abspath(__file__)),
-                    "../../../migration/sqlite/001_initial_schema.sql"
+                    "../../../../migration/sqlite/001_initial_schema.sql"
                 )
                 
                 if os.path.exists(migration_path):
@@ -180,19 +180,75 @@ class SQLiteDatabaseRepository(DatabaseRepository):
     
     async def update_page_chunk_count(self, page_id: str, chunk_count: int) -> dict[str, Any] | None:
         """Update the chunk_count field for a page after chunking is complete."""
-        # SQLite schema doesn't have chunk_count field, so just return the page as-is
         async with self._get_connection() as conn:
-            # Return the existing record without updating
+            # Update the chunk_count field
+            await conn.execute("""
+                UPDATE archon_page_metadata
+                SET chunk_count = ?, updated_at = ?
+                WHERE id = ?
+            """, (chunk_count, datetime.now().isoformat(), page_id))
+            await conn.commit()
+
+            # Return the updated record
             cursor = await conn.execute("""
                 SELECT * FROM archon_page_metadata WHERE id = ?
             """, (page_id,))
             row = await cursor.fetchone()
             if row:
-                result = dict(row)
-                # Add chunk_count to the returned data even though it's not stored
-                result['chunk_count'] = chunk_count
-                return result
+                return dict(row)
             return None
+
+    async def list_page_metadata_by_source(
+        self,
+        source_id: str,
+        section_title: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        List page metadata for a given source with optional section filtering.
+        Returns summary fields only (no full_content).
+        """
+        async with self._get_connection() as conn:
+            query = """
+                SELECT id, url, section_title, section_order,
+                       word_count, char_count, chunk_count
+                FROM archon_page_metadata
+                WHERE source_id = ?
+            """
+            params = [source_id]
+
+            if section_title:
+                query += " AND section_title = ?"
+                params.append(section_title)
+
+            query += " ORDER BY section_order, created_at"
+
+            cursor = await conn.execute(query, params)
+            rows = await cursor.fetchall()
+            return self._rows_to_list(rows)
+
+    async def get_full_page_metadata_by_url(self, url: str) -> dict[str, Any] | None:
+        """
+        Retrieve complete page metadata by URL including full_content.
+        """
+        async with self._get_connection() as conn:
+            cursor = await conn.execute("""
+                SELECT * FROM archon_page_metadata
+                WHERE url = ?
+            """, (url,))
+            row = await cursor.fetchone()
+            return self._row_to_dict(row)
+
+    async def get_full_page_metadata_by_id(self, page_id: str) -> dict[str, Any] | None:
+        """
+        Retrieve complete page metadata by ID including full_content.
+        """
+        async with self._get_connection() as conn:
+            cursor = await conn.execute("""
+                SELECT * FROM archon_page_metadata
+                WHERE id = ?
+            """, (page_id,))
+            row = await cursor.fetchone()
+            return self._row_to_dict(row)
     
     # ============================================
     # 2. Document Search Operations (2 methods)
@@ -432,59 +488,73 @@ class SQLiteDatabaseRepository(DatabaseRepository):
     async def insert_code_example(self, code_example_data: dict[str, Any]) -> dict[str, Any]:
         """Insert a new code example."""
         async with self._get_connection() as conn:
-            example_id = code_example_data.get('id', str(uuid4()))
-            metadata = json.dumps(code_example_data.get('metadata', {}))
-            
-            await conn.execute("""
+            # Prepare metadata - include language if provided
+            metadata_dict = code_example_data.get('metadata', {})
+            if 'language' in code_example_data and code_example_data['language']:
+                metadata_dict['language'] = code_example_data['language']
+            metadata = json.dumps(metadata_dict)
+
+            # Let SQLite auto-generate the id (INTEGER AUTOINCREMENT)
+            cursor = await conn.execute("""
                 INSERT INTO archon_code_examples (
-                    id, url, code, language, summary, relevance,
-                    metadata, source_id, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    url, chunk_number, content, summary,
+                    metadata, source_id, llm_chat_model, embedding_model,
+                    embedding_dimension, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                example_id,
                 code_example_data.get('url'),
-                code_example_data.get('code'),
-                code_example_data.get('language'),
-                code_example_data.get('summary'),
-                code_example_data.get('relevance', 0.0),
+                code_example_data.get('chunk_number', 0),
+                code_example_data.get('content') or code_example_data.get('code', ''),
+                code_example_data.get('summary', ''),
                 metadata,
                 code_example_data.get('source_id'),
+                code_example_data.get('llm_chat_model'),
+                code_example_data.get('embedding_model'),
+                code_example_data.get('embedding_dimension'),
                 datetime.now().isoformat()
             ))
-            
+
             await conn.commit()
-            code_example_data['id'] = example_id
+            # Get the auto-generated id
+            code_example_data['id'] = cursor.lastrowid
             return code_example_data
     
     async def insert_code_examples_batch(self, code_examples: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Insert multiple code examples in a batch."""
         if not code_examples:
             return []
-        
+
         async with self._get_connection() as conn:
             for example in code_examples:
-                example_id = example.get('id', str(uuid4()))
-                metadata = json.dumps(example.get('metadata', {}))
-                
-                await conn.execute("""
+                # Prepare metadata - include language if provided
+                metadata_dict = example.get('metadata', {})
+                if 'language' in example and example['language']:
+                    metadata_dict['language'] = example['language']
+                metadata = json.dumps(metadata_dict)
+
+                # Let SQLite auto-generate the id (INTEGER AUTOINCREMENT)
+                cursor = await conn.execute("""
                     INSERT INTO archon_code_examples (
-                        id, url, code, language, summary, relevance,
-                        metadata, source_id, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        url, chunk_number, content, summary,
+                        metadata, source_id, llm_chat_model, embedding_model,
+                        embedding_dimension, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    example_id,
                     example.get('url'),
-                    example.get('code'),
-                    example.get('language'),
-                    example.get('summary'),
-                    example.get('relevance', 0.0),
+                    example.get('chunk_number', 0),
+                    example.get('content') or example.get('code', ''),
+                    example.get('summary', ''),
                     metadata,
                     example.get('source_id'),
+                    example.get('llm_chat_model'),
+                    example.get('embedding_model'),
+                    example.get('embedding_dimension'),
                     datetime.now().isoformat()
                 ))
-                
-                example['id'] = example_id
-            
+
+                # Get the auto-generated id
+                example['id'] = cursor.lastrowid
+
             await conn.commit()
             return code_examples
     

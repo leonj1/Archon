@@ -117,14 +117,23 @@ def mock_raw_events_data():
 
 def test_get_hourly_analytics_default_hours(client, mock_supabase, mock_hourly_analytics_data):
     """Test hourly analytics with default 24 hours."""
-    mock_result = MagicMock()
-    mock_result.data = mock_hourly_analytics_data
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return hourly analytics data
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in item.items()}
+            for item in mock_hourly_analytics_data
+        ])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/hourly")
 
         assert response.status_code == 200
@@ -141,14 +150,23 @@ def test_get_hourly_analytics_default_hours(client, mock_supabase, mock_hourly_a
 
 def test_get_hourly_analytics_custom_hours(client, mock_supabase, mock_hourly_analytics_data):
     """Test hourly analytics with custom hours parameter."""
-    mock_result = MagicMock()
-    mock_result.data = mock_hourly_analytics_data
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return hourly analytics data
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in item.items()}
+            for item in mock_hourly_analytics_data
+        ])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         # Test 48 hours
         response = client.get("/api/mcp/analytics/hourly?hours=48")
         assert response.status_code == 200
@@ -176,14 +194,20 @@ def test_get_hourly_analytics_hours_validation_too_high(client):
 
 def test_get_hourly_analytics_empty_results(client, mock_supabase):
     """Test hourly analytics with no data."""
-    mock_result = MagicMock()
-    mock_result.data = []
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return empty list
+        mock_cursor.fetchall = AsyncMock(return_value=[])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/hourly")
 
         assert response.status_code == 200
@@ -195,14 +219,23 @@ def test_get_hourly_analytics_empty_results(client, mock_supabase):
 
 def test_get_hourly_analytics_etag_generation(client, mock_supabase, mock_hourly_analytics_data):
     """Test that ETag header is generated for hourly analytics."""
-    mock_result = MagicMock()
-    mock_result.data = mock_hourly_analytics_data
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return hourly analytics data
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in item.items()}
+            for item in mock_hourly_analytics_data
+        ])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/hourly")
 
         assert response.status_code == 200
@@ -213,14 +246,23 @@ def test_get_hourly_analytics_etag_generation(client, mock_supabase, mock_hourly
 
 def test_get_hourly_analytics_304_not_modified(client, mock_supabase, mock_hourly_analytics_data):
     """Test 304 Not Modified response when ETag matches."""
-    mock_result = MagicMock()
-    mock_result.data = mock_hourly_analytics_data
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return hourly analytics data
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in item.items()}
+            for item in mock_hourly_analytics_data
+        ])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         # First request to get ETag
         response1 = client.get("/api/mcp/analytics/hourly")
         assert response1.status_code == 200
@@ -234,9 +276,10 @@ def test_get_hourly_analytics_304_not_modified(client, mock_supabase, mock_hourl
 
 def test_get_hourly_analytics_database_error(client, mock_supabase):
     """Test error handling when database query fails."""
-    mock_supabase.table.side_effect = Exception("Database connection failed")
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        # Make the connection raise an exception
+        mock_connect.side_effect = Exception("Database connection failed")
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
         response = client.get("/api/mcp/analytics/hourly")
 
         assert response.status_code == 500
@@ -252,14 +295,23 @@ def test_get_hourly_analytics_database_error(client, mock_supabase):
 
 def test_get_daily_analytics_default_days(client, mock_supabase, mock_daily_analytics_data):
     """Test daily analytics with default 7 days."""
-    mock_result = MagicMock()
-    mock_result.data = mock_daily_analytics_data
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return daily analytics data
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in item.items()}
+            for item in mock_daily_analytics_data
+        ])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/daily")
 
         assert response.status_code == 200
@@ -276,14 +328,23 @@ def test_get_daily_analytics_default_days(client, mock_supabase, mock_daily_anal
 
 def test_get_daily_analytics_custom_days(client, mock_supabase, mock_daily_analytics_data):
     """Test daily analytics with custom days parameter."""
-    mock_result = MagicMock()
-    mock_result.data = mock_daily_analytics_data
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return daily analytics data
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in item.items()}
+            for item in mock_daily_analytics_data
+        ])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         # Test 30 days
         response = client.get("/api/mcp/analytics/daily?days=30")
         assert response.status_code == 200
@@ -311,14 +372,20 @@ def test_get_daily_analytics_days_validation_too_high(client):
 
 def test_get_daily_analytics_empty_results(client, mock_supabase):
     """Test daily analytics with no data."""
-    mock_result = MagicMock()
-    mock_result.data = []
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return empty list
+        mock_cursor.fetchall = AsyncMock(return_value=[])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/daily")
 
         assert response.status_code == 200
@@ -330,14 +397,23 @@ def test_get_daily_analytics_empty_results(client, mock_supabase):
 
 def test_get_daily_analytics_etag_generation(client, mock_supabase, mock_daily_analytics_data):
     """Test that ETag header is generated for daily analytics."""
-    mock_result = MagicMock()
-    mock_result.data = mock_daily_analytics_data
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return daily analytics data
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in item.items()}
+            for item in mock_daily_analytics_data
+        ])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/daily")
 
         assert response.status_code == 200
@@ -348,14 +424,23 @@ def test_get_daily_analytics_etag_generation(client, mock_supabase, mock_daily_a
 
 def test_get_daily_analytics_304_not_modified(client, mock_supabase, mock_daily_analytics_data):
     """Test 304 Not Modified response when ETag matches."""
-    mock_result = MagicMock()
-    mock_result.data = mock_daily_analytics_data
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return daily analytics data
+        mock_cursor.fetchall = AsyncMock(return_value=[
+            {k: v for k, v in item.items()}
+            for item in mock_daily_analytics_data
+        ])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         # First request to get ETag
         response1 = client.get("/api/mcp/analytics/daily")
         assert response1.status_code == 200
@@ -369,9 +454,10 @@ def test_get_daily_analytics_304_not_modified(client, mock_supabase, mock_daily_
 
 def test_get_daily_analytics_database_error(client, mock_supabase):
     """Test error handling when database query fails."""
-    mock_supabase.table.side_effect = Exception("Database connection failed")
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        # Make the connection raise an exception
+        mock_connect.side_effect = Exception("Database connection failed")
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
         response = client.get("/api/mcp/analytics/daily")
 
         assert response.status_code == 500
@@ -387,14 +473,31 @@ def test_get_daily_analytics_database_error(client, mock_supabase):
 
 def test_get_24h_summary_calculation(client, mock_supabase, mock_raw_events_data):
     """Test 24h summary with proper calculation of statistics."""
-    mock_result = MagicMock()
-    mock_result.data = mock_raw_events_data
+    # Convert mock data to SQLite format (success=1/0 instead of status="success"/"error")
+    sqlite_events = [
+        {
+            "id": event["id"],
+            "tool_name": event["tool_name"],
+            "success": 1 if event["status"] == "success" else 0,
+            "timestamp": event["created_at"],
+        }
+        for event in mock_raw_events_data
+    ]
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock cursor.fetchall() to return SQLite-formatted events
+        mock_cursor.fetchall = AsyncMock(return_value=sqlite_events)
+
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/summary")
 
         assert response.status_code == 200
@@ -413,14 +516,31 @@ def test_get_24h_summary_calculation(client, mock_supabase, mock_raw_events_data
 
 def test_get_24h_summary_tool_usage_sorting(client, mock_supabase, mock_raw_events_data):
     """Test that tool usage is sorted by count descending."""
-    mock_result = MagicMock()
-    mock_result.data = mock_raw_events_data
+    # Convert mock data to SQLite format (success=1/0 instead of status="success"/"error")
+    sqlite_events = [
+        {
+            "id": event["id"],
+            "tool_name": event["tool_name"],
+            "success": 1 if event["status"] == "success" else 0,
+            "timestamp": event["created_at"],
+        }
+        for event in mock_raw_events_data
+    ]
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock cursor.fetchall() to return SQLite-formatted events
+        mock_cursor.fetchall = AsyncMock(return_value=sqlite_events)
+
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/summary")
 
         assert response.status_code == 200
@@ -445,20 +565,26 @@ def test_get_24h_summary_tool_usage_sorting(client, mock_supabase, mock_raw_even
 
 def test_get_24h_summary_success_rate_calculation(client, mock_supabase):
     """Test success rate calculation with various scenarios."""
-    # All success
+    # All success - Convert to SQLite format (success=1 instead of status="success")
     all_success_data = [
-        {"id": "e1", "tool_name": "test_tool", "status": "success", "created_at": datetime.now(UTC).isoformat()},
-        {"id": "e2", "tool_name": "test_tool", "status": "success", "created_at": datetime.now(UTC).isoformat()},
+        {"id": "e1", "tool_name": "test_tool", "success": 1, "timestamp": datetime.now(UTC).isoformat()},
+        {"id": "e2", "tool_name": "test_tool", "success": 1, "timestamp": datetime.now(UTC).isoformat()},
     ]
 
-    mock_result = MagicMock()
-    mock_result.data = all_success_data
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return SQLite-formatted events
+        mock_cursor.fetchall = AsyncMock(return_value=all_success_data)
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/summary")
         assert response.status_code == 200
         assert response.json()["summary"]["success_rate"] == 100.0
@@ -466,14 +592,20 @@ def test_get_24h_summary_success_rate_calculation(client, mock_supabase):
 
 def test_get_24h_summary_empty_events(client, mock_supabase):
     """Test 24h summary with no events."""
-    mock_result = MagicMock()
-    mock_result.data = []
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        # Mock cursor.fetchall() to return empty list
+        mock_cursor.fetchall = AsyncMock(return_value=[])
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/summary")
 
         assert response.status_code == 200
@@ -490,14 +622,31 @@ def test_get_24h_summary_empty_events(client, mock_supabase):
 
 def test_get_24h_summary_etag_generation(client, mock_supabase, mock_raw_events_data):
     """Test that ETag header is generated for summary."""
-    mock_result = MagicMock()
-    mock_result.data = mock_raw_events_data
+    # Convert mock data to SQLite format (success=1/0 instead of status="success"/"error")
+    sqlite_events = [
+        {
+            "id": event["id"],
+            "tool_name": event["tool_name"],
+            "success": 1 if event["status"] == "success" else 0,
+            "timestamp": event["created_at"],
+        }
+        for event in mock_raw_events_data
+    ]
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+        # Mock cursor.fetchall() to return SQLite-formatted events
+        mock_cursor.fetchall = AsyncMock(return_value=sqlite_events)
+
+        # Mock conn.execute() to return cursor
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+
+        # Mock context manager
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
         response = client.get("/api/mcp/analytics/summary")
 
         assert response.status_code == 200
@@ -507,20 +656,38 @@ def test_get_24h_summary_etag_generation(client, mock_supabase, mock_raw_events_
 
 def test_get_24h_summary_304_not_modified(client, mock_supabase, mock_raw_events_data):
     """Test 304 Not Modified response when ETag matches."""
-    mock_result = MagicMock()
-    mock_result.data = mock_raw_events_data
-
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+    # Convert mock data to SQLite format (success=1/0 instead of status="success"/"error")
+    sqlite_events = [
+        {
+            "id": event["id"],
+            "tool_name": event["tool_name"],
+            "success": 1 if event["status"] == "success" else 0,
+            "timestamp": event["created_at"],
+        }
+        for event in mock_raw_events_data
+    ]
 
     # Mock datetime to ensure consistent start_time calculation
     fixed_time = datetime.now(UTC)
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
         with patch("src.server.api_routes.mcp_analytics_api.datetime") as mock_datetime:
+            # Mock datetime.now() to return fixed time for both requests
             mock_datetime.now.return_value = fixed_time
-            mock_datetime.utcnow.return_value = fixed_time.replace(tzinfo=None)
+            mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+            mock_conn = AsyncMock()
+            mock_cursor = AsyncMock()
+
+            # Mock cursor.fetchall() to return SQLite-formatted events
+            mock_cursor.fetchall = AsyncMock(return_value=sqlite_events)
+
+            # Mock conn.execute() to return cursor
+            mock_conn.execute = AsyncMock(return_value=mock_cursor)
+            mock_conn.row_factory = None
+
+            # Mock context manager
+            mock_connect.return_value.__aenter__.return_value = mock_conn
 
             # First request to get ETag
             response1 = client.get("/api/mcp/analytics/summary")
@@ -535,9 +702,10 @@ def test_get_24h_summary_304_not_modified(client, mock_supabase, mock_raw_events
 
 def test_get_24h_summary_database_error(client, mock_supabase):
     """Test error handling when database query fails."""
-    mock_supabase.table.side_effect = Exception("Database connection failed")
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        # Make the connection raise an exception
+        mock_connect.side_effect = Exception("Database connection failed")
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
         response = client.get("/api/mcp/analytics/summary")
 
         assert response.status_code == 500
@@ -552,81 +720,60 @@ def test_get_24h_summary_database_error(client, mock_supabase):
 
 
 def test_refresh_materialized_views_success(client, mock_supabase):
-    """Test successful refresh of materialized views."""
-    mock_result = MagicMock()
-    mock_result.data = {"status": "success"}
+    """Test successful refresh of materialized views (SQLite no-op)."""
+    # SQLite version doesn't need manual refresh, uses automatic triggers
+    response = client.post("/api/mcp/analytics/refresh-views")
 
-    mock_supabase.rpc.return_value.execute.return_value = mock_result
+    assert response.status_code == 200
+    data = response.json()
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
-        response = client.post("/api/mcp/analytics/refresh-views")
-
-        assert response.status_code == 200
-        data = response.json()
-
-        assert data["success"] is True
-        assert data["message"] == "Materialized views refreshed successfully"
-        assert "refreshed_at" in data
-
-        # Verify RPC was called
-        mock_supabase.rpc.assert_called_once_with("refresh_mcp_usage_views")
+    assert data["success"] is True
+    assert "refreshed_at" in data
+    # Message should indicate automatic updates via triggers
+    assert "trigger" in data["message"].lower() or "automatic" in data["message"].lower()
 
 
-def test_refresh_materialized_views_no_data_returned(client, mock_supabase):
-    """Test error when refresh returns no data."""
-    mock_result = MagicMock()
-    mock_result.data = None
+def test_refresh_materialized_views_no_data_returned(client):
+    """Test SQLite refresh endpoint always succeeds (automatic triggers)."""
+    # SQLite version uses automatic triggers, so this endpoint always succeeds
+    response = client.post("/api/mcp/analytics/refresh-views")
 
-    mock_supabase.rpc.return_value.execute.return_value = mock_result
-
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
-        response = client.post("/api/mcp/analytics/refresh-views")
-
-        assert response.status_code == 500
-        data = response.json()
-        assert data["detail"]["success"] is False
-        assert "Failed to refresh materialized views - no data returned" in data["detail"]["error"]
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "refreshed_at" in data
 
 
 def test_refresh_materialized_views_database_error(client, mock_supabase):
-    """Test error handling when database RPC fails."""
-    mock_supabase.rpc.side_effect = Exception("RPC function not found")
+    """Test SQLite refresh endpoint (no database errors expected)."""
+    # SQLite version is a simple no-op that returns success, no database calls
+    response = client.post("/api/mcp/analytics/refresh-views")
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
-        response = client.post("/api/mcp/analytics/refresh-views")
-
-        assert response.status_code == 500
-        data = response.json()
-        assert data["detail"]["success"] is False
-        assert "Failed to refresh materialized views" in data["detail"]["error"]
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
 
 
 def test_refresh_materialized_views_response_structure(client, mock_supabase):
     """Test that refresh response has correct structure."""
-    mock_result = MagicMock()
-    mock_result.data = {"status": "success"}
+    response = client.post("/api/mcp/analytics/refresh-views")
 
-    mock_supabase.rpc.return_value.execute.return_value = mock_result
+    assert response.status_code == 200
+    data = response.json()
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
-        response = client.post("/api/mcp/analytics/refresh-views")
+    # Verify all required fields
+    assert "success" in data
+    assert "message" in data
+    assert "refreshed_at" in data
 
-        assert response.status_code == 200
-        data = response.json()
+    # Verify types
+    assert isinstance(data["success"], bool)
+    assert isinstance(data["message"], str)
+    assert isinstance(data["refreshed_at"], str)
 
-        # Verify all required fields
-        assert "success" in data
-        assert "message" in data
-        assert "refreshed_at" in data
-
-        # Verify types
-        assert isinstance(data["success"], bool)
-        assert isinstance(data["message"], str)
-        assert isinstance(data["refreshed_at"], str)
-
-        # Verify timestamp format (ISO 8601)
-        from datetime import datetime
-        datetime.fromisoformat(data["refreshed_at"])  # Should not raise
+    # Verify timestamp format (ISO 8601)
+    from datetime import datetime
+    datetime.fromisoformat(data["refreshed_at"])  # Should not raise
 
 
 # ============================================================================
@@ -634,70 +781,84 @@ def test_refresh_materialized_views_response_structure(client, mock_supabase):
 # ============================================================================
 
 
-def test_hourly_analytics_table_name(client, mock_supabase, mock_hourly_analytics_data):
-    """Test that hourly analytics queries correct table."""
-    mock_result = MagicMock()
-    mock_result.data = mock_hourly_analytics_data
+def test_hourly_analytics_table_name(client, mock_hourly_analytics_data):
+    """Test that hourly analytics queries correct SQLite table."""
+    # SQLite version uses direct SQL queries, not Supabase table access
+    # This test verifies the endpoint works with the correct table name in SQL
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall = AsyncMock(return_value=[])
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        response = client.get("/api/mcp/analytics/hourly")
+        assert response.status_code == 200
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
-        client.get("/api/mcp/analytics/hourly")
-
-        # Verify correct table was accessed
-        mock_supabase.table.assert_called_once_with("archon_mcp_usage_hourly")
-
-
-def test_daily_analytics_table_name(client, mock_supabase, mock_daily_analytics_data):
-    """Test that daily analytics queries correct table."""
-    mock_result = MagicMock()
-    mock_result.data = mock_daily_analytics_data
-
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
-
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
-        client.get("/api/mcp/analytics/daily")
-
-        # Verify correct table was accessed
-        mock_supabase.table.assert_called_once_with("archon_mcp_usage_daily")
+        # Verify the SQL query includes the correct table name
+        call_args = mock_conn.execute.call_args
+        sql_query = call_args[0][0] if call_args else ""
+        assert "archon_mcp_usage_hourly" in sql_query
 
 
-def test_summary_events_table_name(client, mock_supabase, mock_raw_events_data):
-    """Test that summary queries correct events table."""
-    mock_result = MagicMock()
-    mock_result.data = mock_raw_events_data
+def test_daily_analytics_table_name(client, mock_daily_analytics_data):
+    """Test that daily analytics queries correct SQLite table."""
+    # SQLite version uses direct SQL queries, not Supabase table access
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall = AsyncMock(return_value=[])
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
+        response = client.get("/api/mcp/analytics/daily")
+        assert response.status_code == 200
 
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
-        client.get("/api/mcp/analytics/summary")
-
-        # Verify correct table was accessed
-        mock_supabase.table.assert_called_once_with("archon_mcp_usage_events")
+        # Verify the SQL query includes the correct table name
+        call_args = mock_conn.execute.call_args
+        sql_query = call_args[0][0] if call_args else ""
+        assert "archon_mcp_usage_daily" in sql_query
 
 
-def test_summary_handles_missing_tool_names(client, mock_supabase):
+def test_summary_events_table_name(client, mock_raw_events_data):
+    """Test that summary queries correct SQLite events table."""
+    # SQLite version uses direct SQL queries, not Supabase table access
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall = AsyncMock(return_value=[])
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
+
+        response = client.get("/api/mcp/analytics/summary")
+        assert response.status_code == 200
+
+        # Verify the SQL query includes the correct table name
+        call_args = mock_conn.execute.call_args
+        sql_query = call_args[0][0] if call_args else ""
+        assert "archon_mcp_usage_events" in sql_query
+
+
+def test_summary_handles_missing_tool_names(client):
     """Test that summary handles events with missing tool names."""
+    # Convert to SQLite format (success=1/0 instead of status="success"/"error")
     events_with_missing = [
-        {"id": "e1", "tool_name": "valid_tool", "status": "success", "created_at": datetime.now(UTC).isoformat()},
-        {"id": "e2", "tool_name": None, "status": "success", "created_at": datetime.now(UTC).isoformat()},
-        {"id": "e3", "status": "success", "created_at": datetime.now(UTC).isoformat()},  # No tool_name key
+        {"id": "e1", "tool_name": "valid_tool", "success": 1, "timestamp": datetime.now(UTC).isoformat()},
+        {"id": "e2", "tool_name": None, "success": 1, "timestamp": datetime.now(UTC).isoformat()},
+        {"id": "e3", "success": 1, "timestamp": datetime.now(UTC).isoformat()},  # No tool_name key
     ]
 
-    mock_result = MagicMock()
-    mock_result.data = events_with_missing
+    with patch("src.server.api_routes.mcp_analytics_api.aiosqlite.connect") as mock_connect:
+        mock_conn = AsyncMock()
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall = AsyncMock(return_value=events_with_missing)
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.row_factory = None
+        mock_connect.return_value.__aenter__.return_value = mock_conn
 
-    mock_query = MagicMock()
-    mock_query.select.return_value.gte.return_value.order.return_value.execute.return_value = mock_result
-    mock_supabase.table.return_value = mock_query
-
-    with patch("src.server.api_routes.mcp_analytics_api.get_supabase_client", return_value=mock_supabase):
         response = client.get("/api/mcp/analytics/summary")
 
         assert response.status_code == 200

@@ -109,7 +109,7 @@ class TestAsyncLLMProviderService:
 
                 async with get_llm_client() as client:
                     assert client == mock_client
-                    mock_openai.assert_called_once_with(api_key="test-openai-key")
+                    mock_openai.assert_called_once_with(api_key="test-openai-key", timeout=60.0)
 
                 # Verify provider config was fetched
                 mock_credential_service.get_active_provider.assert_called_once_with("llm")
@@ -133,7 +133,7 @@ class TestAsyncLLMProviderService:
                 async with get_llm_client() as client:
                     assert client == mock_client
                     mock_openai.assert_called_once_with(
-                        api_key="ollama", base_url="http://host.docker.internal:11434/v1"
+                        api_key="ollama", base_url="http://host.docker.internal:11434/v1", timeout=60.0
                     )
 
     @pytest.mark.asyncio
@@ -157,6 +157,7 @@ class TestAsyncLLMProviderService:
                     mock_openai.assert_called_once_with(
                         api_key="test-google-key",
                         base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                        timeout=60.0
                     )
 
     @pytest.mark.asyncio
@@ -177,7 +178,7 @@ class TestAsyncLLMProviderService:
 
                 async with get_llm_client(provider="openai") as client:
                     assert client == mock_client
-                    mock_openai.assert_called_once_with(api_key="override-key")
+                    mock_openai.assert_called_once_with(api_key="override-key", timeout=60.0)
 
                 # Verify explicit provider API key was requested
                 mock_credential_service._get_provider_api_key.assert_called_once_with("openai")
@@ -205,7 +206,7 @@ class TestAsyncLLMProviderService:
 
                 async with get_llm_client(use_embedding_provider=True) as client:
                     assert client == mock_client
-                    mock_openai.assert_called_once_with(api_key="embedding-key")
+                    mock_openai.assert_called_once_with(api_key="embedding-key", timeout=60.0)
 
                 # Verify embedding provider was requested
                 mock_credential_service.get_active_provider.assert_called_once_with("embedding")
@@ -231,17 +232,19 @@ class TestAsyncLLMProviderService:
             with patch(
                 "src.server.services.llm_provider_service.openai.AsyncOpenAI"
             ) as mock_openai:
-                mock_client = self._make_mock_client()
-                mock_openai.return_value = mock_client
+                with patch("os.getenv", return_value=None):
+                    mock_client = self._make_mock_client()
+                    mock_openai.return_value = mock_client
 
-                # Should fallback to Ollama instead of raising an error
-                async with get_llm_client() as client:
-                    assert client == mock_client
-                    # Verify it created an Ollama client with correct params
-                    mock_openai.assert_called_once_with(
-                        api_key="ollama",
-                        base_url="http://host.docker.internal:11434/v1"
-                    )
+                    # Should fallback to Ollama instead of raising an error
+                    async with get_llm_client() as client:
+                        assert client == mock_client
+                        # Verify it created an Ollama client with correct params
+                        mock_openai.assert_called_once_with(
+                            api_key="ollama",
+                            base_url="http://host.docker.internal:11434/v1",
+                            timeout=60.0
+                        )
 
     @pytest.mark.asyncio
     async def test_get_llm_client_missing_openai_key(self, mock_credential_service):
@@ -261,11 +264,12 @@ class TestAsyncLLMProviderService:
         with patch(
             "src.server.services.llm_provider_service.credential_service", mock_credential_service
         ), patch("src.server.services.llm_provider_service.openai.AsyncOpenAI") as mock_openai:
-            mock_openai.side_effect = Exception("Connection failed")
+            with patch("os.getenv", return_value=None):
+                mock_openai.side_effect = Exception("Connection failed")
 
-            with pytest.raises(ValueError, match="OpenAI API key not found and Ollama fallback failed"):
-                async with get_llm_client():
-                    pass
+                with pytest.raises(ValueError, match="OpenAI API key not found and Ollama fallback failed"):
+                    async with get_llm_client():
+                        pass
 
     @pytest.mark.asyncio
     async def test_get_llm_client_missing_google_key(self, mock_credential_service):

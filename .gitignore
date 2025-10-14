@@ -24,4 +24,6 @@ cli_tools.py
 data/archon.db
 data/*.db
 *.db
+qdrant_storage/
+data/
 

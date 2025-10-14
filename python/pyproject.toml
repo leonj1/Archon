@@ -29,6 +29,7 @@ dev = [
     "ruff>=0.12.5",
     "requests>=2.31.0",
     "factory-boy>=3.3.0",
+    "qdrant-client>=1.7.0",  # Required for integration tests
 ]
 
 # Server container dependencies
@@ -63,6 +64,8 @@ server = [
     "docker>=6.1.0",
     # Logging
     "logfire>=0.30.0",
+    # Vector database (for testing and production use)
+    "qdrant-client>=1.7.0",
     # Testing (needed for UI-triggered tests)
     "pytest>=8.0.0",
     "pytest-asyncio>=0.21.0",
@@ -136,6 +139,9 @@ all = [
     "pytest-timeout>=2.3.0",
     "requests>=2.31.0",
     "factory-boy>=3.3.0",
+    # Vector database
+    "qdrant-client>=1.7.0",
+    "aiosqlite>=0.17.0",
 ]
 
 [tool.ruff]

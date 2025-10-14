@@ -66,10 +66,16 @@ describe("ProjectCard", () => {
       <ProjectCard project={mockProject} isSelected={true} taskCounts={mockTaskCounts} {...mockHandlers} />,
     );
 
-    const card = container.firstChild;
-    expect(card).toBeInTheDocument();
-    // Check for selected-specific classes
-    expect((card as HTMLElement)?.className || "").toContain("scale-[1.02]");
+    const outerWrapper = container.firstChild;
+    expect(outerWrapper).toBeInTheDocument();
+    // Check for scale class on outer wrapper (motion.div)
+    expect((outerWrapper as HTMLElement)?.className || "").toContain("scale-[1.02]");
+
+    // Border classes are applied to the inner Card element
+    // Structure: motion.div[role="button"] > div.relative > [aurora glow div] + Card
+    // The Card is the last child that is not the aurora glow
+    const relativeDiv = (outerWrapper as HTMLElement)?.querySelector('.relative');
+    const card = relativeDiv?.lastChild;
     expect((card as HTMLElement)?.className || "").toContain("border-purple");
   });
 
@@ -80,9 +86,15 @@ describe("ProjectCard", () => {
       <ProjectCard project={pinnedProject} isSelected={false} taskCounts={mockTaskCounts} {...mockHandlers} />,
     );
 
-    const card = container.firstChild;
-    expect(card).toBeInTheDocument();
-    // Check for pinned-specific classes
+    const outerWrapper = container.firstChild;
+    expect(outerWrapper).toBeInTheDocument();
+
+    // Structure: motion.div[role="button"] > div.relative > Card
+    // The pinned border and gradient classes are applied to the Card element
+    const relativeDiv = (outerWrapper as HTMLElement)?.querySelector('.relative');
+    const card = relativeDiv?.lastChild;
+
+    // Check for pinned-specific classes on the Card element
     expect((card as HTMLElement)?.className || "").toContain("from-purple");
     expect((card as HTMLElement)?.className || "").toContain("border-purple-500");
   });

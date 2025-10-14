@@ -1,11 +1,12 @@
 """
 Document Storage Service
 
-Handles storage of documents in Supabase with parallel processing support.
+Handles storage of documents in the database with parallel processing support.
 """
 
 import asyncio
 import os
+import warnings
 from typing import Any
 
 from ...config.logfire_config import safe_span, search_logger
@@ -15,8 +16,7 @@ from ..credential_service import credential_service
 from ..embeddings.contextual_embedding_service import generate_contextual_embeddings_batch
 from ..embeddings.embedding_service import create_embeddings_batch
 
-async def add_documents_to_supabase(
-    client,
+async def add_documents_to_database(
     urls: list[str],
     chunk_numbers: list[int],
     contents: list[str],
@@ -31,13 +31,11 @@ async def add_documents_to_supabase(
     repository: DatabaseRepository | None = None,
 ) -> dict[str, int]:
     """
-    Add documents to Supabase with threading optimizations.
+    Add documents to the database with threading optimizations.
 
     This is the simpler sequential version for smaller batches.
 
     Args:
-        client: Supabase client (deprecated, use repository)
-        repository: DatabaseRepository instance (preferred)
         urls: List of URLs
         chunk_numbers: List of chunk numbers
         contents: List of document contents
@@ -46,13 +44,16 @@ async def add_documents_to_supabase(
         batch_size: Size of each batch for insertion
         progress_callback: Optional async callback function for progress reporting
         provider: Optional provider override for embeddings
+        cancellation_check: Optional function to check for cancellation
+        url_to_page_id: Optional mapping of URLs to page IDs
+        repository: DatabaseRepository instance (optional, will use default if not provided)
     """
     # Handle backward compatibility - if repository not provided, create from client
     if repository is None:
         repository = get_repository()
 
     with safe_span(
-        "add_documents_to_supabase", total_documents=len(contents), batch_size=batch_size
+        "add_documents_to_database", total_documents=len(contents), batch_size=batch_size
     ) as span:
         # Simple progress reporting helper with batch info support
         async def report_progress(message: str, progress: int, batch_info: dict = None):
@@ -548,3 +549,22 @@ async def add_documents_to_supabase(
         span.set_attribute("total_stored", total_chunks_stored)
 
         return {"chunks_stored": total_chunks_stored}
+
+
+# Deprecated alias for backward compatibility
+async def add_documents_to_supabase(*args, **kwargs):
+    """
+    Deprecated: Use add_documents_to_database() instead.
+
+    This function is maintained for backward compatibility only and will be
+    removed in a future version.
+    """
+    warnings.warn(
+        "add_documents_to_supabase() is deprecated. Use add_documents_to_database() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    # Filter out the 'client' parameter if present (it's deprecated)
+    if 'client' in kwargs:
+        kwargs.pop('client')
+    return await add_documents_to_database(*args, **kwargs)

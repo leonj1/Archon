@@ -35,8 +35,8 @@ class TestSourceUrlShadowing:
         
         doc_storage._create_source_records = mock_create_source_records
         
-        # Mock add_documents_to_supabase
-        with patch('src.server.services.crawling.document_storage_operations.add_documents_to_supabase') as mock_add:
+        # Mock add_documents_to_database
+        with patch('src.server.services.storage.document_storage_service.add_documents_to_database') as mock_add:
             mock_add.return_value = {"chunks_stored": 3}
             
             # Test data - simulating a sitemap crawl
@@ -104,7 +104,7 @@ class TestSourceUrlShadowing:
         
         doc_storage._create_source_records = mock_create_source_records
         
-        with patch('src.server.services.crawling.document_storage_operations.add_documents_to_supabase') as mock_add:
+        with patch('src.server.services.storage.document_storage_service.add_documents_to_database') as mock_add:
             mock_add.return_value = {"chunks_stored": 2}
             crawl_results = [
                 {"url": "https://example.com/doc1", "markdown": "Doc 1"},

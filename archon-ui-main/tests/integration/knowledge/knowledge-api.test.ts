@@ -1,6 +1,12 @@
 /**
  * Integration tests for Knowledge Base API
  * Tests actual API endpoints with backend
+ *
+ * IMPORTANT: Run these tests with INTEGRATION_TEST=true to disable fetch mocking:
+ * $ INTEGRATION_TEST=true npm test -- tests/integration/knowledge/knowledge-api.test.ts
+ *
+ * Or add to package.json:
+ * "test:integration": "INTEGRATION_TEST=true vitest run tests/integration/"
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -10,14 +16,25 @@ import type { KnowledgeItemsResponse, CrawlStartResponse } from '../../../src/fe
 // Skip in CI, only run locally with backend
 const skipInCI = process.env.CI ? describe.skip : describe;
 
+// Integration tests require INTEGRATION_TEST=true to disable fetch mocking
+if (process.env.INTEGRATION_TEST !== 'true') {
+  console.warn('\n⚠️  Integration tests require INTEGRATION_TEST=true environment variable');
+  console.warn('   Run: INTEGRATION_TEST=true npm test -- tests/integration/\n');
+}
+
 skipInCI('Knowledge API Integration', () => {
   let testSourceId: string | null = null;
   let testProgressId: string | null = null;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Ensure we're testing against local backend
     if (!import.meta.env.DEV) {
       throw new Error('Integration tests should only run in development mode');
+    }
+
+    // Verify fetch is not mocked
+    if (typeof fetch === 'undefined') {
+      throw new Error('Native fetch is not available. Node.js 18+ is required for integration tests.');
     }
   });
 
@@ -180,7 +197,7 @@ skipInCI('Knowledge API Integration', () => {
   describe('Sources', () => {
     it('should get knowledge sources', async () => {
       const sources = await knowledgeService.getKnowledgeSources();
-      
+
       expect(Array.isArray(sources)).toBe(true);
       // Sources might be empty array if no sources exist
     });

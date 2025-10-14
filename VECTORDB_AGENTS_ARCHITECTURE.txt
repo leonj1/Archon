@@ -1,0 +1,300 @@
+================================================================================
+         CLAUDE CODE AGENT SDK - VECTOR DB PIPELINE ARCHITECTURE
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          PROJECT ROOT                                     │
+│  - create_vectordb_agents.py        (Main agent orchestrator)           │
+│  - run_all_vectordb_agents.sh       (Automated runner)                  │
+│  - example_usage.py                 (Usage examples)                     │
+│  - VECTORDB_AGENTS_README.md        (Full documentation)                │
+│  - QUICK_START_VECTORDB_AGENTS.md   (Quick start guide)                │
+│  - VECTORDB_AGENTS_SUMMARY.md       (This summary)                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                       AGENT ORCHESTRATION FLOW                            │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────┐
+    │        create_vectordb_agents.py                     │
+    │        (Claude Code Agent SDK)                       │
+    └─────────────────────┬───────────────────────────────┘
+                          │
+         ┌────────────────┼────────────────┐
+         │                │                │
+         ▼                ▼                ▼
+    ┌────────┐      ┌──────────┐    ┌─────────┐
+    │Agent 1 │      │ Agent 2  │    │Agent 3  │
+    │Crawling│      │ VectorDB │    │Wrapper  │
+    │Service │      │ Service  │    │Service  │
+    └────┬───┘      └─────┬────┘    └────┬────┘
+         │                │              │
+         │    Generates   │              │
+         │       ▼        │              │
+         │   Services     │              │
+         └────────────────┴──────────────┘
+                          │
+         ┌────────────────┼────────────────┐
+         │                                 │
+         ▼                                 ▼
+    ┌──────────┐                    ┌────────────┐
+    │ Agent 4  │                    │  Agent 5   │
+    │Integration│                   │   Test     │
+    │   Test   │                    │ Validator  │
+    └──────────┘                    └────────────┘
+
+================================================================================
+                            GENERATED SERVICES
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  SERVICE 1: SimpleCrawlingService                                        │
+│  Location: python/src/server/services/simple_crawling_service.py        │
+│  Purpose:  Web crawler that extracts content from URLs                   │
+│                                                                           │
+│  Interface:                                                               │
+│    async def crawl(url: str, max_depth: int = 1)                        │
+│      -> List[Dict[str, str]]                                            │
+│                                                                           │
+│  Features:                                                                │
+│    ✓ Single page crawling                                               │
+│    ✓ Recursive crawling with depth control                              │
+│    ✓ Sitemap support                                                     │
+│    ✓ Markdown/HTML content extraction                                   │
+│    ✓ Error handling and retries                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  SERVICE 2: SimpleVectorDBService                                        │
+│  Location: python/src/server/services/simple_vectordb_service.py        │
+│  Purpose:  Chunks documents and stores vectors in Qdrant                 │
+│                                                                           │
+│  Interface:                                                               │
+│    async def store_documents(                                           │
+│        documents: List[Dict],                                           │
+│        source_id: str,                                                  │
+│        chunk_size: int = 5000                                           │
+│    ) -> Dict[str, int]                                                  │
+│                                                                           │
+│  Features:                                                                │
+│    ✓ Smart text chunking                                                │
+│    ✓ OpenAI embedding generation                                        │
+│    ✓ Qdrant vector storage                                              │
+│    ✓ Batch processing                                                    │
+│    ✓ Progress tracking                                                   │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  SERVICE 3: CrawlAndStoreService (UNIFIED WRAPPER)                       │
+│  Location: python/src/server/services/crawl_and_store_service.py        │
+│  Purpose:  Single API combining crawling + vector storage                │
+│                                                                           │
+│  Interface:                                                               │
+│    async def crawl_and_store(                                           │
+│        url: str,                                                        │
+│        source_id: str = None,                                           │
+│        chunk_size: int = 5000,                                          │
+│        max_depth: int = 1                                               │
+│    ) -> Dict[str, Any]                                                  │
+│                                                                           │
+│  Returns:                                                                 │
+│    {                                                                      │
+│        "success": bool,                                                  │
+│        "crawl": {                                                        │
+│            "documents": [...],                                          │
+│            "total_pages": int                                           │
+│        },                                                                │
+│        "storage": {                                                      │
+│            "chunks_stored": int,                                        │
+│            "source_id": str                                             │
+│        }                                                                 │
+│    }                                                                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                              DATA FLOW
+================================================================================
+
+ USER INPUT (URL)
+      │
+      ▼
+┌─────────────────────┐
+│  CrawlAndStoreService│
+└──────────┬──────────┘
+           │
+    ┌──────┴───────┐
+    ▼              ▼
+┌─────────┐   ┌──────────┐
+│Crawling │   │ VectorDB │
+│Service  │   │ Service  │
+└────┬────┘   └────┬─────┘
+     │             │
+     │ Documents   │
+     └──────┬──────┘
+            ▼
+      ┌─────────┐
+      │ Chunking│
+      └────┬────┘
+           │ Chunks
+           ▼
+      ┌──────────┐
+      │Embeddings│
+      │ (OpenAI) │
+      └────┬─────┘
+           │ Vectors
+           ▼
+      ┌─────────┐
+      │ Qdrant  │
+      │ Storage │
+      └─────────┘
+
+================================================================================
+                            TESTING ARCHITECTURE
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  TEST: test_crawl_and_store_real.py                                     │
+│  Type: INTEGRATION TEST (Real external calls)                            │
+│                                                                           │
+│  Test Target:                                                             │
+│    URL: https://github.com/The-Pocket/PocketFlow                        │
+│                                                                           │
+│  External Dependencies Used:                                              │
+│    ✓ Real HTTP requests (web crawling)                                  │
+│    ✓ Real OpenAI API (embeddings)                                       │
+│    ✓ Real Qdrant instance (vector storage)                              │
+│    ✗ NO MOCKS                                                            │
+│                                                                           │
+│  Assertions:                                                              │
+│    ✓ Documents were crawled                                              │
+│    ✓ Content is non-empty                                                │
+│    ✓ Embeddings were generated                                           │
+│    ✓ Vectors stored in Qdrant                                            │
+│    ✓ Source ID created                                                   │
+│    ✓ Cleanup successful                                                  │
+│                                                                           │
+│  Validation:                                                              │
+│    Agent 5 validates test quality and generates VALIDATION_REPORT.md    │
+└──────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                         USAGE EXAMPLE
+================================================================================
+
+import asyncio
+from python.src.server.services.crawl_and_store_service import CrawlAndStoreService
+
+async def main():
+    # Initialize service
+    service = CrawlAndStoreService()
+
+    # Crawl and store
+    result = await service.crawl_and_store(
+        url="https://docs.python.org/3/library/asyncio.html",
+        max_depth=2,
+        chunk_size=3000
+    )
+
+    # Access results
+    print(f"✓ Crawled {len(result['crawl']['documents'])} pages")
+    print(f"✓ Stored {result['storage']['chunks_stored']} chunks")
+    print(f"✓ Source ID: {result['storage']['source_id']}")
+
+asyncio.run(main())
+
+================================================================================
+                         PREREQUISITES
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  1. Environment Variables (.env)                                         │
+│     ANTHROPIC_API_KEY=sk-ant-xxx                                        │
+│     OPENAI_API_KEY=sk-xxx                                               │
+│     QDRANT_URL=http://localhost:6333                                    │
+│                                                                           │
+│  2. Python Dependencies                                                   │
+│     cd python && uv sync --group all                                    │
+│                                                                           │
+│  3. Claude Code Agent SDK                                                 │
+│     pip install claude-agent-sdk                                        │
+│                                                                           │
+│  4. Qdrant Vector Database                                                │
+│     docker run -d -p 6333:6333 qdrant/qdrant                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                         EXECUTION METHODS
+================================================================================
+
+METHOD 1: Automated (Recommended)
+    ./run_all_vectordb_agents.sh
+
+METHOD 2: Interactive
+    python create_vectordb_agents.py
+    (Select agents from menu)
+
+METHOD 3: Individual Agents
+    python create_vectordb_agents.py --agent crawling-service-builder
+    python create_vectordb_agents.py --agent vectordb-service-builder
+    python create_vectordb_agents.py --agent wrapper-service-builder
+    python create_vectordb_agents.py --agent integration-test-builder
+    python create_vectordb_agents.py --agent test-validator
+
+================================================================================
+                         FILE INVENTORY
+================================================================================
+
+Created Files:
+    ✓ create_vectordb_agents.py              (Main agent script)
+    ✓ run_all_vectordb_agents.sh             (Automated runner)
+    ✓ example_usage.py                        (Usage examples)
+    ✓ VECTORDB_AGENTS_README.md               (Full docs)
+    ✓ QUICK_START_VECTORDB_AGENTS.md          (Quick start)
+    ✓ VECTORDB_AGENTS_SUMMARY.md              (Summary)
+    ✓ VECTORDB_AGENTS_ARCHITECTURE.txt        (This file)
+
+Generated Files (by agents):
+    → python/src/server/services/simple_crawling_service.py
+    → python/src/server/services/simple_vectordb_service.py
+    → python/src/server/services/crawl_and_store_service.py
+    → python/tests/integration/test_crawl_and_store_real.py
+    → python/tests/integration/VALIDATION_REPORT.md
+
+================================================================================
+                         QUICK START COMMANDS
+================================================================================
+
+# 1. Setup and run all agents
+./run_all_vectordb_agents.sh
+
+# 2. Verify with integration test
+cd python && uv run pytest tests/integration/test_crawl_and_store_real.py -v
+
+# 3. Try the examples
+python example_usage.py
+
+# 4. Use in your code
+python -c "
+import asyncio
+from python.src.server.services.crawl_and_store_service import CrawlAndStoreService
+
+async def test():
+    service = CrawlAndStoreService()
+    result = await service.crawl_and_store('https://example.com')
+    print(f'Stored {result[\"storage\"][\"chunks_stored\"]} chunks')
+
+asyncio.run(test())
+"
+
+================================================================================
+                         SUPPORT & DOCUMENTATION
+================================================================================
+
+Quick Start:         QUICK_START_VECTORDB_AGENTS.md
+Full Documentation:  VECTORDB_AGENTS_README.md
+Summary:             VECTORDB_AGENTS_SUMMARY.md
+Architecture:        VECTORDB_AGENTS_ARCHITECTURE.txt (this file)
+Code Examples:       example_usage.py
+
+================================================================================

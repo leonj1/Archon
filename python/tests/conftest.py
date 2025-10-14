@@ -136,6 +136,15 @@ def mock_supabase_client():
 @pytest.fixture
 def client(mock_supabase_client):
     """FastAPI test client with mocked database."""
+    from unittest.mock import AsyncMock
+    import src.server.main as server_main
+
+    # Mark initialization as complete for testing
+    server_main._initialization_complete = True
+
+    # Mock the schema check to always return valid - this must persist for the test duration
+    mock_schema_check = AsyncMock(return_value={"valid": True, "message": "Schema is up to date"})
+
     # Patch all the ways Supabase client can be created
     with patch(
         "src.server.services.client_manager.get_supabase_client",
@@ -145,22 +154,13 @@ def client(mock_supabase_client):
             "src.server.utils.get_supabase_client",
             return_value=mock_supabase_client,
         ):
-            with patch(
-                "src.server.services.credential_service.create_client",
-                return_value=mock_supabase_client,
-            ):
-                with patch("supabase.create_client", return_value=mock_supabase_client):
-                    from unittest.mock import AsyncMock
-                    import src.server.main as server_main
-
-                    # Mark initialization as complete for testing (before accessing app)
-                    server_main._initialization_complete = True
+            with patch("supabase.create_client", return_value=mock_supabase_client):
+                # Apply the schema check mock
+                with patch("src.server.main._check_database_schema", new=mock_schema_check):
                     app = server_main.app
-
-                    # Mock the schema check to always return valid
-                    mock_schema_check = AsyncMock(return_value={"valid": True, "message": "Schema is up to date"})
-                    with patch("src.server.main._check_database_schema", new=mock_schema_check):
-                        return TestClient(app)
+                    # Create test client within the context where all mocks are active
+                    test_client = TestClient(app)
+                    yield test_client
 
 
 @pytest.fixture

@@ -3,10 +3,13 @@
  * Tests progress polling with actual backend
  */
 
+// IMPORTANT: Set INTEGRATION_TEST before any imports to prevent fetch mocking
+process.env.INTEGRATION_TEST = 'true';
+
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { progressService } from '../../../src/features/knowledge/progress/services';
+import { progressService } from '../../../src/features/progress/services';
 import { knowledgeService } from '../../../src/features/knowledge/services';
-import type { ProgressResponse } from '../../../src/features/knowledge/progress/types';
+import type { ProgressResponse } from '../../../src/features/progress/types';
 
 // Skip in CI, only run locally with backend
 const skipInCI = process.env.CI ? describe.skip : describe;

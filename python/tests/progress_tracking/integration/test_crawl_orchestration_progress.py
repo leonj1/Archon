@@ -18,26 +18,26 @@ def mock_crawler():
 
 
 @pytest.fixture
-def crawl_progress_mock_supabase_client():
-    """Create a mock Supabase client for crawl orchestration progress tests."""
-    client = MagicMock()
-    
-    # Mock table operations
-    mock_table = MagicMock()
-    mock_table.select.return_value = mock_table
-    mock_table.eq.return_value = mock_table
-    mock_table.execute.return_value = MagicMock(data=[])
-    
-    client.table.return_value = mock_table
-    return client
+def mock_repository():
+    """Create a mock DatabaseRepository for crawl orchestration progress tests."""
+    from src.server.repositories.database_repository import DatabaseRepository
+
+    # Create a mock repository that implements the DatabaseRepository interface
+    repository = MagicMock(spec=DatabaseRepository)
+
+    # Mock common methods that might be called
+    repository.get_settings_by_key = AsyncMock(return_value=None)
+    repository.get_all_settings = AsyncMock(return_value={})
+
+    return repository
 
 
 @pytest.fixture
-def crawling_service(mock_crawler, crawl_progress_mock_supabase_client):
+def crawling_service(mock_crawler, mock_repository):
     """Create a CrawlingService instance for testing."""
     service = CrawlingService(
         crawler=mock_crawler,
-        supabase_client=crawl_progress_mock_supabase_client,
+        repository=mock_repository,
         progress_id="test-crawl-123"
     )
     # Initialize progress tracker for testing

@@ -55,7 +55,8 @@ describe("apiClient (callAPIWithETag)", () => {
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/test-endpoint"),
         expect.objectContaining({
-          headers: expect.objectContaining({
+          // GET requests without a body should not have Content-Type header
+          headers: expect.not.objectContaining({
             "Content-Type": "application/json",
           }),
         }),
@@ -168,12 +169,15 @@ describe("apiClient (callAPIWithETag)", () => {
         expect.any(String),
         expect.objectContaining({
           headers: expect.objectContaining({
-            "Content-Type": "application/json",
             Authorization: "Bearer token123",
             "Custom-Header": "custom-value",
           }),
         }),
       );
+
+      // Verify GET requests without body don't get Content-Type header
+      const [, fetchOptions] = (global.fetch as any).mock.calls[0];
+      expect(fetchOptions.headers).not.toHaveProperty("Content-Type");
     });
 
     it("should rely on browser cache for 304 handling", async () => {

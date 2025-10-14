@@ -225,7 +225,7 @@ async def projects_health():
         try:
             project_service = ProjectService(repository=repository)
             # Try to list projects with limit 1 to test table access
-            success, _ = project_service.list_projects()
+            success, _ = await project_service.list_projects()
             projects_table_exists = success
             if success:
                 logfire.info("Projects table detected successfully")
@@ -239,7 +239,7 @@ async def projects_health():
         try:
             task_service = TaskService(repository=repository)
             # Try to list tasks with limit 1 to test table access
-            success, _ = task_service.list_tasks(include_closed=True)
+            success, _ = await task_service.list_tasks(include_closed=True)
             tasks_table_exists = success
             if success:
                 logfire.info("Tasks table detected successfully")
@@ -300,7 +300,7 @@ async def get_all_task_counts(
         # Get repository instance from factory (uses configured backend)
         repository = get_repository()
         task_service = TaskService(repository=repository)
-        success, result = task_service.get_all_project_task_counts()
+        success, result = await task_service.get_all_project_task_counts()
 
         if not success:
             logfire.error(f"Failed to get task counts | error={result.get('error')}")
@@ -347,7 +347,7 @@ async def get_project(project_id: str):
         # Use ProjectService to get the project
         repository = get_repository()
         project_service = ProjectService(repository=repository)
-        success, result = project_service.get_project(project_id)
+        success, result = await project_service.get_project(project_id)
 
         if not success:
             if "not found" in result.get("error", "").lower():
@@ -573,7 +573,7 @@ async def list_project_tasks(
         # Use TaskService to list tasks
         repository = get_repository()
         task_service = TaskService(repository=repository)
-        success, result = task_service.list_tasks(
+        success, result = await task_service.list_tasks(
             project_id=project_id,
             include_closed=True,  # Get all tasks, including done
             exclude_large_fields=exclude_large_fields,
@@ -711,7 +711,7 @@ async def list_tasks(
         # Use TaskService to list tasks
         repository = get_repository()
         task_service = TaskService(repository=repository)
-        success, result = task_service.list_tasks(
+        success, result = await task_service.list_tasks(
             project_id=project_id,
             status=status,
             include_closed=include_closed,

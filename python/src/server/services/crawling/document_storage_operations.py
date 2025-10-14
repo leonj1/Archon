@@ -13,7 +13,7 @@ from ...config.logfire_config import get_logger, safe_logfire_error, safe_logfir
 from ...repositories.database_repository import DatabaseRepository
 from ...repositories.repository_factory import get_repository
 from ..source_management_service import extract_source_summary, update_source_info
-from ..storage.document_storage_service import add_documents_to_supabase
+from ..storage.document_storage_service import add_documents_to_database
 from ..storage.storage_services import DocumentStorageService
 from .code_extraction_service import CodeExtractionService
 
@@ -290,9 +290,8 @@ class DocumentStorageOperations:
             f"Document storage | processed={processed_docs}/{len(crawl_results)} | chunks={len(all_contents)} | avg_chunks_per_doc={avg_chunks:.1f}"
         )
 
-        # Call add_documents_to_supabase with the correct parameters
-        storage_stats = await add_documents_to_supabase(
-            client=self.supabase_client,  # For backward compatibility
+        # Store documents in database
+        storage_stats = await add_documents_to_database(
             urls=all_urls,  # Now has entry per chunk
             chunk_numbers=all_chunk_numbers,  # Proper chunk numbers (0, 1, 2, etc)
             contents=all_contents,  # Individual chunks

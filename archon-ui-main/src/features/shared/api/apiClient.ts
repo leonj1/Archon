@@ -42,7 +42,7 @@ function buildFullUrl(cleanEndpoint: string): string {
  */
 export async function callAPIWithETag<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
   try {
-    // Clean endpoint
+    // Clean endpoint - strip /api prefix since API_BASE_URL already includes it
     const cleanEndpoint = endpoint.startsWith("/api") ? endpoint.substring(4) : endpoint;
 
     // Construct the full URL

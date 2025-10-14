@@ -23,7 +23,8 @@ services:
       - ./src:/app/src:ro
       - ./tests:/app/tests:ro
       - ./pytest.ini:/app/pytest.ini:ro
-      
+      - ../migration:/app/migration:ro
+
       # Cache directories for faster subsequent runs
       - pytest_cache:/app/.pytest_cache
       - playwright_cache:/ms-playwright
