@@ -143,38 +143,61 @@ class SQLiteDatabaseRepository(DatabaseRepository):
         """Insert or update multiple page metadata records in a batch."""
         if not pages:
             return []
-        
+
         async with self._get_connection() as conn:
             results = []
             for page in pages:
                 # Generate ID if not provided
                 page_id = page.get('id', str(uuid4()))
-                
+
                 # Prepare JSON fields
                 metadata = json.dumps(page.get('metadata', {}))
-                sections = json.dumps(page.get('sections', []))
-                
-                # SQLite schema only has: id, url, section_title, word_count
-                # Extract word count from page data
+
+                # Extract required fields
+                source_id = page.get('source_id')
+                if not source_id:
+                    raise ValueError(f"source_id is required for page metadata: {page.get('url', 'unknown')}")
+
+                url = page.get('url')
+                if not url:
+                    raise ValueError("url is required for page metadata")
+
+                full_content = page.get('full_content', '')
+                if not full_content:
+                    raise ValueError(f"full_content is required for page metadata: {url}")
+
                 word_count = page.get('word_count', 0)
-                if word_count == 0 and 'content' in page:
+                if word_count == 0:
                     # Calculate word count if not provided
-                    word_count = len(page.get('content', '').split())
-                
+                    word_count = len(full_content.split())
+
+                char_count = page.get('char_count', 0)
+                if char_count == 0:
+                    char_count = len(full_content)
+
                 await conn.execute("""
                     INSERT OR REPLACE INTO archon_page_metadata (
-                        id, url, section_title, word_count
-                    ) VALUES (?, ?, ?, ?)
+                        id, source_id, url, full_content, section_title, section_order,
+                        word_count, char_count, chunk_count, metadata, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     page_id,
-                    page.get('url'),
+                    source_id,
+                    url,
+                    full_content,
                     page.get('section_title'),
-                    word_count
+                    page.get('section_order', 0),
+                    word_count,
+                    char_count,
+                    page.get('chunk_count', 0),
+                    metadata,
+                    page.get('created_at', datetime.now().isoformat()),
+                    datetime.now().isoformat()
                 ))
-                
+
                 page['id'] = page_id
                 results.append(page)
-            
+
             await conn.commit()
             return results
     
@@ -355,56 +378,61 @@ class SQLiteDatabaseRepository(DatabaseRepository):
     async def insert_document(self, document_data: dict[str, Any]) -> dict[str, Any]:
         """Insert a new document chunk."""
         async with self._get_connection() as conn:
-            doc_id = document_data.get('id', str(uuid4()))
+            # Use auto-increment ID for SQLite
             metadata = json.dumps(document_data.get('metadata', {}))
-            
+
             await conn.execute("""
                 INSERT INTO archon_crawled_pages (
-                    id, url, chunk_number, content, metadata,
-                    source_id, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    url, chunk_number, content, metadata, source_id, page_id,
+                    llm_chat_model, embedding_model, embedding_dimension, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                doc_id,
                 document_data.get('url'),
                 document_data.get('chunk_number', 0),
                 document_data.get('content'),
                 metadata,
                 document_data.get('source_id'),
+                document_data.get('page_id'),
+                document_data.get('llm_chat_model'),
+                document_data.get('embedding_model'),
+                document_data.get('embedding_dimension'),
                 datetime.now().isoformat()
             ))
-            
+
             await conn.commit()
-            document_data['id'] = doc_id
+            # Note: Embeddings are not stored in SQLite (no vector support)
             return document_data
     
     async def insert_documents_batch(self, documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Insert multiple document chunks in a batch."""
         if not documents:
             return []
-        
+
         async with self._get_connection() as conn:
             for doc in documents:
-                doc_id = doc.get('id', str(uuid4()))
+                # Use auto-increment ID for SQLite
                 metadata = json.dumps(doc.get('metadata', {}))
-                
+
                 await conn.execute("""
                     INSERT INTO archon_crawled_pages (
-                        id, url, chunk_number, content, metadata,
-                        source_id, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        url, chunk_number, content, metadata, source_id, page_id,
+                        llm_chat_model, embedding_model, embedding_dimension, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    doc_id,
                     doc.get('url'),
                     doc.get('chunk_number', 0),
                     doc.get('content'),
                     metadata,
                     doc.get('source_id'),
+                    doc.get('page_id'),
+                    doc.get('llm_chat_model'),
+                    doc.get('embedding_model'),
+                    doc.get('embedding_dimension'),
                     datetime.now().isoformat()
                 ))
-                
-                doc['id'] = doc_id
-            
+
             await conn.commit()
+            # Note: Embeddings (embedding_768, etc.) are not stored in SQLite
             return documents
     
     async def delete_documents_by_source(self, source_id: str) -> int:
@@ -1690,51 +1718,58 @@ class SQLiteDatabaseRepository(DatabaseRepository):
     async def insert_crawled_page(self, page_data: dict[str, Any]) -> dict[str, Any]:
         """Insert a new crawled page."""
         async with self._get_connection() as conn:
-            page_id = page_data.get('id', str(uuid4()))
+            # Use auto-increment ID for SQLite
             metadata = json.dumps(page_data.get('metadata', {}))
-            
+
             await conn.execute("""
                 INSERT INTO archon_crawled_pages (
-                    id, url, chunk_number, content, metadata,
-                    source_id, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    url, chunk_number, content, metadata, source_id, page_id,
+                    llm_chat_model, embedding_model, embedding_dimension, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                page_id,
                 page_data.get('url'),
                 page_data.get('chunk_number', 0),
                 page_data.get('content'),
                 metadata,
                 page_data.get('source_id'),
+                page_data.get('page_id'),
+                page_data.get('llm_chat_model'),
+                page_data.get('embedding_model'),
+                page_data.get('embedding_dimension'),
                 datetime.now().isoformat()
             ))
-            
+
             await conn.commit()
-            page_data['id'] = page_id
+            # Note: Embeddings are not stored in SQLite (no vector support)
+            # They are skipped intentionally
             return page_data
     
     async def upsert_crawled_page(self, page_data: dict[str, Any]) -> dict[str, Any]:
         """Insert or update a crawled page."""
         async with self._get_connection() as conn:
-            page_id = page_data.get('id', str(uuid4()))
+            # Use auto-increment ID for SQLite
             metadata = json.dumps(page_data.get('metadata', {}))
-            
+
             await conn.execute("""
                 INSERT OR REPLACE INTO archon_crawled_pages (
-                    id, url, chunk_number, content, metadata,
-                    source_id, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    url, chunk_number, content, metadata, source_id, page_id,
+                    llm_chat_model, embedding_model, embedding_dimension, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                page_id,
                 page_data.get('url'),
                 page_data.get('chunk_number', 0),
                 page_data.get('content'),
                 metadata,
                 page_data.get('source_id'),
+                page_data.get('page_id'),
+                page_data.get('llm_chat_model'),
+                page_data.get('embedding_model'),
+                page_data.get('embedding_dimension'),
                 page_data.get('created_at', datetime.now().isoformat())
             ))
-            
+
             await conn.commit()
-            page_data['id'] = page_id
+            # Note: Embeddings are not stored in SQLite (no vector support)
             return page_data
     
     async def delete_crawled_pages_by_urls(self, urls: list[str]) -> int:
@@ -1755,30 +1790,33 @@ class SQLiteDatabaseRepository(DatabaseRepository):
         """Insert multiple crawled pages in a batch."""
         if not pages:
             return []
-        
+
         async with self._get_connection() as conn:
             for page in pages:
-                page_id = page.get('id', str(uuid4()))
+                # Use auto-increment ID for SQLite
                 metadata = json.dumps(page.get('metadata', {}))
-                
+
                 await conn.execute("""
                     INSERT INTO archon_crawled_pages (
-                        id, url, chunk_number, content, metadata,
-                        source_id, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        url, chunk_number, content, metadata, source_id, page_id,
+                        llm_chat_model, embedding_model, embedding_dimension, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    page_id,
                     page.get('url'),
                     page.get('chunk_number', 0),
                     page.get('content'),
                     metadata,
                     page.get('source_id'),
+                    page.get('page_id'),
+                    page.get('llm_chat_model'),
+                    page.get('embedding_model'),
+                    page.get('embedding_dimension'),
                     datetime.now().isoformat()
                 ))
-                
-                page['id'] = page_id
-            
+
             await conn.commit()
+            # Note: Embeddings (embedding_768, embedding_1024, etc.) are not stored in SQLite
+            # SQLite doesn't have native vector support, so embedding columns are skipped
             return pages
     
     # ============================================
