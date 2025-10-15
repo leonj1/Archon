@@ -67,37 +67,19 @@ class CrawlingService:
     Combines functionality from both CrawlingService and CrawlOrchestrationService.
     """
 
-    def __init__(self, crawler=None, repository: Optional[DatabaseRepository] = None, supabase_client=None, progress_id=None):
+    def __init__(self, crawler=None, repository: Optional[DatabaseRepository] = None, progress_id=None):
         """
         Initialize the crawling service.
 
         Args:
             crawler: The Crawl4AI crawler instance
-            repository: DatabaseRepository instance (preferred)
-            supabase_client: Legacy supabase client (for backward compatibility)
+            repository: DatabaseRepository instance. If None, it will be created via get_repository().
             progress_id: Optional progress ID for HTTP polling updates
         """
         self.crawler = crawler
 
         # Initialize repository following the standard pattern
-        if repository is not None:
-            self.repository = repository
-        elif supabase_client is not None:
-            # Lazy import to avoid dependency issues in tests
-            from ...repositories.supabase_repository import SupabaseDatabaseRepository
-            self.repository = SupabaseDatabaseRepository(supabase_client)
-        else:
-            self.repository = get_repository()
-
-        # Keep supabase_client for operations that haven't been migrated yet
-        # (DocumentStorageOperations and PageStorageOperations)
-        # We'll pass the repository to operations instead of supabase client
-        self.supabase_client = None
-        if supabase_client is not None:
-            self.supabase_client = supabase_client
-        elif hasattr(self.repository, 'client'):
-            # For SupabaseDatabaseRepository
-            self.supabase_client = self.repository.client
+        self.repository = repository if repository is not None else get_repository()
 
         self.progress_id = progress_id
         self.progress_tracker = None
@@ -114,7 +96,7 @@ class CrawlingService:
         self.single_page_strategy = SinglePageCrawlStrategy(crawler, self.markdown_generator)
         self.sitemap_strategy = SitemapCrawlStrategy()
 
-        # Initialize operations with repository instead of supabase_client
+        # Initialize operations with repository
         self.doc_storage_ops = DocumentStorageOperations(repository=self.repository)
         self.page_storage_ops = PageStorageOperations(repository=self.repository)
 
