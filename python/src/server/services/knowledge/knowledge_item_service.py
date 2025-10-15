@@ -316,7 +316,16 @@ class KnowledgeItemService:
         Returns:
             Transformed knowledge item
         """
-        source_metadata = source.get("metadata", {})
+        import json
+        # Parse metadata if it's a JSON string
+        raw_metadata = source.get("metadata", {})
+        if isinstance(raw_metadata, str):
+            try:
+                source_metadata = json.loads(raw_metadata)
+            except json.JSONDecodeError:
+                source_metadata = {}
+        else:
+            source_metadata = raw_metadata
         source_id = source["source_id"]
 
         # Get first page URL
