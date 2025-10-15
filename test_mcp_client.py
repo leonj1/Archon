@@ -164,7 +164,7 @@ class SimpleMCPClient:
         await self.client.aclose()
 
 
-async def test_mcp_connection(base_url: str = "http://192.168.1.162:8051"):
+async def test_mcp_connection(base_url: str = "http://localhost:8051"):
     """Test MCP server connection and basic functionality"""
     print("=" * 60)
     print("🧪 Archon MCP Server Test")
@@ -221,7 +221,7 @@ async def test_mcp_connection(base_url: str = "http://192.168.1.162:8051"):
 
 if __name__ == "__main__":
     # Get base URL from command line or use default
-    base_url = sys.argv[1] if len(sys.argv) > 1 else "http://192.168.1.162:8051"
+    base_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8051"
 
     # Run the test
     success = asyncio.run(test_mcp_connection(base_url))
