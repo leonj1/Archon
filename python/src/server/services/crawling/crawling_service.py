@@ -11,7 +11,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any, Optional
 
-from ...config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
+from ...config.logfire_config import get_logger, safe_logfire_info
 from ...repositories.database_repository import DatabaseRepository
 from ...repositories.repository_factory import get_repository
 from ...utils.progress.progress_tracker import ProgressTracker

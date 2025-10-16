@@ -9,6 +9,7 @@ import re
 
 from pydantic import BaseModel
 
+
 class LLMsFullSection(BaseModel):
     """Parsed section from llms-full.txt file"""
 

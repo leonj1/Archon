@@ -1,6 +1,6 @@
 """Progress tracker protocol for crawl operations."""
 
-from typing import Protocol, Any
+from typing import Any, Protocol
 
 
 class IProgressTracker(Protocol):

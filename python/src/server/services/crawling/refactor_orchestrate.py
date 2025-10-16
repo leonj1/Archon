@@ -5,6 +5,7 @@ This replaces the massive 405-line method with a clean 150-line version using ex
 
 import re
 
+
 def get_refactored_method():
     """Return the refactored _async_orchestrate_crawl method."""
     return '''    async def _async_orchestrate_crawl(self, request: dict[str, Any], task_id: str):
@@ -250,7 +251,7 @@ def refactor_file():
     """Refactor the crawling_service.py file."""
     file_path = "/home/jose/src/Archon/python/src/server/services/crawling/crawling_service.py"
 
-    with open(file_path, 'r') as f:
+    with open(file_path) as f:
         content = f.read()
 
     # Find the _async_orchestrate_crawl method and replace it
@@ -270,7 +271,7 @@ def refactor_file():
         f.write(new_content)
 
     print(f"Successfully refactored {file_path}")
-    print(f"Reduced _async_orchestrate_crawl from 405 lines to ~260 lines")
+    print("Reduced _async_orchestrate_crawl from 405 lines to ~260 lines")
     return True
 
 if __name__ == "__main__":

@@ -4,7 +4,6 @@ Source Status Manager for Crawl Orchestration
 Manages source crawl status updates and verification.
 """
 
-from typing import Any, Optional
 
 from ....config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from ....repositories.database_repository import DatabaseRepository
@@ -64,7 +63,7 @@ class SourceStatusManager:
             safe_logfire_error(f"Failed to update source crawl_status | error={e}")
             return False
 
-    async def update_to_failed(self, source_id: Optional[str]) -> bool:
+    async def update_to_failed(self, source_id: str | None) -> bool:
         """
         Update source crawl status to 'failed'.
 

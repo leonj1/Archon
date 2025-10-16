@@ -5,11 +5,10 @@ Manages periodic heartbeat signals to keep progress tracking alive during long o
 """
 
 import asyncio
-from typing import Any
 
 from ....config.logfire_config import get_logger
-from ..protocols.time_source import ITimeSource
 from ..protocols.progress_callback import IProgressCallback
+from ..protocols.time_source import ITimeSource
 
 logger = get_logger(__name__)
 

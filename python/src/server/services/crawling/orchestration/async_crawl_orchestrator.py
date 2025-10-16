@@ -4,8 +4,9 @@ Async Crawl Orchestrator
 Main orchestration logic for async crawling operations with progress tracking.
 """
 
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from typing import Any
 
 from ....config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 

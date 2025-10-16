@@ -4,9 +4,10 @@ Document Processing Orchestrator
 Coordinates document storage with progress tracking and validation.
 """
 
-from typing import Any, Callable, Awaitable
+from collections.abc import Callable
+from typing import Any
 
-from ....config.logfire_config import get_logger, safe_logfire_info, safe_logfire_error
+from ....config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from ..document_storage_operations import DocumentStorageOperations
 
 logger = get_logger(__name__)

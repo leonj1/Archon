@@ -1,6 +1,6 @@
 """Progress update handler protocol."""
 
-from typing import Protocol, Any, Awaitable
+from typing import Any, Protocol
 
 
 class IProgressUpdateHandler(Protocol):

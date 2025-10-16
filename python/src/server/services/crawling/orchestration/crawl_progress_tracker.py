@@ -4,7 +4,8 @@ Crawl Progress Tracker
 Manages progress updates with mapping and progress state tracking.
 """
 
-from typing import Any, Callable, Awaitable, Optional
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from ....config.logfire_config import get_logger, safe_logfire_info
 from ....utils.progress.progress_tracker import ProgressTracker
@@ -18,7 +19,7 @@ class CrawlProgressTracker:
 
     def __init__(
         self,
-        progress_tracker: Optional[ProgressTracker],
+        progress_tracker: ProgressTracker | None,
         progress_mapper: ProgressMapper,
         task_id: str,
         handle_progress_update: Callable[[str, dict[str, Any]], Awaitable[None]],

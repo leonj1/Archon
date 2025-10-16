@@ -4,7 +4,8 @@ Code Examples Orchestrator
 Coordinates code example extraction with progress tracking and error handling.
 """
 
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from ....config.logfire_config import get_logger, safe_logfire_error
 from ...credential_service import credential_service
@@ -40,7 +41,7 @@ class CodeExamplesOrchestrator:
         crawl_results: list[dict[str, Any]],
         url_to_full_document: dict[str, str],
         source_id: str,
-        progress_callback: Callable[[dict[str, Any]], Awaitable[None]] | None,
+        progress_callback: Callable[..., Awaitable[None]] | None,
         total_pages: int,
     ) -> int:
         """
@@ -94,12 +95,12 @@ class CodeExamplesOrchestrator:
 
             # Report failure to progress tracker
             if progress_callback:
-                await progress_callback({
-                    "status": "code_extraction",
-                    "progress": self.progress_mapper.map_progress("code_extraction", 100),
-                    "log": f"Code extraction failed: {str(e)}. Continuing crawl without code examples.",
-                    "total_pages": total_pages,
-                })
+                await progress_callback(
+                    "code_extraction",
+                    self.progress_mapper.map_progress("code_extraction", 100),
+                    f"Code extraction failed: {str(e)}. Continuing crawl without code examples.",
+                    total_pages=total_pages,
+                )
 
             return 0
 
@@ -133,7 +134,7 @@ class CodeExamplesOrchestrator:
 
     def _create_progress_callback(
         self,
-        progress_callback: Callable[[dict[str, Any]], Awaitable[None]] | None,
+        progress_callback: Callable[..., Awaitable[None]] | None,
         total_pages: int,
     ) -> Callable[[dict[str, Any]], Awaitable[None]]:
         """
@@ -153,12 +154,13 @@ class CodeExamplesOrchestrator:
                     "code_extraction", raw_progress
                 )
 
-                await progress_callback({
-                    "status": data.get("status", "code_extraction"),
-                    "progress": mapped_progress,
-                    "log": data.get("log", "Extracting code examples..."),
-                    "total_pages": total_pages,
+                # Call with positional arguments matching IProgressTracker.update signature
+                await progress_callback(
+                    data.get("status", "code_extraction"),  # status
+                    mapped_progress,  # progress
+                    data.get("log", "Extracting code examples..."),  # log
+                    total_pages=total_pages,  # kwargs
                     **{k: v for k, v in data.items() if k not in ["status", "progress", "percentage", "log"]}
-                })
+                )
 
         return wrapped_callback

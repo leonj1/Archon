@@ -1,6 +1,6 @@
 """Progress callback protocol for heartbeat updates."""
 
-from typing import Protocol, Any, Awaitable
+from typing import Any, Protocol
 
 
 class IProgressCallback(Protocol):

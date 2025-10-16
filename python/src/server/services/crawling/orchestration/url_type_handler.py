@@ -4,7 +4,8 @@ URL Type Handler
 Detects URL types and performs appropriate crawling strategy.
 """
 
-from typing import Any, Callable, Awaitable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from ....config.logfire_config import get_logger
 from ..helpers.url_handler import URLHandler
@@ -46,8 +47,8 @@ class UrlTypeHandler:
         self,
         url: str,
         request: dict[str, Any],
-        progress_callback: Optional[Callable] = None,
-    ) -> tuple[list[dict[str, Any]], Optional[str]]:
+        progress_callback: Callable | None = None,
+    ) -> tuple[list[dict[str, Any]], str | None]:
         """
         Detect URL type and perform appropriate crawling.
 
@@ -72,7 +73,7 @@ class UrlTypeHandler:
         self,
         url: str,
         request: dict[str, Any],
-        progress_callback: Optional[Callable],
+        progress_callback: Callable | None,
     ) -> tuple[list[dict[str, Any]], str]:
         """Handle text file crawling."""
         crawl_type = "llms-txt" if "llms" in url.lower() else "text_file"
@@ -96,7 +97,7 @@ class UrlTypeHandler:
         content: str,
         original_results: list[dict[str, Any]],
         request: dict[str, Any],
-        progress_callback: Optional[Callable],
+        progress_callback: Callable | None,
     ) -> tuple[list[dict[str, Any]], str]:
         """Process a link collection file by extracting and crawling links."""
         # Extract links with text
@@ -139,7 +140,7 @@ class UrlTypeHandler:
         return combined_results, "link_collection_with_crawled_links"
 
     async def _handle_sitemap(
-        self, url: str, progress_callback: Optional[Callable]
+        self, url: str, progress_callback: Callable | None
     ) -> tuple[list[dict[str, Any]], str]:
         """Handle sitemap crawling."""
         sitemap_urls = self.parse_sitemap(url)
@@ -157,7 +158,7 @@ class UrlTypeHandler:
         self,
         url: str,
         request: dict[str, Any],
-        progress_callback: Optional[Callable],
+        progress_callback: Callable | None,
     ) -> tuple[list[dict[str, Any]], str]:
         """Handle regular webpage with recursive crawling."""
         max_depth = request.get("max_depth", 1)

@@ -5,13 +5,13 @@ Handles the storage of complete documentation pages in the archon_page_metadata 
 Pages are stored BEFORE chunking to maintain full context for agent retrieval.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from postgrest.exceptions import APIError
 
+from ...config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from ...repositories.database_repository import DatabaseRepository
 from ...repositories.repository_factory import get_repository
-from ...config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from .helpers.llms_full_parser import parse_llms_full_sections
 
 logger = get_logger(__name__)
@@ -24,7 +24,7 @@ class PageStorageOperations:
     This enables agents to retrieve complete documentation pages instead of just chunks.
     """
 
-    def __init__(self, repository: Optional[DatabaseRepository] = None, supabase_client=None):
+    def __init__(self, repository: DatabaseRepository | None = None, supabase_client=None):
         """
         Initialize with optional repository or supabase client.
 
@@ -38,7 +38,7 @@ class PageStorageOperations:
             # First argument is actually a supabase client (backward compatibility)
             supabase_client = repository
             repository = None
-            
+
         if repository is not None:
             self.repository = repository
         elif supabase_client is not None:

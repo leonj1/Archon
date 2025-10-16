@@ -12,6 +12,8 @@ class FakeProgressMapper:
         """Initialize fake progress mapper."""
         self.calls: list[tuple[str, int]] = []
         self._mappings: dict[tuple[str, int], int] = {}
+        self._current_stage = "initializing"
+        self._current_progress = 0
 
     def map_progress(self, stage: str, progress: int) -> int:
         """
@@ -68,3 +70,21 @@ class FakeProgressMapper:
             True if mapper was called with these arguments
         """
         return (stage, progress) in self.calls
+
+    def get_current_stage(self) -> str:
+        """
+        Get the current stage name.
+
+        Returns:
+            Current stage name
+        """
+        return self._current_stage
+
+    def get_current_progress(self) -> int:
+        """
+        Get the current overall progress percentage.
+
+        Returns:
+            Current progress (0-100)
+        """
+        return self._current_progress
