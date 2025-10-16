@@ -116,12 +116,24 @@ class KnowledgeSummaryService:
                         # This handles legacy data that might not have knowledge_type set
                         safe_logfire_info(f"Knowledge type not found in metadata for {source_id}, defaulting to technical")
                         knowledge_type = "technical"
-                    
+
+                    # Map crawl_status to frontend-expected status
+                    crawl_status = metadata.get("crawl_status", "pending")
+                    frontend_status = {
+                        "completed": "active",
+                        "failed": "error",
+                        "pending": "processing"
+                    }.get(crawl_status, "processing")
+
+                    # Update metadata to include mapped status
+                    metadata["status"] = frontend_status
+                    metadata["crawl_status"] = crawl_status
+
                     summary = {
                         "source_id": source_id,
                         "title": source.get("title", source.get("summary", "Untitled")),
                         "url": first_url,
-                        "status": "active",  # Always active for now
+                        "status": frontend_status,  # Map from crawl_status
                         "document_count": doc_counts.get(source_id, 0),
                         "code_examples_count": code_counts.get(source_id, 0),
                         "knowledge_type": knowledge_type,

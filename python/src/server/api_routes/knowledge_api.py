@@ -1312,3 +1312,81 @@ async def stop_crawl_task(progress_id: str):
             f"Failed to stop crawl task | error={str(e)} | progress_id={progress_id}"
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
+
+@router.post("/knowledge-items/fix-pending-statuses")
+async def fix_pending_statuses():
+    """
+    Fix sources with crawl_status='pending' but have documents.
+
+    This endpoint updates sources that were successfully crawled but weren't
+    properly marked as 'completed' due to earlier code versions.
+    """
+    try:
+        safe_logfire_info("Starting fix for pending statuses")
+
+        repository = get_repository()
+        sources = await repository.list_sources()
+
+        fixed_count = 0
+        already_correct = 0
+        no_documents = 0
+
+        for source in sources:
+            source_id = source["source_id"]
+            metadata = source.get("metadata", {})
+
+            # Parse metadata if it's a string
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata) if metadata else {}
+                except (json.JSONDecodeError, TypeError):
+                    metadata = {}
+
+            crawl_status = metadata.get("crawl_status", "pending")
+
+            # Get document count for this source
+            doc_count = await repository.get_page_count_by_source(source_id)
+
+            if crawl_status == "pending" and doc_count > 0:
+                # This source should be marked as completed!
+                safe_logfire_info(
+                    f"Fixing source: {source.get('title')} | docs={doc_count} | status={crawl_status}"
+                )
+
+                # Update metadata with completed status
+                metadata["crawl_status"] = "completed"
+
+                # Update the source
+                await repository.upsert_source({
+                    "source_id": source_id,
+                    "title": source.get("title"),
+                    "summary": source.get("summary"),
+                    "total_word_count": source.get("total_word_count", 0),
+                    "metadata": metadata,
+                    "source_url": source.get("source_url"),
+                    "source_display_name": source.get("source_display_name"),
+                })
+
+                fixed_count += 1
+
+            elif crawl_status == "completed":
+                already_correct += 1
+
+            elif doc_count == 0:
+                no_documents += 1
+
+        safe_logfire_info(
+            f"Fix pending statuses complete | fixed={fixed_count} | correct={already_correct} | no_docs={no_documents}"
+        )
+
+        return {
+            "success": True,
+            "fixed_count": fixed_count,
+            "already_correct": already_correct,
+            "no_documents": no_documents,
+            "message": f"Fixed {fixed_count} sources with incorrect status"
+        }
+
+    except Exception as e:
+        safe_logfire_error(f"Failed to fix pending statuses | error={str(e)}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
