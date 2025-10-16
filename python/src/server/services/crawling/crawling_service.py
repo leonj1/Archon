@@ -23,13 +23,17 @@ from .helpers.site_config import SiteConfig
 
 # Import helpers
 from .helpers.url_handler import URLHandler
+from .helpers.url_validator import UrlValidator
 
 # Import orchestration components
 from .orchestration import (
+    AsyncCrawlOrchestrator,
     CodeExamplesOrchestrator,
+    CrawlOrchestrationConfig,
     CrawlProgressTracker,
     DocumentProcessingOrchestrator,
     HeartbeatManager,
+    ProgressCallbackFactory,
     SourceStatusManager,
     UrlTypeHandler,
 )
@@ -86,34 +90,38 @@ class CrawlingService:
             progress_id: Optional progress ID for HTTP polling updates
         """
         self.crawler = crawler
-
-        # Initialize repository following the standard pattern
         self.repository = repository if repository is not None else get_repository()
-
         self.progress_id = progress_id
         self.progress_tracker = None
 
-        # Initialize helpers
+        self._init_helpers()
+        self._init_strategies(crawler)
+        self._init_operations()
+        self._init_progress_state()
+
+    def _init_helpers(self):
+        """Initialize helper objects."""
         self.url_handler = URLHandler()
         self.site_config = SiteConfig()
         self.markdown_generator = self.site_config.get_markdown_generator()
         self.link_pruning_markdown_generator = self.site_config.get_link_pruning_markdown_generator()
 
-        # Initialize strategies
+    def _init_strategies(self, crawler):
+        """Initialize crawling strategies."""
         self.batch_strategy = BatchCrawlStrategy(crawler, self.link_pruning_markdown_generator)
         self.recursive_strategy = RecursiveCrawlStrategy(crawler, self.link_pruning_markdown_generator)
         self.single_page_strategy = SinglePageCrawlStrategy(crawler, self.markdown_generator)
         self.sitemap_strategy = SitemapCrawlStrategy()
 
-        # Initialize operations with repository
+    def _init_operations(self):
+        """Initialize storage operations."""
         self.doc_storage_ops = DocumentStorageOperations(repository=self.repository)
         self.page_storage_ops = PageStorageOperations(repository=self.repository)
 
-        # Track progress state across all stages to prevent UI resets
+    def _init_progress_state(self):
+        """Initialize progress tracking state."""
         self.progress_state = {"progressId": self.progress_id} if self.progress_id else {}
-        # Initialize progress mapper to prevent backwards jumps
         self.progress_mapper = ProgressMapper()
-        # Cancellation support
         self._cancelled = False
 
     def set_progress_id(self, progress_id: str):
@@ -149,32 +157,12 @@ class CrawlingService:
         Returns:
             Async callback function with signature (status: str, progress: int, message: str, **kwargs) -> None
         """
-        async def callback(status: str, progress: int, message: str, **kwargs):
-            if self.progress_tracker:
-                # Debug log what we're receiving
-                safe_logfire_info(
-                    f"Progress callback received | status={status} | progress={progress} | "
-                    f"total_pages={kwargs.get('total_pages', 'N/A')} | processed_pages={kwargs.get('processed_pages', 'N/A')} | "
-                    f"kwargs_keys={list(kwargs.keys())}"
-                )
-
-                # Map the progress to the overall progress range
-                mapped_progress = self.progress_mapper.map_progress(base_status, progress)
-
-                # Update progress via tracker (stores in memory for HTTP polling)
-                await self.progress_tracker.update(
-                    status=base_status,
-                    progress=mapped_progress,
-                    log=message,
-                    **kwargs
-                )
-                safe_logfire_info(
-                    f"Updated crawl progress | progress_id={self.progress_id} | status={base_status} | "
-                    f"raw_progress={progress} | mapped_progress={mapped_progress} | "
-                    f"total_pages={kwargs.get('total_pages', 'N/A')} | processed_pages={kwargs.get('processed_pages', 'N/A')}"
-                )
-
-        return callback
+        factory = ProgressCallbackFactory(
+            self.progress_tracker,
+            self.progress_mapper,
+            self.progress_id,
+        )
+        return await factory.create_callback(base_status)
 
     async def _handle_progress_update(self, task_id: str, update: dict[str, Any]) -> None:
         """
@@ -267,255 +255,115 @@ class CrawlingService:
         url = str(request.get("url", ""))
         safe_logfire_info(f"Starting background crawl orchestration | url={url}")
 
-        # Create task ID
         task_id = self.progress_id or str(uuid.uuid4())
+        await self._register_orchestration()
 
-        # Register this orchestration service for cancellation support
+        crawl_task = self._create_crawl_task(request, task_id)
+
+        return self._build_orchestration_response(task_id, url, crawl_task)
+
+    async def _register_orchestration(self):
+        """Register orchestration service for cancellation support."""
         if self.progress_id:
             await register_orchestration(self.progress_id, self)
 
-        # Start the crawl as an async task in the main event loop
-        # Store the task reference for proper cancellation
+    def _create_crawl_task(self, request: dict[str, Any], task_id: str):
+        """Create and configure the crawl task."""
         crawl_task = asyncio.create_task(self._async_orchestrate_crawl(request, task_id))
 
-        # Set a name for the task to help with debugging
         if self.progress_id:
             crawl_task.set_name(f"crawl_{self.progress_id}")
 
-        # Return immediately with task reference
+        return crawl_task
+
+    def _build_orchestration_response(self, task_id: str, url: str, crawl_task) -> dict[str, Any]:
+        """Build the orchestration response dictionary."""
         return {
             "task_id": task_id,
             "status": "started",
             "message": f"Crawl operation started for {url}",
             "progress_id": self.progress_id,
-            "task": crawl_task,  # Return the actual task for proper cancellation
+            "task": crawl_task,
         }
 
     async def _async_orchestrate_crawl(self, request: dict[str, Any], task_id: str):
         """
         Async orchestration that runs in the main event loop.
-        Now significantly simplified by delegating to specialized orchestration services.
+        Delegated to AsyncCrawlOrchestrator for cleaner separation of concerns.
         """
-        # Initialize orchestration helpers
-        heartbeat_mgr = HeartbeatManager(
-            interval=30.0,
-            progress_callback=self._create_heartbeat_callback(task_id),
-        )
-
-        source_status_mgr = SourceStatusManager(self.repository)
-
-        progress_tracker = CrawlProgressTracker(
-            self.progress_tracker,
-            self.progress_mapper,
-            task_id,
-            self._handle_progress_update,
-        )
-
-        doc_processor = DocumentProcessingOrchestrator(
-            self.doc_storage_ops,
-            self.progress_mapper,
-            self.progress_tracker,
-        )
-
-        code_orchestrator = CodeExamplesOrchestrator(
-            self.doc_storage_ops,
-            self.progress_mapper,
-            self._check_cancellation,
-        )
-
-        url_type_handler = UrlTypeHandler(
-            self.url_handler,
-            self.crawl_markdown_file,
-            self.parse_sitemap,
-            self.crawl_batch_with_progress,
-            self.crawl_recursive_with_progress,
-            self._is_self_link,
-        )
+        config = self._create_orchestration_config(task_id)
+        orchestrator = AsyncCrawlOrchestrator(config)
 
         try:
-            url = str(request.get("url", ""))
-            safe_logfire_info(f"Starting async crawl orchestration | url={url} | task_id={task_id}")
-
-            # Start progress tracking
-            await progress_tracker.start(url)
-
-            # Generate source identifiers
-            original_source_id = self.url_handler.generate_unique_source_id(url)
-            source_display_name = self.url_handler.extract_display_name(url)
-            safe_logfire_info(
-                f"Generated unique source_id '{original_source_id}' and display name '{source_display_name}' from URL '{url}'"
-            )
-
-            # Initial progress
-            await progress_tracker.update_mapped(
-                "starting", 100, f"Starting crawl of {url}", current_url=url
-            )
-
-            # Check for cancellation
-            self._check_cancellation()
-
-            # Analyzing stage
-            await progress_tracker.update_mapped(
-                "analyzing", 50, f"Analyzing URL type for {url}",
-                total_pages=1, processed_pages=0
-            )
-
-            # Detect URL type and perform crawl
-            crawl_results, crawl_type = await url_type_handler.crawl_by_type(
-                url,
-                request,
-                progress_callback=await self._create_crawl_progress_callback("crawling"),
-            )
-
-            # Update progress with crawl type
-            await progress_tracker.update_with_crawl_type(crawl_type)
-
-            # Check for cancellation and send heartbeat
-            self._check_cancellation()
-            await heartbeat_mgr.send_if_needed(
-                self.progress_mapper.get_current_stage(),
-                self.progress_mapper.get_current_progress()
-            )
-
-            if not crawl_results:
-                raise ValueError("No content was crawled from the provided URL")
-
-            # Processing stage
-            await progress_tracker.update_mapped("processing", 50, "Processing crawled content")
-            self._check_cancellation()
-
-            # Process and store documents
-            storage_results = await doc_processor.process_and_store(
-                crawl_results,
-                request,
-                crawl_type,
-                original_source_id,
-                self._check_cancellation,
-                url,
-                source_display_name,
-            )
-
-            # Update progress with source_id
-            await progress_tracker.update_with_source_id(storage_results.get("source_id"))
-
-            # Check cancellation and send heartbeat
-            self._check_cancellation()
-            await heartbeat_mgr.send_if_needed(
-                self.progress_mapper.get_current_stage(),
-                self.progress_mapper.get_current_progress()
-            )
-
-            # Extract code examples if requested
-            total_pages = len(crawl_results)
-            actual_chunks_stored = storage_results.get("chunks_stored", 0)
-
-            code_examples_count = 0
-            if actual_chunks_stored > 0:
-                await progress_tracker.update_mapped(
-                    "code_extraction", 0, "Starting code extraction..."
-                )
-
-                code_examples_count = await code_orchestrator.extract_code_examples(
-                    request,
-                    crawl_results,
-                    storage_results["url_to_full_document"],
-                    storage_results["source_id"],
-                    self.progress_tracker.update if self.progress_tracker else None,
-                    total_pages,
-                )
-
-                # Check cancellation and send heartbeat
-                self._check_cancellation()
-                await heartbeat_mgr.send_if_needed(
-                    self.progress_mapper.get_current_stage(),
-                    self.progress_mapper.get_current_progress()
-                )
-
-            # Finalization
-            await progress_tracker.update_mapped(
-                "finalization", 50, "Finalizing crawl results...",
-                chunks_stored=actual_chunks_stored,
-                code_examples_found=code_examples_count,
-            )
-
-            # Complete progress tracking
-            await progress_tracker.update_mapped(
-                "completed", 100,
-                f"Crawl completed: {actual_chunks_stored} chunks, {code_examples_count} code examples",
-                chunks_stored=actual_chunks_stored,
-                code_examples_found=code_examples_count,
-                processed_pages=len(crawl_results),
-                total_pages=len(crawl_results),
-            )
-
-            # Mark as completed in progress tracker
-            await progress_tracker.complete(
-                actual_chunks_stored,
-                code_examples_count,
-                len(crawl_results),
-                len(crawl_results),
-                storage_results.get("source_id", ""),
-            )
-
-            # Update source status to completed
-            source_id = storage_results.get("source_id")
-            if source_id:
-                await source_status_mgr.update_to_completed(source_id)
-
-            # Unregister after successful completion
-            if self.progress_id:
-                await unregister_orchestration(self.progress_id)
-                safe_logfire_info(
-                    f"Unregister orchestration service after completion | progress_id={self.progress_id}"
-                )
+            await orchestrator.orchestrate(request, task_id)
+            await self._unregister_on_success()
 
         except asyncio.CancelledError:
-            safe_logfire_info(f"Crawl operation cancelled | progress_id={self.progress_id}")
-            cancelled_progress = self.progress_mapper.map_progress("cancelled", 0)
-            await self._handle_progress_update(
-                task_id,
-                {
-                    "status": "cancelled",
-                    "progress": cancelled_progress,
-                    "log": "Crawl operation was cancelled by user",
-                },
+            await self._handle_cancellation(task_id)
+
+        except Exception:
+            await self._unregister_on_error()
+
+    def _create_orchestration_config(self, task_id: str) -> CrawlOrchestrationConfig:
+        """Create configuration for orchestrator."""
+        return CrawlOrchestrationConfig(
+            heartbeat_mgr=HeartbeatManager(30.0, self._create_heartbeat_callback(task_id)),
+            source_status_mgr=SourceStatusManager(self.repository),
+            progress_tracker=CrawlProgressTracker(
+                self.progress_tracker, self.progress_mapper, task_id, self._handle_progress_update
+            ),
+            doc_processor=DocumentProcessingOrchestrator(
+                self.doc_storage_ops, self.progress_mapper, self.progress_tracker
+            ),
+            code_orchestrator=CodeExamplesOrchestrator(
+                self.doc_storage_ops, self.progress_mapper, self._check_cancellation
+            ),
+            url_type_handler=UrlTypeHandler(
+                self.url_handler, self.crawl_markdown_file, self.parse_sitemap,
+                self.crawl_batch_with_progress, self.crawl_recursive_with_progress, self._is_self_link
+            ),
+            url_handler=self.url_handler,
+            progress_mapper=self.progress_mapper,
+            progress_state=self.progress_state,
+            cancellation_check=self._check_cancellation,
+            create_crawl_progress_callback=self._create_crawl_progress_callback,
+            handle_progress_update=self._handle_progress_update,
+            progress_id=self.progress_id,
+        )
+
+    async def _unregister_on_success(self):
+        """Unregister orchestration after successful completion."""
+        if self.progress_id:
+            await unregister_orchestration(self.progress_id)
+            safe_logfire_info(
+                f"Unregister orchestration service after completion | progress_id={self.progress_id}"
             )
-            if self.progress_id:
-                await unregister_orchestration(self.progress_id)
-                safe_logfire_info(
-                    f"Unregistered orchestration service on cancellation | progress_id={self.progress_id}"
-                )
 
-        except Exception as e:
-            logger.error("Async crawl orchestration failed", exc_info=True)
-            safe_logfire_error(f"Async crawl orchestration failed | error={str(e)}")
-
-            error_message = f"Crawl failed: {str(e)}"
-            error_progress = self.progress_mapper.map_progress("error", 0)
-            await self._handle_progress_update(
-                task_id,
-                {
-                    "status": "error",
-                    "progress": error_progress,
-                    "log": error_message,
-                    "error": str(e),
-                },
+    async def _handle_cancellation(self, task_id: str):
+        """Handle cancellation of orchestration."""
+        safe_logfire_info(f"Crawl operation cancelled | progress_id={self.progress_id}")
+        cancelled_progress = self.progress_mapper.map_progress("cancelled", 0)
+        await self._handle_progress_update(
+            task_id,
+            {
+                "status": "cancelled",
+                "progress": cancelled_progress,
+                "log": "Crawl operation was cancelled by user",
+            },
+        )
+        if self.progress_id:
+            await unregister_orchestration(self.progress_id)
+            safe_logfire_info(
+                f"Unregistered orchestration service on cancellation | progress_id={self.progress_id}"
             )
 
-            # Mark error in progress tracker
-            await progress_tracker.error(error_message)
-
-            # Update source status to failed
-            source_id = self.progress_state.get("source_id")
-            if source_id:
-                await source_status_mgr.update_to_failed(source_id)
-
-            # Unregister on error
-            if self.progress_id:
-                await unregister_orchestration(self.progress_id)
-                safe_logfire_info(
-                    f"Unregistered orchestration service on error | progress_id={self.progress_id}"
-                )
+    async def _unregister_on_error(self):
+        """Unregister orchestration after error."""
+        if self.progress_id:
+            await unregister_orchestration(self.progress_id)
+            safe_logfire_info(
+                f"Unregistered orchestration service on error | progress_id={self.progress_id}"
+            )
 
     def _create_heartbeat_callback(self, task_id: str):
         """Create a callback for heartbeat progress updates."""
@@ -532,8 +380,7 @@ class CrawlingService:
     def _is_self_link(self, link: str, base_url: str) -> bool:
         """
         Check if a link is a self-referential link to the base URL.
-        Handles query parameters, fragments, trailing slashes, and normalizes
-        scheme/host/ports for accurate comparison.
+        Delegates to UrlValidator for the actual validation logic.
 
         Args:
             link: The link to check
@@ -542,26 +389,7 @@ class CrawlingService:
         Returns:
             True if the link is self-referential, False otherwise
         """
-        try:
-            from urllib.parse import urlparse
-
-            def _core(u: str) -> str:
-                p = urlparse(u)
-                scheme = (p.scheme or "http").lower()
-                host = (p.hostname or "").lower()
-                port = p.port
-                if (scheme == "http" and port in (None, 80)) or (scheme == "https" and port in (None, 443)):
-                    port_part = ""
-                else:
-                    port_part = f":{port}" if port else ""
-                path = p.path.rstrip("/")
-                return f"{scheme}://{host}{port_part}{path}"
-
-            return _core(link) == _core(base_url)
-        except Exception as e:
-            logger.warning(f"Error checking if link is self-referential: {e}", exc_info=True)
-            # Fallback to simple string comparison
-            return link.rstrip('/') == base_url.rstrip('/')
+        return UrlValidator.is_self_link(link, base_url)
 
 # Alias for backward compatibility
 CrawlOrchestrationService = CrawlingService

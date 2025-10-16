@@ -1,0 +1,55 @@
+{
+  "outputStyle": "Professional Developer",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/validate_function_length.py",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/validate_constructor_dependencies.py",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/validate_pydantic_types.py",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '✅ Refactoring session complete. Run tests to verify!'"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Bash(pytest:*)",
+      "Bash(python:*)",
+      "Bash(git:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": [
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(sudo:*)"
+    ]
+  }
+}
