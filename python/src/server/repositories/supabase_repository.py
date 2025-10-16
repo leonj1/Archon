@@ -1216,8 +1216,24 @@ class SupabaseDatabaseRepository(DatabaseRepository):
             raise
 
     async def delete_source(self, source_id: str) -> bool:
-        """Delete a source (CASCADE deletes related records)."""
+        """
+        Delete a source and explicitly delete all related records.
+
+        This method explicitly deletes related records before deleting the source
+        to ensure cleanup happens even if CASCADE DELETE constraints are not
+        properly configured in the database.
+        """
         try:
+            # Step 1: Explicitly delete related crawled_pages
+            # This prevents orphaned records if CASCADE DELETE is not working
+            crawled_pages_deleted = await self.delete_crawled_pages_by_source(source_id)
+            logger.info(f"Explicitly deleted {crawled_pages_deleted} crawled pages for source {source_id}")
+
+            # Step 2: Explicitly delete related code_examples
+            code_examples_deleted = await self.delete_code_examples_by_source(source_id)
+            logger.info(f"Explicitly deleted {code_examples_deleted} code examples for source {source_id}")
+
+            # Step 3: Delete the source itself
             result = (
                 self.supabase_client.table("archon_sources")
                 .delete()
@@ -1227,7 +1243,10 @@ class SupabaseDatabaseRepository(DatabaseRepository):
 
             deleted = len(result.data) > 0 if result.data else False
             if deleted:
-                logger.info(f"Deleted source {source_id} (CASCADE deletes related records)")
+                logger.info(
+                    f"Deleted source {source_id} and all related records "
+                    f"({crawled_pages_deleted} pages, {code_examples_deleted} code examples)"
+                )
             return deleted
 
         except Exception as e:
