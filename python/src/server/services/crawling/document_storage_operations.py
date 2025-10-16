@@ -400,6 +400,7 @@ class DocumentStorageOperations:
                     original_url=request.get("url"),  # Store the original crawl URL
                     source_url=source_url,
                     source_display_name=source_display_name,
+                    crawl_status="pending",  # Initialize crawl_status field on source creation
                 )
                 safe_logfire_info(f"Successfully created/updated source record for '{source_id}'")
             except Exception as e:
@@ -421,6 +422,7 @@ class DocumentStorageOperations:
                             "auto_generated": True,
                             "fallback_creation": True,
                             "original_url": request.get("url"),
+                            "crawl_status": "pending",  # Initialize crawl_status field
                         },
                     }
 

@@ -625,6 +625,21 @@ async def refresh_knowledge_item(source_id: str):
             "crawl_type": "refresh"
         })
 
+        # Set crawl_status to "pending" at the start of refresh operation
+        try:
+            from ..services.source_management_service import update_source_info
+            await update_source_info(
+                repository=repository,
+                source_id=source_id,
+                summary=existing_item.get("summary", ""),
+                word_count=existing_item.get("total_word_count", 0),
+                crawl_status="pending",
+            )
+            safe_logfire_info(f"Set crawl_status to 'pending' at refresh start | source_id={source_id}")
+        except Exception as e:
+            logger.warning(f"Failed to set initial crawl_status to pending: {e}")
+            safe_logfire_error(f"Failed to set crawl_status | error={e} | source_id={source_id}")
+
         # Get crawler from CrawlerManager - same pattern as _perform_crawl_with_progress
         try:
             crawler = await get_crawler()
