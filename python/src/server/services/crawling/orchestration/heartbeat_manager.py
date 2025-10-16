@@ -5,9 +5,11 @@ Manages periodic heartbeat signals to keep progress tracking alive during long o
 """
 
 import asyncio
-from typing import Any, Callable, Awaitable
+from typing import Any
 
 from ....config.logfire_config import get_logger
+from ..protocols.time_source import ITimeSource
+from ..protocols.progress_callback import IProgressCallback
 
 logger = get_logger(__name__)
 
@@ -18,7 +20,8 @@ class HeartbeatManager:
     def __init__(
         self,
         interval: float = 30.0,
-        progress_callback: Callable[[str, dict[str, Any]], Awaitable[None]] | None = None,
+        progress_callback: IProgressCallback | None = None,
+        time_source: ITimeSource | None = None,
     ):
         """
         Initialize the heartbeat manager.
@@ -26,10 +29,12 @@ class HeartbeatManager:
         Args:
             interval: Heartbeat interval in seconds (default: 30.0)
             progress_callback: Callback to send heartbeat updates
+            time_source: Time source for retrieving current time (default: asyncio event loop time)
         """
         self.interval = interval
         self.progress_callback = progress_callback
-        self.last_heartbeat = asyncio.get_event_loop().time()
+        self.time_source = time_source or (lambda: asyncio.get_event_loop().time())
+        self.last_heartbeat = self.time_source()
 
     async def send_if_needed(self, current_stage: str, current_progress: int):
         """
@@ -42,7 +47,7 @@ class HeartbeatManager:
         if not self.progress_callback:
             return
 
-        current_time = asyncio.get_event_loop().time()
+        current_time = self.time_source()
         if current_time - self.last_heartbeat >= self.interval:
             await self.progress_callback(
                 current_stage,
@@ -57,4 +62,4 @@ class HeartbeatManager:
 
     def reset(self):
         """Reset the heartbeat timer."""
-        self.last_heartbeat = asyncio.get_event_loop().time()
+        self.last_heartbeat = self.time_source()
