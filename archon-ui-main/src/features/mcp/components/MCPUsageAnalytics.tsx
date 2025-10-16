@@ -1,25 +1,11 @@
-import React, { useState, useMemo } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
-import { Activity, TrendingUp, AlertCircle, RefreshCw } from "lucide-react";
+import { Activity, AlertCircle, RefreshCw, TrendingUp } from "lucide-react";
+import type React from "react";
+import { useMemo, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Card } from "@/features/ui/primitives/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/primitives/select";
 import { useMcpHourlyUsage, useMcpUsageSummary } from "../hooks/useMcpAnalytics";
 import { KnowledgeBaseUsageCard } from "./KnowledgeBaseUsageCard";
-import { Card } from "@/features/ui/primitives/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/features/ui/primitives/select";
 
 interface ChartDataPoint {
   hour: string;
@@ -56,9 +42,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
           <span className="w-3 h-3 rounded-full bg-red-500" />
           Errors: <span className="font-medium">{errors}</span>
         </p>
-        <p className="text-green-400 font-medium mt-1">
-          Success Rate: {successRate}%
-        </p>
+        <p className="text-green-400 font-medium mt-1">Success Rate: {successRate}%</p>
       </div>
     </div>
   );
@@ -171,9 +155,7 @@ export const MCPUsageAnalytics: React.FC = () => {
       <Card blur="md" transparency="light" size="lg">
         <div className="text-center py-8">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Failed to load analytics
-          </p>
+          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Failed to load analytics</p>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             {(hourlyError as Error)?.message || (summaryError as Error)?.message}
           </p>
@@ -195,12 +177,8 @@ export const MCPUsageAnalytics: React.FC = () => {
       <Card blur="md" transparency="light" size="lg">
         <div className="text-center py-8">
           <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            No usage data yet
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Start using MCP tools to see analytics here
-          </p>
+          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No usage data yet</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Start using MCP tools to see analytics here</p>
         </div>
       </Card>
     );
@@ -230,9 +208,7 @@ export const MCPUsageAnalytics: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Calls (24h)</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {totalCalls.toLocaleString()}
-              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalCalls.toLocaleString()}</p>
             </div>
           </div>
         </Card>
@@ -253,9 +229,7 @@ export const MCPUsageAnalytics: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Success Rate</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {successRate.toFixed(1)}%
-              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{successRate.toFixed(1)}%</p>
             </div>
           </div>
         </Card>
@@ -276,9 +250,7 @@ export const MCPUsageAnalytics: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Failed Calls</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {failedCalls.toLocaleString()}
-              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{failedCalls.toLocaleString()}</p>
             </div>
           </div>
         </Card>
@@ -291,13 +263,8 @@ export const MCPUsageAnalytics: React.FC = () => {
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Time Range Filter */}
         <div className="w-full sm:w-auto">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Time Range
-          </label>
-          <Select
-            value={timeRange.toString()}
-            onValueChange={(value) => setTimeRange(Number(value) as 24 | 48 | 168)}
-          >
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time Range</label>
+          <Select value={timeRange.toString()} onValueChange={(value) => setTimeRange(Number(value) as 24 | 48 | 168)}>
             <SelectTrigger color="blue" className="w-full sm:w-48">
               <SelectValue />
             </SelectTrigger>
@@ -317,9 +284,7 @@ export const MCPUsageAnalytics: React.FC = () => {
 
         {/* Category Filter */}
         <div className="w-full sm:w-auto">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Category
-          </label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category</label>
           <Select
             value={selectedCategory || "all"}
             onValueChange={(value) => setSelectedCategory(value === "all" ? undefined : value)}
@@ -365,9 +330,7 @@ export const MCPUsageAnalytics: React.FC = () => {
 
       {/* Bar Chart */}
       <Card blur="md" transparency="light" size="lg">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Usage Over Time
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Usage Over Time</h3>
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(156, 163, 175, 0.2)" />
@@ -386,9 +349,7 @@ export const MCPUsageAnalytics: React.FC = () => {
             <Legend
               wrapperStyle={{ paddingTop: "20px" }}
               iconType="circle"
-              formatter={(value) => (
-                <span className="text-gray-700 dark:text-gray-300">{value}</span>
-              )}
+              formatter={(value) => <span className="text-gray-700 dark:text-gray-300">{value}</span>}
             />
             <Bar
               dataKey="total"
@@ -410,9 +371,7 @@ export const MCPUsageAnalytics: React.FC = () => {
 
       {/* Top Tools Table */}
       <Card blur="md" transparency="light" size="lg">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Top 10 Most Used Tools
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top 10 Most Used Tools</h3>
         <div className="overflow-x-auto">
           <table className="w-full" role="table">
             <thead>
@@ -434,9 +393,7 @@ export const MCPUsageAnalytics: React.FC = () => {
                   >
                     <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium">
                       <span className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 dark:text-gray-400 w-6">
-                          {index + 1}.
-                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 w-6">{index + 1}.</span>
                         {item.tool}
                       </span>
                     </td>

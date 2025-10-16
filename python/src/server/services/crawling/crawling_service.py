@@ -577,6 +577,27 @@ class CrawlingService:
                     "log": "Crawl completed successfully!",
                 })
 
+            # Update source crawl_status to "completed"
+            from ..source_management_service import update_source_info
+            try:
+                # Get existing source to preserve other metadata
+                source_id = storage_results.get("source_id")
+                if source_id:
+                    existing_source = await self.repository.get_source_by_id(source_id)
+                    if existing_source:
+                        await update_source_info(
+                            repository=self.repository,
+                            source_id=source_id,
+                            summary=existing_source.get("summary", ""),
+                            word_count=existing_source.get("total_word_count", 0),
+                            crawl_status="completed",
+                        )
+                        safe_logfire_info(f"Updated source crawl_status to completed | source_id={source_id}")
+            except Exception as e:
+                # Don't fail the crawl if status update fails
+                logger.warning(f"Failed to update source crawl_status: {e}")
+                safe_logfire_error(f"Failed to update source crawl_status | error={e}")
+
             # Unregister after successful completion
             if self.progress_id:
                 await unregister_orchestration(self.progress_id)
@@ -620,6 +641,27 @@ class CrawlingService:
             # Mark error in progress tracker with standardized schema
             if self.progress_tracker:
                 await self.progress_tracker.error(error_message)
+
+            # Update source crawl_status to "failed" if source was created
+            from ..source_management_service import update_source_info
+            try:
+                # Try to get source_id from progress state if available
+                source_id = self.progress_state.get("source_id")
+                if source_id:
+                    existing_source = await self.repository.get_source_by_id(source_id)
+                    if existing_source:
+                        await update_source_info(
+                            repository=self.repository,
+                            source_id=source_id,
+                            summary=existing_source.get("summary", ""),
+                            word_count=existing_source.get("total_word_count", 0),
+                            crawl_status="failed",
+                        )
+                        safe_logfire_info(f"Updated source crawl_status to failed | source_id={source_id}")
+            except Exception as status_error:
+                # Don't fail twice - just log the error
+                logger.warning(f"Failed to update source crawl_status on error: {status_error}")
+
             # Unregister on error
             if self.progress_id:
                 await unregister_orchestration(self.progress_id)

@@ -1,8 +1,8 @@
+import { AlertCircle, Clock, Database, Loader2, TrendingUp } from "lucide-react";
 import React from "react";
-import { Database, TrendingUp, Clock, AlertCircle, Loader2 } from "lucide-react";
-import { useMcpKnowledgeBaseAnalytics } from "../hooks/useMcpKnowledgeBaseAnalytics";
 import { Card } from "@/features/ui/primitives/card";
 import { cn } from "@/features/ui/primitives/styles";
+import { useMcpKnowledgeBaseAnalytics } from "../hooks/useMcpKnowledgeBaseAnalytics";
 
 interface KnowledgeBaseUsageCardProps {
   hours?: number;
@@ -15,12 +15,7 @@ interface TooltipData {
   successRate: number;
 }
 
-const KnowledgeBaseTooltip: React.FC<TooltipData> = ({
-  name,
-  queryCount,
-  avgResponseTimeMs,
-  successRate,
-}) => {
+const KnowledgeBaseTooltip: React.FC<TooltipData> = ({ name, queryCount, avgResponseTimeMs, successRate }) => {
   return (
     <div className="bg-black/90 dark:bg-black/95 text-white p-3 rounded-lg shadow-lg border border-white/10 backdrop-blur-sm min-w-[250px]">
       <p className="font-semibold mb-2 text-purple-400">{name}</p>
@@ -63,9 +58,7 @@ export const KnowledgeBaseUsageCard: React.FC<KnowledgeBaseUsageCardProps> = ({ 
           <div className="p-2 rounded-lg bg-purple-500/10 dark:bg-purple-400/10">
             <Database className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Knowledge Base Usage
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Knowledge Base Usage</h3>
         </div>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
@@ -82,18 +75,12 @@ export const KnowledgeBaseUsageCard: React.FC<KnowledgeBaseUsageCardProps> = ({ 
           <div className="p-2 rounded-lg bg-purple-500/10 dark:bg-purple-400/10">
             <Database className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Knowledge Base Usage
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Knowledge Base Usage</h3>
         </div>
         <div className="text-center py-8">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Failed to load knowledge base analytics
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-            {(error as Error)?.message}
-          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Failed to load knowledge base analytics</p>
+          <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">{(error as Error)?.message}</p>
         </div>
       </Card>
     );
@@ -107,18 +94,12 @@ export const KnowledgeBaseUsageCard: React.FC<KnowledgeBaseUsageCardProps> = ({ 
           <div className="p-2 rounded-lg bg-purple-500/10 dark:bg-purple-400/10">
             <Database className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Knowledge Base Usage
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Knowledge Base Usage</h3>
         </div>
         <div className="text-center py-8">
           <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-            No knowledge bases queried yet
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500">
-            Start using RAG tools to search your knowledge
-          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">No knowledge bases queried yet</p>
+          <p className="text-xs text-gray-500 dark:text-gray-500">Start using RAG tools to search your knowledge</p>
         </div>
       </Card>
     );
@@ -149,9 +130,7 @@ export const KnowledgeBaseUsageCard: React.FC<KnowledgeBaseUsageCardProps> = ({ 
           <Database className="w-5 h-5 text-purple-600 dark:text-purple-400" />
         </div>
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Knowledge Base Usage
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Knowledge Base Usage</h3>
           <p className="text-xs text-gray-600 dark:text-gray-400">
             Top {topKnowledgeBases.length} most queried {topKnowledgeBases.length === 1 ? "source" : "sources"}
           </p>
@@ -191,10 +170,7 @@ export const KnowledgeBaseUsageCard: React.FC<KnowledgeBaseUsageCardProps> = ({ 
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-4 shrink-0">
                       {index + 1}.
                     </span>
-                    <span
-                      className="text-sm font-medium text-gray-900 dark:text-white truncate"
-                      title={kb.source_name}
-                    >
+                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate" title={kb.source_name}>
                       {kb.source_name}
                     </span>
                   </div>

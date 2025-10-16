@@ -51,13 +51,7 @@ describe("useMcpAnalytics", () => {
     });
 
     it("should generate correct hourly key with all parameters", () => {
-      expect(mcpAnalyticsKeys.hourly(24, "rag", "search")).toEqual([
-        "mcp-analytics",
-        "hourly",
-        24,
-        "rag",
-        "search",
-      ]);
+      expect(mcpAnalyticsKeys.hourly(24, "rag", "search")).toEqual(["mcp-analytics", "hourly", 24, "rag", "search"]);
     });
 
     it("should generate correct hourly key with minimal parameters", () => {
@@ -65,13 +59,7 @@ describe("useMcpAnalytics", () => {
     });
 
     it("should generate correct hourly key with category only", () => {
-      expect(mcpAnalyticsKeys.hourly(48, "project")).toEqual([
-        "mcp-analytics",
-        "hourly",
-        48,
-        "project",
-        undefined,
-      ]);
+      expect(mcpAnalyticsKeys.hourly(48, "project")).toEqual(["mcp-analytics", "hourly", 48, "project", undefined]);
     });
 
     it("should generate correct daily key with all parameters", () => {
@@ -546,7 +534,7 @@ describe("useMcpAnalytics", () => {
     it("should expose loading state during query execution", async () => {
       const { mcpAnalyticsService } = await import("../../services/mcpAnalyticsService");
       vi.mocked(mcpAnalyticsService.getHourlyUsage).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve([]), 100))
+        () => new Promise((resolve) => setTimeout(() => resolve([]), 100)),
       );
 
       const { result } = renderHook(() => useMcpHourlyUsage(), {

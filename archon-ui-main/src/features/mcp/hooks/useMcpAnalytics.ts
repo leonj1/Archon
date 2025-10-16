@@ -15,8 +15,7 @@ export const mcpAnalyticsKeys = {
   all: ["mcp-analytics"] as const,
   hourly: (hours: number, category?: string, tool?: string) =>
     [...mcpAnalyticsKeys.all, "hourly", hours, category, tool] as const,
-  daily: (days: number, category?: string) =>
-    [...mcpAnalyticsKeys.all, "daily", days, category] as const,
+  daily: (days: number, category?: string) => [...mcpAnalyticsKeys.all, "daily", days, category] as const,
   summary: () => [...mcpAnalyticsKeys.all, "summary"] as const,
 };
 
@@ -33,7 +32,7 @@ export function useMcpHourlyUsage(
   hours: number = 24,
   toolCategory?: string,
   toolName?: string,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: mcpAnalyticsKeys.hourly(hours, toolCategory, toolName),
@@ -51,11 +50,7 @@ export function useMcpHourlyUsage(
  * @param options - Query options (enabled, etc.)
  * @returns Query result with daily usage data
  */
-export function useMcpDailyUsage(
-  days: number = 7,
-  toolCategory?: string,
-  options?: { enabled?: boolean }
-) {
+export function useMcpDailyUsage(days: number = 7, toolCategory?: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: mcpAnalyticsKeys.daily(days, toolCategory),
     queryFn: () => mcpAnalyticsService.getDailyUsage(days, toolCategory),

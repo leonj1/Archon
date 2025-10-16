@@ -14,313 +14,351 @@ Bug fixed: Previously the API returned status=null at top level, causing UI to s
 "Completed" for all sources. Now the top-level status field is correctly populated.
 """
 
+import asyncio
+import os
+
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import patch
 
 
-class TestKnowledgeStatusAPIEndpoint:
-    """Tests for the /api/knowledge-items endpoint status field."""
+def test_api_returns_top_level_status_for_pending(client):
+    """
+    Test that API returns top-level status='processing' for pending sources.
 
-    def test_api_returns_top_level_status_for_pending(self, client, mock_supabase_client):
-        """
-        Test that API returns top-level status='processing' for pending sources.
+    This is the critical bug fix test: Previously API returned status=null,
+    causing UI to show incorrect "Completed" badge for pending sources.
+    """
+    with patch.dict(os.environ, {"ARCHON_DB_BACKEND": "fake"}):
+        from src.server.repositories.repository_factory import (
+            reset_factory,
+            get_repository,
+        )
 
-        This is the critical bug fix test: Previously API returned status=null,
-        causing UI to show incorrect "Completed" badge for pending sources.
-        """
-        # Mock the sources table to return a pending source
-        mock_sources_data = [{
-            "source_id": "test-pending",
-            "title": "Pending Source",
-            "summary": "Test pending",
-            "metadata": {
-                "knowledge_type": "technical",
-                "crawl_status": "pending"
-            },
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        }]
+        # Reset factory to pick up new environment variable
+        reset_factory()
 
-        # Mock URL data
-        mock_urls_data = [{
-            "source_id": "test-pending",
-            "url": "https://example.com/pending"
-        }]
+        # Get fake repository instance
+        fake_repo = get_repository(backend="fake")
 
-        # Set up query counter to track which query we're on
-        query_state = {"count": 0}
+        # Patch get_repository everywhere to return the same instance
+        with patch(
+            "src.server.repositories.repository_factory.get_repository",
+            return_value=fake_repo,
+        ):
+            with patch(
+                "src.server.api_routes.knowledge_api.get_repository",
+                return_value=fake_repo,
+            ):
+                with patch(
+                    "src.server.services.knowledge.knowledge_item_service.get_repository",
+                    return_value=fake_repo,
+                ):
 
-        def mock_execute():
-            """Return different data based on query sequence."""
-            query_state["count"] += 1
-            result = MagicMock()
-            result.error = None
+                    # Populate test data directly in the fake repository
+                    async def setup_test_data():
+                        await fake_repo.upsert_source(
+                            {
+                                "source_id": "test-pending",
+                                "title": "Pending Source",
+                                "summary": "Test pending",
+                                "metadata": {
+                                    "knowledge_type": "technical",
+                                    "crawl_status": "pending",
+                                },
+                                "source_url": "https://example.com/pending",
+                                "created_at": "2024-01-01T00:00:00",
+                                "updated_at": "2024-01-01T00:00:00",
+                            }
+                        )
 
-            if query_state["count"] == 1:
-                # Count query for sources
-                result.count = 1
-                result.data = None
-            elif query_state["count"] == 2:
-                # Main sources query
-                result.data = mock_sources_data
-                result.count = None
-            elif query_state["count"] == 3:
-                # URLs batch query
-                result.data = mock_urls_data
-                result.count = None
-            else:
-                # Document/code counts - return 0 for pending
-                result.count = 0
-                result.data = None
+                        # Add crawled page for URL data
+                        await fake_repo.insert_crawled_page(
+                            {
+                                "source_id": "test-pending",
+                                "url": "https://example.com/pending",
+                                "title": "Pending Page",
+                                "content": "Test content",
+                                "metadata": {},
+                                "created_at": "2024-01-01T00:00:00",
+                            }
+                        )
 
-            return result
+                    # Run async setup
+                    asyncio.run(setup_test_data())
 
-        # Set up mock chaining
-        mock_select = MagicMock()
-        mock_select.execute = mock_execute
-        mock_select.eq = MagicMock(return_value=mock_select)
-        mock_select.in_ = MagicMock(return_value=mock_select)
-        mock_select.range = MagicMock(return_value=mock_select)
-        mock_select.order = MagicMock(return_value=mock_select)
+                    # Call the API endpoint
+                    response = client.get("/api/knowledge-items")
 
-        mock_from = MagicMock()
-        mock_from.select = MagicMock(return_value=mock_select)
+                    # Validate response
+                    assert (
+                        response.status_code == 200
+                    ), f"API returned {response.status_code}: {response.text}"
 
-        mock_supabase_client.from_ = MagicMock(return_value=mock_from)
+                    data = response.json()
+                    assert "items" in data, "Response missing 'items' field"
+                    assert len(data["items"]) > 0, "No items returned"
 
-        # Call the API endpoint
-        response = client.get("/api/knowledge-items")
+                    item = data["items"][0]
 
-        # Validate response
-        assert response.status_code == 200, f"API returned {response.status_code}: {response.text}"
+                    # CRITICAL: Top-level status must be present and correct
+                    assert (
+                        "status" in item
+                    ), "Missing top-level 'status' field (BUG: null status)"
+                    assert (
+                        item["status"] == "processing"
+                    ), f"Expected status='processing' for pending source, got '{item['status']}'"
 
-        data = response.json()
-        assert "items" in data, "Response missing 'items' field"
-        assert len(data["items"]) > 0, "No items returned"
+                    # Verify metadata also has correct status
+                    assert "metadata" in item
+                    assert item["metadata"]["status"] == "processing"
+                    assert item["metadata"]["crawl_status"] == "pending"
 
-        item = data["items"][0]
 
-        # CRITICAL: Top-level status must be present and correct
-        assert "status" in item, "Missing top-level 'status' field (BUG: null status)"
-        assert item["status"] == "processing", \
-            f"Expected status='processing' for pending source, got '{item['status']}'"
+def test_api_returns_top_level_status_for_completed(client):
+    """Test that API returns top-level status='active' for completed sources."""
+    with patch.dict(os.environ, {"ARCHON_DB_BACKEND": "fake"}):
+        from src.server.repositories.repository_factory import (
+            reset_factory,
+            get_repository,
+        )
 
-        # Verify metadata also has correct status
-        assert "metadata" in item
-        assert item["metadata"]["status"] == "processing"
-        assert item["metadata"]["crawl_status"] == "pending"
+        reset_factory()
+        fake_repo = get_repository(backend="fake")
 
-    def test_api_returns_top_level_status_for_completed(self, client, mock_supabase_client):
-        """Test that API returns top-level status='active' for completed sources."""
-        # Mock completed source
-        mock_sources_data = [{
-            "source_id": "test-completed",
-            "title": "Completed Source",
-            "summary": "Test completed",
-            "metadata": {
-                "knowledge_type": "technical",
-                "crawl_status": "completed"
-            },
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        }]
+        with patch(
+            "src.server.repositories.repository_factory.get_repository",
+            return_value=fake_repo,
+        ):
+            with patch(
+                "src.server.api_routes.knowledge_api.get_repository",
+                return_value=fake_repo,
+            ):
+                with patch(
+                    "src.server.services.knowledge.knowledge_item_service.get_repository",
+                    return_value=fake_repo,
+                ):
 
-        mock_urls_data = [{
-            "source_id": "test-completed",
-            "url": "https://example.com/completed"
-        }]
+                    async def setup_test_data():
+                        await fake_repo.upsert_source(
+                            {
+                                "source_id": "test-completed",
+                                "title": "Completed Source",
+                                "summary": "Test completed",
+                                "metadata": {
+                                    "knowledge_type": "technical",
+                                    "crawl_status": "completed",
+                                },
+                                "source_url": "https://example.com/completed",
+                                "created_at": "2024-01-01T00:00:00",
+                                "updated_at": "2024-01-01T00:00:00",
+                            }
+                        )
 
-        query_state = {"count": 0}
+                        await fake_repo.insert_crawled_page(
+                            {
+                                "source_id": "test-completed",
+                                "url": "https://example.com/completed",
+                                "title": "Completed Page",
+                                "content": "Test content",
+                                "metadata": {},
+                                "created_at": "2024-01-01T00:00:00",
+                            }
+                        )
 
-        def mock_execute():
-            query_state["count"] += 1
-            result = MagicMock()
-            result.error = None
+                        # Add some documents to make it "active"
+                        for i in range(5):
+                            await fake_repo.insert_document(
+                                {
+                                    "source_id": "test-completed",
+                                    "content": f"Document {i}",
+                                    "embedding": [0.1] * 1536,  # Fake embedding
+                                    "metadata": {},
+                                    "url": f"https://example.com/completed#{i}",
+                                    "created_at": "2024-01-01T00:00:00",
+                                }
+                            )
 
-            if query_state["count"] == 1:
-                result.count = 1
-                result.data = None
-            elif query_state["count"] == 2:
-                result.data = mock_sources_data
-                result.count = None
-            elif query_state["count"] == 3:
-                result.data = mock_urls_data
-                result.count = None
-            else:
-                # Return positive counts for completed source
-                result.count = 5
-                result.data = None
+                    asyncio.run(setup_test_data())
 
-            return result
+                    response = client.get("/api/knowledge-items")
 
-        mock_select = MagicMock()
-        mock_select.execute = mock_execute
-        mock_select.eq = MagicMock(return_value=mock_select)
-        mock_select.in_ = MagicMock(return_value=mock_select)
-        mock_select.range = MagicMock(return_value=mock_select)
-        mock_select.order = MagicMock(return_value=mock_select)
+                    assert response.status_code == 200
+                    data = response.json()
+                    item = data["items"][0]
 
-        mock_from = MagicMock()
-        mock_from.select = MagicMock(return_value=mock_select)
-        mock_supabase_client.from_ = MagicMock(return_value=mock_from)
+                    # Verify top-level status
+                    assert (
+                        item["status"] == "active"
+                    ), f"Expected status='active' for completed source, got '{item['status']}'"
+                    assert item["metadata"]["crawl_status"] == "completed"
 
-        response = client.get("/api/knowledge-items")
 
-        assert response.status_code == 200
-        data = response.json()
-        item = data["items"][0]
+def test_api_returns_top_level_status_for_failed(client):
+    """Test that API returns top-level status='error' for failed sources."""
+    with patch.dict(os.environ, {"ARCHON_DB_BACKEND": "fake"}):
+        from src.server.repositories.repository_factory import (
+            reset_factory,
+            get_repository,
+        )
 
-        # Verify top-level status
-        assert item["status"] == "active", \
-            f"Expected status='active' for completed source, got '{item['status']}'"
-        assert item["metadata"]["crawl_status"] == "completed"
+        reset_factory()
+        fake_repo = get_repository(backend="fake")
 
-    def test_api_returns_top_level_status_for_failed(self, client, mock_supabase_client):
-        """Test that API returns top-level status='error' for failed sources."""
-        mock_sources_data = [{
-            "source_id": "test-failed",
-            "title": "Failed Source",
-            "summary": "Test failed",
-            "metadata": {
-                "knowledge_type": "technical",
-                "crawl_status": "failed",
-                "error_message": "Crawl failed"
-            },
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        }]
+        with patch(
+            "src.server.repositories.repository_factory.get_repository",
+            return_value=fake_repo,
+        ):
+            with patch(
+                "src.server.api_routes.knowledge_api.get_repository",
+                return_value=fake_repo,
+            ):
+                with patch(
+                    "src.server.services.knowledge.knowledge_item_service.get_repository",
+                    return_value=fake_repo,
+                ):
 
-        mock_urls_data = [{
-            "source_id": "test-failed",
-            "url": "https://example.com/failed"
-        }]
+                    async def setup_test_data():
+                        await fake_repo.upsert_source(
+                            {
+                                "source_id": "test-failed",
+                                "title": "Failed Source",
+                                "summary": "Test failed",
+                                "metadata": {
+                                    "knowledge_type": "technical",
+                                    "crawl_status": "failed",
+                                    "error_message": "Crawl failed",
+                                },
+                                "source_url": "https://example.com/failed",
+                                "created_at": "2024-01-01T00:00:00",
+                                "updated_at": "2024-01-01T00:00:00",
+                            }
+                        )
 
-        query_state = {"count": 0}
+                        await fake_repo.insert_crawled_page(
+                            {
+                                "source_id": "test-failed",
+                                "url": "https://example.com/failed",
+                                "title": "Failed Page",
+                                "content": "Test content",
+                                "metadata": {},
+                                "created_at": "2024-01-01T00:00:00",
+                            }
+                        )
 
-        def mock_execute():
-            query_state["count"] += 1
-            result = MagicMock()
-            result.error = None
+                    asyncio.run(setup_test_data())
 
-            if query_state["count"] == 1:
-                result.count = 1
-                result.data = None
-            elif query_state["count"] == 2:
-                result.data = mock_sources_data
-                result.count = None
-            elif query_state["count"] == 3:
-                result.data = mock_urls_data
-                result.count = None
-            else:
-                result.count = 0  # Failed source has no documents
-                result.data = None
+                    response = client.get("/api/knowledge-items")
 
-            return result
+                    assert response.status_code == 200
+                    data = response.json()
+                    item = data["items"][0]
 
-        mock_select = MagicMock()
-        mock_select.execute = mock_execute
-        mock_select.eq = MagicMock(return_value=mock_select)
-        mock_select.in_ = MagicMock(return_value=mock_select)
-        mock_select.range = MagicMock(return_value=mock_select)
-        mock_select.order = MagicMock(return_value=mock_select)
+                    # Verify top-level status
+                    assert (
+                        item["status"] == "error"
+                    ), f"Expected status='error' for failed source, got '{item['status']}'"
+                    assert item["metadata"]["crawl_status"] == "failed"
 
-        mock_from = MagicMock()
-        mock_from.select = MagicMock(return_value=mock_select)
-        mock_supabase_client.from_ = MagicMock(return_value=mock_from)
 
-        response = client.get("/api/knowledge-items")
+def test_api_response_structure_matches_typescript_interface(client):
+    """
+    Validate that API response matches the TypeScript KnowledgeItem interface.
 
-        assert response.status_code == 200
-        data = response.json()
-        item = data["items"][0]
+    This ensures the API contract matches what the UI expects.
+    """
+    with patch.dict(os.environ, {"ARCHON_DB_BACKEND": "fake"}):
+        from src.server.repositories.repository_factory import (
+            reset_factory,
+            get_repository,
+        )
 
-        # Verify top-level status
-        assert item["status"] == "error", \
-            f"Expected status='error' for failed source, got '{item['status']}'"
-        assert item["metadata"]["crawl_status"] == "failed"
+        reset_factory()
+        fake_repo = get_repository(backend="fake")
 
-    def test_api_response_structure_matches_typescript_interface(self, client, mock_supabase_client):
-        """
-        Validate that API response matches the TypeScript KnowledgeItem interface.
+        with patch(
+            "src.server.repositories.repository_factory.get_repository",
+            return_value=fake_repo,
+        ):
+            with patch(
+                "src.server.api_routes.knowledge_api.get_repository",
+                return_value=fake_repo,
+            ):
+                with patch(
+                    "src.server.services.knowledge.knowledge_item_service.get_repository",
+                    return_value=fake_repo,
+                ):
 
-        This ensures the API contract matches what the UI expects.
-        """
-        mock_sources_data = [{
-            "source_id": "test-structure",
-            "title": "Structure Test",
-            "summary": "Test structure",
-            "metadata": {
-                "knowledge_type": "technical",
-                "crawl_status": "completed"
-            },
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        }]
+                    async def setup_test_data():
+                        await fake_repo.upsert_source(
+                            {
+                                "source_id": "test-structure",
+                                "title": "Structure Test",
+                                "summary": "Test structure",
+                                "metadata": {
+                                    "knowledge_type": "technical",
+                                    "crawl_status": "completed",
+                                },
+                                "source_url": "https://example.com/structure",
+                                "created_at": "2024-01-01T00:00:00",
+                                "updated_at": "2024-01-01T00:00:00",
+                            }
+                        )
 
-        mock_urls_data = [{
-            "source_id": "test-structure",
-            "url": "https://example.com/structure"
-        }]
+                        await fake_repo.insert_crawled_page(
+                            {
+                                "source_id": "test-structure",
+                                "url": "https://example.com/structure",
+                                "title": "Structure Page",
+                                "content": "Test content",
+                                "metadata": {},
+                                "created_at": "2024-01-01T00:00:00",
+                            }
+                        )
 
-        query_state = {"count": 0}
+                        # Add documents
+                        for i in range(5):
+                            await fake_repo.insert_document(
+                                {
+                                    "source_id": "test-structure",
+                                    "content": f"Document {i}",
+                                    "embedding": [0.1] * 1536,
+                                    "metadata": {},
+                                    "url": f"https://example.com/structure#{i}",
+                                    "created_at": "2024-01-01T00:00:00",
+                                }
+                            )
 
-        def mock_execute():
-            query_state["count"] += 1
-            result = MagicMock()
-            result.error = None
+                    asyncio.run(setup_test_data())
 
-            if query_state["count"] == 1:
-                result.count = 1
-                result.data = None
-            elif query_state["count"] == 2:
-                result.data = mock_sources_data
-                result.count = None
-            elif query_state["count"] == 3:
-                result.data = mock_urls_data
-                result.count = None
-            else:
-                result.count = 5
-                result.data = None
+                    response = client.get("/api/knowledge-items")
 
-            return result
+                    assert response.status_code == 200
+                    data = response.json()
+                    item = data["items"][0]
 
-        mock_select = MagicMock()
-        mock_select.execute = mock_execute
-        mock_select.eq = MagicMock(return_value=mock_select)
-        mock_select.in_ = MagicMock(return_value=mock_select)
-        mock_select.range = MagicMock(return_value=mock_select)
-        mock_select.order = MagicMock(return_value=mock_select)
+                    # Verify required top-level fields per KnowledgeItem interface
+                    required_fields = [
+                        "id",  # source_id
+                        "title",
+                        "url",
+                        "source_id",
+                        "source_type",
+                        "knowledge_type",
+                        "status",  # CRITICAL: top-level status field
+                        "document_count",
+                        "code_examples_count",
+                        "metadata",
+                        "created_at",
+                        "updated_at",
+                    ]
 
-        mock_from = MagicMock()
-        mock_from.select = MagicMock(return_value=mock_select)
-        mock_supabase_client.from_ = MagicMock(return_value=mock_from)
+                    for field in required_fields:
+                        assert field in item, f"Missing required field: {field}"
 
-        response = client.get("/api/knowledge-items")
-
-        assert response.status_code == 200
-        data = response.json()
-        item = data["items"][0]
-
-        # Verify required top-level fields per KnowledgeItem interface
-        required_fields = [
-            "id",           # source_id
-            "title",
-            "url",
-            "source_id",
-            "source_type",
-            "knowledge_type",
-            "status",       # CRITICAL: top-level status field
-            "document_count",
-            "code_examples_count",
-            "metadata",
-            "created_at",
-            "updated_at"
-        ]
-
-        for field in required_fields:
-            assert field in item, f"Missing required field: {field}"
-
-        # Verify status is not null
-        assert item["status"] is not None, "Status field is null (BUG)"
-        assert item["status"] in ["active", "processing", "error"], \
-            f"Invalid status value: {item['status']}"
+                    # Verify status is not null
+                    assert item["status"] is not None, "Status field is null (BUG)"
+                    assert item["status"] in [
+                        "active",
+                        "processing",
+                        "error",
+                    ], f"Invalid status value: {item['status']}"

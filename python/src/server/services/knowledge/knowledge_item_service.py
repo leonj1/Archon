@@ -4,6 +4,7 @@ Knowledge Item Service
 Handles all knowledge item CRUD operations and data transformations.
 """
 
+import json
 from typing import Any
 
 from ...config.logfire_config import safe_logfire_error, safe_logfire_info
@@ -101,7 +102,15 @@ class KnowledgeItemService:
             items = []
             for source in sources:
                 source_id = source["source_id"]
-                source_metadata = source.get("metadata", {})
+                # Parse metadata if it's a JSON string
+                raw_metadata = source.get("metadata", {})
+                if isinstance(raw_metadata, str):
+                    try:
+                        source_metadata = json.loads(raw_metadata)
+                    except json.JSONDecodeError:
+                        source_metadata = {}
+                else:
+                    source_metadata = raw_metadata
 
                 # Use the original source_url from the source record (the URL the user entered)
                 # Fall back to first crawled page URL, then to source:// format as last resort
@@ -117,12 +126,24 @@ class KnowledgeItemService:
                 # Determine source type - use display_url for type detection
                 source_type = self._determine_source_type(source_metadata, display_url)
 
+                # Map crawl_status to frontend-expected status
+                crawl_status = source_metadata.get("crawl_status", "pending")
+                frontend_status = {
+                    "completed": "active",    # Successful crawl = active
+                    "failed": "error",        # Failed crawl = error
+                    "pending": "processing"   # Pending/in-progress = processing
+                }.get(crawl_status, "processing")
+
                 item = {
                     "id": source_id,
                     "title": source.get("title", source.get("summary", "Untitled")),
                     "url": display_url,
                     "source_id": source_id,
-                    "source_type": source_type,  # Add top-level source_type field
+                    "source_type": source_type,
+                    "knowledge_type": source_metadata.get("knowledge_type", "technical"),
+                    "status": frontend_status,
+                    "document_count": chunks_count,
+                    "code_examples_count": code_examples_count,
                     "code_examples": [{"count": code_examples_count}]
                     if code_examples_count > 0
                     else [],  # Minimal array just for count display
@@ -130,7 +151,8 @@ class KnowledgeItemService:
                         "knowledge_type": source_metadata.get("knowledge_type", "technical"),
                         "tags": source_metadata.get("tags", []),
                         "source_type": source_type,
-                        "status": "active",
+                        "status": frontend_status,
+                        "crawl_status": crawl_status,  # Keep original for reference
                         "description": source_metadata.get(
                             "description", source.get("summary", "")
                         ),
@@ -234,6 +256,7 @@ class KnowledgeItemService:
                 "status",
                 "update_frequency",
                 "group_name",
+                "crawl_status",
             ]
             metadata_updates = {k: v for k, v in updates.items() if k in metadata_fields}
 
@@ -316,7 +339,6 @@ class KnowledgeItemService:
         Returns:
             Transformed knowledge item
         """
-        import json
         # Parse metadata if it's a JSON string
         raw_metadata = source.get("metadata", {})
         if isinstance(raw_metadata, str):
@@ -337,11 +359,26 @@ class KnowledgeItemService:
         # Get code examples
         code_examples = await self._get_code_examples(source_id)
 
+        # Map crawl_status to frontend-expected status
+        crawl_status = source_metadata.get("crawl_status", "pending")
+        frontend_status = {
+            "completed": "active",    # Successful crawl = active
+            "failed": "error",        # Failed crawl = error
+            "pending": "processing"   # Pending/in-progress = processing
+        }.get(crawl_status, "processing")
+
+        chunks_count = await self._get_chunks_count(source_id)
+
         return {
             "id": source_id,
             "title": source.get("title", source.get("summary", "Untitled")),
             "url": first_page_url,
             "source_id": source_id,
+            "source_type": source_type,
+            "knowledge_type": source_metadata.get("knowledge_type", "technical"),
+            "status": frontend_status,
+            "document_count": chunks_count,
+            "code_examples_count": len(code_examples),
             "code_examples": code_examples,
             "metadata": {
                 # Spread source_metadata first, then override with computed values
@@ -349,9 +386,10 @@ class KnowledgeItemService:
                 "knowledge_type": source_metadata.get("knowledge_type", "technical"),
                 "tags": source_metadata.get("tags", []),
                 "source_type": source_type,  # This should be the correctly determined source_type
-                "status": "active",
+                "status": frontend_status,
+                "crawl_status": crawl_status,  # Keep original for reference
                 "description": source_metadata.get("description", source.get("summary", "")),
-                "chunks_count": await self._get_chunks_count(source_id),  # Get actual chunk count
+                "chunks_count": chunks_count,  # Use already fetched chunk count
                 "word_count": source.get("total_words", 0),
                 "estimated_pages": round(
                     source.get("total_words", 0) / 250, 1

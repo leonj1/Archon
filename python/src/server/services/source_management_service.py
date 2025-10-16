@@ -220,6 +220,7 @@ async def update_source_info(
     source_url: str | None = None,
     source_display_name: str | None = None,
     source_type: str | None = None,
+    crawl_status: str | None = None,
 ):
     """
     Update or insert source information in the sources table.
@@ -233,6 +234,7 @@ async def update_source_info(
         knowledge_type: Type of knowledge
         tags: List of tags
         update_frequency: Update frequency in days
+        crawl_status: Optional crawl status (pending, completed, failed)
     """
     search_logger.info(f"Updating source {source_id} with knowledge_type={knowledge_type}")
     try:
@@ -240,8 +242,9 @@ async def update_source_info(
         existing_source = await repository.get_source_by_id(source_id)
 
         if existing_source:
-            # Source exists - preserve the existing title
+            # Source exists - preserve the existing title and metadata
             existing_title = existing_source["title"]
+            existing_metadata = existing_source.get("metadata", {})
             search_logger.info(f"Preserving existing title for {source_id}: {existing_title}")
 
             # Update metadata while preserving title
@@ -256,14 +259,34 @@ async def update_source_info(
                 else:
                     determined_source_type = "url"
 
-            metadata = {
-                "knowledge_type": knowledge_type,
-                "tags": tags or [],
-                "source_type": determined_source_type,
-                "auto_generated": False,  # Mark as not auto-generated since we're preserving
-                "update_frequency": update_frequency,
-            }
-            search_logger.info(f"Updating existing source {source_id} metadata: knowledge_type={knowledge_type}")
+            # Start with existing metadata to preserve all fields
+            # Handle case where metadata might not be a dict
+            if isinstance(existing_metadata, dict):
+                metadata = existing_metadata.copy()
+            elif isinstance(existing_metadata, str):
+                # Parse JSON string if needed
+                import json
+                try:
+                    metadata = json.loads(existing_metadata)
+                except json.JSONDecodeError:
+                    metadata = {}
+            else:
+                metadata = {}
+
+            # Update with new values
+            metadata["knowledge_type"] = knowledge_type
+            metadata["source_type"] = determined_source_type
+            metadata["update_frequency"] = update_frequency
+
+            # Only update tags if explicitly provided
+            if tags is not None:
+                metadata["tags"] = tags
+
+            # Only update crawl_status if explicitly provided
+            if crawl_status is not None:
+                metadata["crawl_status"] = crawl_status
+
+            search_logger.info(f"Updating existing source {source_id} metadata: knowledge_type={knowledge_type}, crawl_status={crawl_status}")
             if original_url:
                 metadata["original_url"] = original_url
 
@@ -310,6 +333,8 @@ async def update_source_info(
                     "source_type": determined_source_type,
                     "auto_generated": False,
                 }
+                if crawl_status is not None:
+                    metadata["crawl_status"] = crawl_status
             else:
                 # Fallback to AI generation only if no display name
                 title, metadata = await generate_source_title_and_metadata(
@@ -328,6 +353,8 @@ async def update_source_info(
             metadata["update_frequency"] = update_frequency
             if original_url:
                 metadata["original_url"] = original_url
+            if crawl_status is not None:
+                metadata["crawl_status"] = crawl_status
 
             search_logger.info(f"Creating new source {source_id} with knowledge_type={knowledge_type}")
             # Use upsert to avoid race conditions with concurrent crawls

@@ -74,7 +74,7 @@ describe("ProjectCard", () => {
     // Border classes are applied to the inner Card element
     // Structure: motion.div[role="button"] > div.relative > [aurora glow div] + Card
     // The Card is the last child that is not the aurora glow
-    const relativeDiv = (outerWrapper as HTMLElement)?.querySelector('.relative');
+    const relativeDiv = (outerWrapper as HTMLElement)?.querySelector(".relative");
     const card = relativeDiv?.lastChild;
     expect((card as HTMLElement)?.className || "").toContain("border-purple");
   });
@@ -91,7 +91,7 @@ describe("ProjectCard", () => {
 
     // Structure: motion.div[role="button"] > div.relative > Card
     // The pinned border and gradient classes are applied to the Card element
-    const relativeDiv = (outerWrapper as HTMLElement)?.querySelector('.relative');
+    const relativeDiv = (outerWrapper as HTMLElement)?.querySelector(".relative");
     const card = relativeDiv?.lastChild;
 
     // Check for pinned-specific classes on the Card element

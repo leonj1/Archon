@@ -20,6 +20,7 @@ import { useDeleteKnowledgeItem, useRefreshKnowledgeItem } from "../hooks";
 import type { KnowledgeItem } from "../types";
 import { extractDomain } from "../utils/knowledge-utils";
 import { KnowledgeCardActions } from "./KnowledgeCardActions";
+import { KnowledgeCardStatus } from "./KnowledgeCardStatus";
 import { KnowledgeCardTags } from "./KnowledgeCardTags";
 import { KnowledgeCardTitle } from "./KnowledgeCardTitle";
 import { KnowledgeCardType } from "./KnowledgeCardType";
@@ -134,7 +135,7 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         <DataCardHeader>
           <div className="flex items-start justify-between gap-2 mb-2">
             {/* Type and Source Badge */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <SimpleTooltip content={isUrl ? "Content from a web page" : "Uploaded document"}>
                 <div
                   className={cn(
@@ -149,6 +150,7 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
                 </div>
               </SimpleTooltip>
               <KnowledgeCardType sourceId={item.source_id} knowledgeType={item.knowledge_type} />
+              <KnowledgeCardStatus status={item.status} crawlStatus={item.metadata?.crawl_status} />
             </div>
 
             {/* Actions */}

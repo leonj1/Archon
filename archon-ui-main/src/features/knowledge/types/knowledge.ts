@@ -8,6 +8,7 @@ export interface KnowledgeItemMetadata {
   tags?: string[];
   source_type?: "url" | "file" | "group";
   status?: "active" | "processing" | "error";
+  crawl_status?: "pending" | "completed" | "failed";
   description?: string;
   last_scraped?: string;
   chunks_count?: number;

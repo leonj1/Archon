@@ -163,20 +163,30 @@ wheels = [
 name = "archon"
 version = "0.1.0"
 source = { virtual = "." }
+dependencies = [
+    { name = "claude-agent-sdk" },
+    { name = "nest-asyncio" },
+    { name = "qdrant-client" },
+    { name = "rich" },
+]
 
 [package.dev-dependencies]
 agents = [
+    { name = "claude-agent-sdk" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "nest-asyncio" },
     { name = "pydantic" },
     { name = "pydantic-ai" },
     { name = "python-dotenv" },
+    { name = "rich" },
     { name = "structlog" },
     { name = "uvicorn" },
 ]
 all = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
+    { name = "claude-agent-sdk" },
     { name = "crawl4ai" },
     { name = "cryptography" },
     { name = "docker" },
@@ -186,6 +196,7 @@ all = [
     { name = "logfire" },
     { name = "markdown" },
     { name = "mcp" },
+    { name = "nest-asyncio" },
     { name = "openai" },
     { name = "pdfplumber" },
     { name = "pydantic" },
@@ -201,6 +212,7 @@ all = [
     { name = "python-multipart" },
     { name = "qdrant-client" },
     { name = "requests" },
+    { name = "rich" },
     { name = "slowapi" },
     { name = "structlog" },
     { name = "supabase" },
@@ -264,20 +276,30 @@ server-reranking = [
 ]
 
 [package.metadata]
+requires-dist = [
+    { name = "claude-agent-sdk", specifier = ">=0.1.4" },
+    { name = "nest-asyncio", specifier = ">=1.6.0" },
+    { name = "qdrant-client", specifier = ">=1.15.1" },
+    { name = "rich", specifier = ">=14.0.0" },
+]
 
 [package.metadata.requires-dev]
 agents = [
+    { name = "claude-agent-sdk", specifier = ">=0.1.0" },
     { name = "fastapi", specifier = ">=0.104.0" },
     { name = "httpx", specifier = ">=0.24.0" },
+    { name = "nest-asyncio", specifier = ">=1.5.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pydantic-ai", specifier = ">=0.0.13" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "rich", specifier = ">=13.0.0" },
     { name = "structlog", specifier = ">=23.1.0" },
     { name = "uvicorn", specifier = ">=0.24.0" },
 ]
 all = [
     { name = "aiosqlite", specifier = ">=0.17.0" },
     { name = "asyncpg", specifier = ">=0.29.0" },
+    { name = "claude-agent-sdk", specifier = ">=0.1.0" },
     { name = "crawl4ai", specifier = "==0.7.4" },
     { name = "cryptography", specifier = ">=41.0.0" },
     { name = "docker", specifier = ">=6.1.0" },
@@ -287,6 +309,7 @@ all = [
     { name = "logfire", specifier = ">=0.30.0" },
     { name = "markdown", specifier = ">=3.8" },
     { name = "mcp", specifier = "==1.12.2" },
+    { name = "nest-asyncio", specifier = ">=1.5.0" },
     { name = "openai", specifier = "==1.71.0" },
     { name = "pdfplumber", specifier = ">=0.11.6" },
     { name = "pydantic", specifier = ">=2.0.0" },
@@ -302,6 +325,7 @@ all = [
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "qdrant-client", specifier = ">=1.7.0" },
     { name = "requests", specifier = ">=2.31.0" },
+    { name = "rich", specifier = ">=13.0.0" },
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "structlog", specifier = ">=23.1.0" },
     { name = "supabase", specifier = "==2.15.1" },
@@ -577,6 +601,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/44/96/392abd49b094d30b91d9fbda6a69519e95802250b777841cf3bda8fe136c/charset_normalizer-3.4.2-cp313-cp313-win32.whl", hash = "sha256:aaeeb6a479c7667fbe1099af9617c83aaca22182d6cf8c53966491a0f1b7ffb7", size = 98064, upload-time = "2025-05-02T08:33:17.06Z" },
     { url = "https://files.pythonhosted.org/packages/e9/b0/0200da600134e001d91851ddc797809e2fe0ea72de90e09bec5a2fbdaccb/charset_normalizer-3.4.2-cp313-cp313-win_amd64.whl", hash = "sha256:aa6af9e7d59f9c12b33ae4e9450619cf2488e2bbe9b44030905877f0b2324980", size = 105641, upload-time = "2025-05-02T08:33:18.753Z" },
     { url = "https://files.pythonhosted.org/packages/20/94/c5790835a017658cbfabd07f3bfb549140c3ac458cfc196323996b10095a/charset_normalizer-3.4.2-py3-none-any.whl", hash = "sha256:7f56930ab0abd1c45cd15be65cc741c28b1c9a34876ce8c17a2fa107810c0af0", size = 52626, upload-time = "2025-05-02T08:34:40.053Z" },
+]
+
+[[package]]
+name = "claude-agent-sdk"
+version = "0.1.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "mcp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/86/44/f470573bb13fc944955f73745cf96d4205c7e00571b0e4c6c66fb1c6c4ea/claude_agent_sdk-0.1.4.tar.gz", hash = "sha256:06472b1a30b5b7c189edd0b7456a6be72d21baa457977d10a4ef257f484c79b2", size = 48046, upload-time = "2025-10-15T21:35:06.28Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/99/3e/622ee6d7b9932a73a348381718bd3b8e8bdac457293538f4862ba1011223/claude_agent_sdk-0.1.4-py3-none-any.whl", hash = "sha256:4d81ec68dc357b995bfd9c8b904314a8b65fa1de2ef1740eac5e76314310d3f0", size = 35429, upload-time = "2025-10-15T21:35:04.915Z" },
 ]
 
 [[package]]
@@ -1707,6 +1744,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/6e/371856a3fb9d31ca8dac321cda606860fa4548858c0cc45d9d1d4ca2628b/mypy_extensions-1.1.0.tar.gz", hash = "sha256:52e68efc3284861e772bbcd66823fde5ae21fd2fdb51c62a211403730b916558", size = 6343, upload-time = "2025-04-22T14:54:24.164Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl", hash = "sha256:1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505", size = 4963, upload-time = "2025-04-22T14:54:22.983Z" },
+]
+
+[[package]]
+name = "nest-asyncio"
+version = "1.6.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/83/f8/51569ac65d696c8ecbee95938f89d4abf00f47d58d48f6fbabfe8f0baefe/nest_asyncio-1.6.0.tar.gz", hash = "sha256:6f172d5449aca15afd6c646851f4e31e02c598d553a667e38cafa997cfec55fe", size = 7418, upload-time = "2024-01-21T14:25:19.227Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a0/c4/c2971a3ba4c6103a3d10c4b0f24f461ddc027f0f09763220cf35ca1401b3/nest_asyncio-1.6.0-py3-none-any.whl", hash = "sha256:87af6efd6b5e897c81050477ef65c62e2b2f35d51703cae01aff2905b1852e1c", size = 5195, upload-time = "2024-01-21T14:25:17.223Z" },
 ]
 
 [[package]]

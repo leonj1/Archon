@@ -52,7 +52,7 @@ class Config:
     SUMMARY_FILE = "TEST_FIX_SUMMARY.md"
     BACKUP_DIR = ".test_fix_backups"
     TEST_COMMAND = "make test"
-    MODEL = "sonnet"
+    MODEL = "claude-sonnet-4-5-20250929"
 
 
 # ================================

@@ -36,18 +36,14 @@ class MCPAnalyticsService {
   /**
    * Fetch hourly usage data with optional filters
    */
-  async getHourlyUsage(
-    hours: number = 24,
-    toolCategory?: string,
-    toolName?: string
-  ): Promise<HourlyUsageData[]> {
+  async getHourlyUsage(hours: number = 24, toolCategory?: string, toolName?: string): Promise<HourlyUsageData[]> {
     try {
       const params = new URLSearchParams({ hours: hours.toString() });
       if (toolCategory) params.append("tool_category", toolCategory);
       if (toolName) params.append("tool_name", toolName);
 
       const response = await callAPIWithETag<{ data: HourlyUsageData[] }>(
-        `/api/mcp/analytics/hourly?${params.toString()}`
+        `/api/mcp/analytics/hourly?${params.toString()}`,
       );
       return response.data;
     } catch (error) {
@@ -65,7 +61,7 @@ class MCPAnalyticsService {
       if (toolCategory) params.append("tool_category", toolCategory);
 
       const response = await callAPIWithETag<{ data: DailyUsageData[] }>(
-        `/api/mcp/analytics/daily?${params.toString()}`
+        `/api/mcp/analytics/daily?${params.toString()}`,
       );
       return response.data;
     } catch (error) {
@@ -94,7 +90,7 @@ class MCPAnalyticsService {
     try {
       const params = new URLSearchParams({ hours: hours.toString() });
       const response = await callAPIWithETag<KnowledgeBaseAnalyticsResponse>(
-        `/api/mcp/analytics/knowledge-bases?${params.toString()}`
+        `/api/mcp/analytics/knowledge-bases?${params.toString()}`,
       );
       return response;
     } catch (error) {
