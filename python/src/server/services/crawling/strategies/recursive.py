@@ -57,6 +57,15 @@ class RecursiveCrawlStrategy:
         Returns:
             List of crawl results
         """
+        # Validate start URLs before proceeding
+        invalid_urls = [url for url in start_urls if not url.startswith(("http://", "https://", "file://"))]
+        if invalid_urls:
+            error_msg = f"Invalid URLs detected: {', '.join(invalid_urls)}. URLs must start with http://, https://, or file://"
+            logger.error(error_msg)
+            if progress_callback:
+                await progress_callback("error", 0, error_msg)
+            raise ValueError(error_msg)
+
         if not self.crawler:
             logger.error("No crawler instance available for recursive crawling")
             if progress_callback:

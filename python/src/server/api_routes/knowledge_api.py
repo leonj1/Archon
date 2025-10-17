@@ -599,11 +599,27 @@ async def refresh_knowledge_item(source_id: str):
         metadata = existing_item.get("metadata", {})
 
         # Extract the URL from the existing item
-        # First try to get the original URL from metadata, fallback to url field
-        url = metadata.get("original_url") or existing_item.get("url")
-        if not url:
+        # Priority: source_url (user-entered URL) > metadata.original_url > existing_item.url
+        # Skip fallback URLs like "source://" which are display-only
+        url = existing_item.get("source_url") or metadata.get("original_url") or existing_item.get("url")
+
+        # Validate that we have a real URL, not a fallback display URL
+        if not url or url.startswith("source://"):
             raise HTTPException(
-                status_code=400, detail={"error": "Knowledge item does not have a URL to refresh"}
+                status_code=400,
+                detail={
+                    "error": "Knowledge item does not have a valid URL to refresh. "
+                             "This item may have been uploaded as a file or the original URL was not saved."
+                }
+            )
+
+        # Ensure URL is a valid HTTP/HTTPS URL
+        if not url.startswith(("http://", "https://")):
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": f"Invalid URL format: {url}. URL must start with http:// or https://"
+                }
             )
         knowledge_type = metadata.get("knowledge_type", "technical")
         tags = metadata.get("tags", [])

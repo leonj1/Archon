@@ -69,26 +69,27 @@ class SQLiteDatabaseRepository(DatabaseRepository):
     async def _ensure_schema(self):
         """Ensure all required tables exist in the database."""
         async with self._get_connection(skip_init=True) as conn:
+            import os
+
             # Check if core tables exist
             cursor = await conn.execute("""
-                SELECT name FROM sqlite_master 
+                SELECT name FROM sqlite_master
                 WHERE type='table' AND name='archon_sources'
             """)
             if not await cursor.fetchone():
                 logfire.warning("Database schema not initialized. Applying initial migration...")
-                
+
                 # Apply the initial schema migration
-                import os
                 migration_path = os.path.join(
                     os.path.dirname(os.path.abspath(__file__)),
                     "../../../../migration/sqlite/001_initial_schema.sql"
                 )
-                
+
                 if os.path.exists(migration_path):
                     logfire.info(f"Applying migration from {migration_path}")
                     with open(migration_path, 'r') as f:
                         schema_sql = f.read()
-                    
+
                     # Execute the schema SQL
                     # Split by semicolons to execute each statement separately
                     statements = [s.strip() for s in schema_sql.split(';') if s.strip()]
@@ -99,11 +100,44 @@ class SQLiteDatabaseRepository(DatabaseRepository):
                         except Exception as e:
                             logfire.error(f"Error executing migration statement: {e}")
                             raise
-                    
+
                     logfire.info("Initial schema migration applied successfully")
                 else:
                     logfire.error(f"Migration file not found at {migration_path}")
                     raise RuntimeError("SQLite schema migration file not found")
+
+            # Check if MCP usage tracking tables exist
+            cursor = await conn.execute("""
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name='archon_mcp_usage_events'
+            """)
+            if not await cursor.fetchone():
+                logfire.info("MCP usage tracking tables not found. Applying migration...")
+
+                # Apply the MCP usage tracking migration
+                mcp_migration_path = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    "../../../../migration/sqlite/002_mcp_usage_tracking.sql"
+                )
+
+                if os.path.exists(mcp_migration_path):
+                    logfire.info(f"Applying MCP migration from {mcp_migration_path}")
+                    with open(mcp_migration_path, 'r') as f:
+                        mcp_sql = f.read()
+
+                    # Execute the MCP migration SQL
+                    statements = [s.strip() for s in mcp_sql.split(';') if s.strip() and not s.strip().startswith('--')]
+                    for statement in statements:
+                        try:
+                            await conn.execute(statement)
+                            await conn.commit()
+                        except Exception as e:
+                            logfire.error(f"Error executing MCP migration statement: {e}")
+                            raise
+
+                    logfire.info("MCP usage tracking migration applied successfully")
+                else:
+                    logfire.warning(f"MCP migration file not found at {mcp_migration_path} - skipping MCP analytics setup")
     
     def _row_to_dict(self, row: aiosqlite.Row) -> dict:
         """Convert a database row to a dictionary."""
