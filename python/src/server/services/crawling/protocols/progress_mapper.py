@@ -18,3 +18,21 @@ class IProgressMapper(Protocol):
             Overall progress percentage (0-100)
         """
         ...
+
+    def get_current_stage(self) -> str:
+        """
+        Get the current stage name.
+
+        Returns:
+            Current stage name
+        """
+        ...
+
+    def get_current_progress(self) -> int:
+        """
+        Get the current overall progress percentage.
+
+        Returns:
+            Current progress percentage (0-100)
+        """
+        ...

@@ -686,7 +686,28 @@ class FakeDatabaseRepository(DatabaseRepository):
             source_id = source_data.get("source_id")
             if not source_id:
                 raise ValueError("source_id is required")
-            self.sources[source_id] = source_data.copy()
+
+            # Check if source exists
+            if source_id in self.sources:
+                # MERGE update: preserve existing fields not in source_data
+                existing = self.sources[source_id]
+
+                # Merge top-level fields
+                merged = existing.copy()
+                merged.update(source_data)
+
+                # Special handling for metadata: deep merge
+                if "metadata" in source_data and "metadata" in existing:
+                    # Merge metadata dicts (new values override old)
+                    merged_metadata = existing.get("metadata", {}).copy()
+                    merged_metadata.update(source_data["metadata"])
+                    merged["metadata"] = merged_metadata
+
+                self.sources[source_id] = merged
+            else:
+                # INSERT: new source
+                self.sources[source_id] = source_data.copy()
+
             return self.sources[source_id]
 
     async def update_source_metadata(

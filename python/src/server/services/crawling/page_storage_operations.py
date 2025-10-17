@@ -24,29 +24,14 @@ class PageStorageOperations:
     This enables agents to retrieve complete documentation pages instead of just chunks.
     """
 
-    def __init__(self, repository: DatabaseRepository | None = None, supabase_client=None):
+    def __init__(self, repository: DatabaseRepository | None = None):
         """
-        Initialize with optional repository or supabase client.
+        Initialize with optional repository.
 
         Args:
-            repository: DatabaseRepository instance (preferred)
-            supabase_client: Legacy supabase client (for backward compatibility)
+            repository: DatabaseRepository instance (uses default if not provided)
         """
-        # Handle backward compatibility: if first arg looks like a supabase client (not a DatabaseRepository),
-        # treat it as supabase_client for compatibility with existing code
-        if repository is not None and not isinstance(repository, DatabaseRepository):
-            # First argument is actually a supabase client (backward compatibility)
-            supabase_client = repository
-            repository = None
-
-        if repository is not None:
-            self.repository = repository
-        elif supabase_client is not None:
-            # Legacy: create repository from supabase client
-            from ...repositories.supabase_repository import SupabaseDatabaseRepository
-            self.repository = SupabaseDatabaseRepository(supabase_client)
-        else:
-            self.repository = get_repository()
+        self.repository = repository or get_repository()
 
     async def store_pages(
         self,

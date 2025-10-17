@@ -6,28 +6,53 @@ Main orchestration logic for async crawling operations with progress tracking.
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, NotRequired, TypedDict
 
 from ....config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
+from ..protocols import (
+    ICodeExamplesOrchestrator,
+    ICrawlProgressTracker,
+    IDocumentProcessingOrchestrator,
+    IHeartbeatManager,
+    IProgressMapper,
+    IProgressUpdateHandler,
+    ISourceStatusManager,
+    IURLHandler,
+    IUrlTypeHandler,
+)
 
 logger = get_logger(__name__)
+
+
+class ProgressState(TypedDict, total=False):
+    """State dictionary for tracking progress information."""
+    progressId: str
+    source_id: str
+
+
+class ProgressUpdate(TypedDict):
+    """Progress update data structure."""
+    status: str
+    progress: int
+    log: str
+    error: NotRequired[str]
 
 
 @dataclass
 class CrawlOrchestrationConfig:
     """Configuration for async crawl orchestration."""
-    heartbeat_mgr: Any
-    source_status_mgr: Any
-    progress_tracker: Any
-    doc_processor: Any
-    code_orchestrator: Any
-    url_type_handler: Any
-    url_handler: Any
-    progress_mapper: Any
-    progress_state: dict[str, Any]
+    heartbeat_mgr: IHeartbeatManager
+    source_status_mgr: ISourceStatusManager
+    progress_tracker: ICrawlProgressTracker
+    doc_processor: IDocumentProcessingOrchestrator
+    code_orchestrator: ICodeExamplesOrchestrator
+    url_type_handler: IUrlTypeHandler
+    url_handler: IURLHandler
+    progress_mapper: IProgressMapper
+    progress_state: ProgressState
     cancellation_check: Callable[[], None]
     create_crawl_progress_callback: Callable[[str], Awaitable[Callable[[str, int, str], Awaitable[None]]]]
-    handle_progress_update: Callable[[str, dict[str, Any]], Awaitable[None]]
+    handle_progress_update: IProgressUpdateHandler
     progress_id: str | None = None
 
 

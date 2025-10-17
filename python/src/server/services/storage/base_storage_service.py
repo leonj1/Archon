@@ -23,32 +23,14 @@ logger = get_logger(__name__)
 class BaseStorageService(ABC):
     """Base class for all storage services with common functionality."""
 
-    def __init__(self, repository: DatabaseRepository | None = None, supabase_client=None):
+    def __init__(self, repository: DatabaseRepository | None = None):
         """
-        Initialize with optional repository or supabase client.
+        Initialize with optional repository.
 
         Args:
-            repository: DatabaseRepository instance (preferred)
-            supabase_client: Legacy supabase client (for backward compatibility)
+            repository: DatabaseRepository instance (uses default if not provided)
         """
-        if repository is not None:
-            self.repository = repository
-        elif supabase_client is not None:
-            # Legacy: create repository from supabase client
-            from ...repositories.supabase_repository import SupabaseDatabaseRepository
-            self.repository = SupabaseDatabaseRepository(supabase_client)
-        else:
-            self.repository = get_repository()
-
-        # Keep supabase_client for legacy utility functions that still need it
-        # This will be removed once all utility functions are migrated to use repository
-        if supabase_client:
-            self.supabase_client = supabase_client
-        elif hasattr(self.repository, 'client'):
-            # For SupabaseDatabaseRepository
-            self.supabase_client = self.repository.client
-        else:
-            self.supabase_client = None
+        self.repository = repository or get_repository()
 
         # Lazy import threading service
         from ...utils import get_utils_threading_service

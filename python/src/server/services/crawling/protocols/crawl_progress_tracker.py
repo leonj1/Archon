@@ -26,34 +26,34 @@ class ICrawlProgressTracker(Protocol):
         ...
 
     async def update_mapped(
-        self, stage: str, progress: int, message: str, **kwargs: Any
+        self, stage: str, stage_progress: int, message: str, **kwargs: Any
     ) -> None:
         """
         Update progress with stage mapping.
 
         Args:
             stage: Current stage name
-            progress: Progress within stage (0-100)
+            stage_progress: Progress within stage (0-100)
             message: Progress message
             **kwargs: Additional metadata
         """
         ...
 
-    async def update_with_crawl_type(self, crawl_type: str) -> None:
+    async def update_with_crawl_type(self, crawl_type: str | None) -> None:
         """
         Update progress with detected crawl type.
 
         Args:
-            crawl_type: The type of crawl (e.g., 'single_page', 'recursive')
+            crawl_type: The type of crawl (e.g., 'single_page', 'recursive'), or None
         """
         ...
 
-    async def update_with_source_id(self, source_id: str) -> None:
+    async def update_with_source_id(self, source_id: str | None) -> None:
         """
         Update progress with generated source ID.
 
         Args:
-            source_id: The source identifier
+            source_id: The source identifier, or None
         """
         ...
 

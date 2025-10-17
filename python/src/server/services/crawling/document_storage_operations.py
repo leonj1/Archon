@@ -24,43 +24,16 @@ class DocumentStorageOperations:
     Handles document storage operations for crawled content.
     """
 
-    def __init__(self, repository: DatabaseRepository | None = None, supabase_client=None):
+    def __init__(self, repository: DatabaseRepository | None = None):
         """
-        Initialize with optional repository or supabase client.
+        Initialize with optional repository.
 
         Args:
-            repository: DatabaseRepository instance (preferred)
-            supabase_client: Legacy supabase client (for backward compatibility)
+            repository: DatabaseRepository instance (uses default if not provided)
         """
-        # Handle backward compatibility: if first arg looks like a supabase client (not a DatabaseRepository),
-        # treat it as supabase_client for compatibility with existing code like DocumentStorageOperations(supabase_client)
-        if repository is not None and not isinstance(repository, DatabaseRepository):
-            # First argument is actually a supabase client (backward compatibility)
-            supabase_client = repository
-            repository = None
+        self.repository = repository or get_repository()
 
-        if repository is not None:
-            self.repository = repository
-            # Extract supabase_client for legacy dependencies
-            if hasattr(repository, 'client'):
-                self.supabase_client = repository.client
-            else:
-                self.supabase_client = None
-        elif supabase_client is not None:
-            # Legacy: create repository from supabase client
-            from ...repositories.supabase_repository import SupabaseDatabaseRepository
-            self.repository = SupabaseDatabaseRepository(supabase_client)
-            self.supabase_client = supabase_client
-        else:
-            # Use repository factory to get the configured repository
-            self.repository = get_repository()
-            # Extract supabase_client if available (for SupabaseDatabaseRepository)
-            if hasattr(self.repository, 'client'):
-                self.supabase_client = self.repository.client
-            else:
-                self.supabase_client = None
-
-        # Initialize dependent services - pass repository instead of supabase_client
+        # Initialize dependent services
         self.doc_storage_service = DocumentStorageService(repository=self.repository)
         self.code_extraction_service = CodeExtractionService(repository=self.repository)
 
@@ -196,7 +169,7 @@ class DocumentStorageOperations:
 
         # Store pages AFTER source is created but BEFORE chunks (FK constraint requirement)
         from .page_storage_operations import PageStorageOperations
-        page_storage_ops = PageStorageOperations(self.supabase_client)
+        page_storage_ops = PageStorageOperations(repository=self.repository)
 
         # Check if this is an llms-full.txt file
         is_llms_full = crawl_type == "llms-txt" or (

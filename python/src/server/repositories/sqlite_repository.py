@@ -1343,53 +1343,115 @@ class SQLiteDatabaseRepository(DatabaseRepository):
         """Get a specific source by ID."""
         async with self._get_connection() as conn:
             cursor = await conn.execute("""
-                SELECT * FROM archon_sources 
+                SELECT * FROM archon_sources
                 WHERE source_id = ?
             """, (source_id,))
             row = await cursor.fetchone()
             if row:
                 source = dict(row)
-                # Parse metadata JSON
+                # Parse metadata JSON and keep it in the metadata field
                 if source.get('metadata'):
                     try:
-                        metadata = json.loads(source['metadata'])
-                        source.update(metadata)
+                        source['metadata'] = json.loads(source['metadata'])
                     except:
-                        pass
+                        source['metadata'] = {}
+                else:
+                    source['metadata'] = {}
                 return source
             return None
     
     async def upsert_source(self, source_data: dict[str, Any]) -> dict[str, Any]:
-        """Insert or update a source."""
+        """Insert or update a source with proper merge logic."""
         async with self._get_connection() as conn:
             source_id = source_data.get('source_id', str(uuid4()))
-            
-            # Prepare metadata JSON field
-            metadata = source_data.get('metadata', {})
-            # Store extra fields in metadata
-            metadata['knowledge_type'] = source_data.get('knowledge_type', 'documentation')
-            metadata['crawl_status'] = source_data.get('crawl_status', 'pending')
-            metadata['last_crawled_at'] = source_data.get('last_crawled_at')
-            metadata['crawl_config'] = source_data.get('crawl_config', {})
-            metadata_json = json.dumps(metadata)
-            
-            await conn.execute("""
-                INSERT OR REPLACE INTO archon_sources (
-                    source_id, source_url, source_display_name,
-                    summary, title, metadata,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                source_id,
-                source_data.get('source_url'),
-                source_data.get('source_display_name'),
-                source_data.get('summary'),
-                source_data.get('title'),
-                metadata_json,
-                source_data.get('created_at', datetime.now().isoformat()),
-                datetime.now().isoformat()
-            ))
-            
+
+            # Check if source exists
+            cursor = await conn.execute("""
+                SELECT * FROM archon_sources WHERE source_id = ?
+            """, (source_id,))
+            existing_row = await cursor.fetchone()
+
+            if existing_row:
+                # MERGE update: preserve existing fields not in source_data
+                existing = dict(existing_row)
+
+                # Parse existing metadata
+                existing_metadata = {}
+                if existing.get('metadata'):
+                    try:
+                        existing_metadata = json.loads(existing['metadata'])
+                    except:
+                        existing_metadata = {}
+
+                # Merge metadata: existing + new
+                new_metadata = source_data.get('metadata', {})
+                # Add special fields to metadata
+                if 'knowledge_type' in source_data:
+                    new_metadata['knowledge_type'] = source_data['knowledge_type']
+                if 'crawl_status' in source_data:
+                    new_metadata['crawl_status'] = source_data['crawl_status']
+                if 'last_crawled_at' in source_data:
+                    new_metadata['last_crawled_at'] = source_data['last_crawled_at']
+                if 'crawl_config' in source_data:
+                    new_metadata['crawl_config'] = source_data['crawl_config']
+
+                # Deep merge metadata
+                merged_metadata = existing_metadata.copy()
+                merged_metadata.update(new_metadata)
+                metadata_json = json.dumps(merged_metadata)
+
+                # Merge top-level fields (prefer new over existing)
+                merged = existing.copy()
+                merged.update(source_data)
+                merged['metadata'] = metadata_json
+                merged['updated_at'] = datetime.now().isoformat()
+
+                # UPDATE existing record
+                await conn.execute("""
+                    UPDATE archon_sources
+                    SET source_url = ?,
+                        source_display_name = ?,
+                        summary = ?,
+                        title = ?,
+                        metadata = ?,
+                        updated_at = ?
+                    WHERE source_id = ?
+                """, (
+                    merged.get('source_url'),
+                    merged.get('source_display_name'),
+                    merged.get('summary'),
+                    merged.get('title'),
+                    metadata_json,
+                    merged['updated_at'],
+                    source_id
+                ))
+            else:
+                # INSERT new record
+                metadata = source_data.get('metadata', {})
+                # Store extra fields in metadata
+                metadata['knowledge_type'] = source_data.get('knowledge_type', 'documentation')
+                metadata['crawl_status'] = source_data.get('crawl_status', 'pending')
+                metadata['last_crawled_at'] = source_data.get('last_crawled_at')
+                metadata['crawl_config'] = source_data.get('crawl_config', {})
+                metadata_json = json.dumps(metadata)
+
+                await conn.execute("""
+                    INSERT INTO archon_sources (
+                        source_id, source_url, source_display_name,
+                        summary, title, metadata,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    source_id,
+                    source_data.get('source_url'),
+                    source_data.get('source_display_name'),
+                    source_data.get('summary'),
+                    source_data.get('title'),
+                    metadata_json,
+                    source_data.get('created_at', datetime.now().isoformat()),
+                    datetime.now().isoformat()
+                ))
+
             await conn.commit()
             source_data['source_id'] = source_id
             return source_data

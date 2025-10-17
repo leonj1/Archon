@@ -2,7 +2,7 @@
 Repository Factory
 
 Provides centralized management of repository instances with support for
-different database backends (SQLite, Supabase, Fake for testing).
+different database backends (SQLite, Fake for testing).
 
 Usage:
     # Get the default configured repository (SQLite)
@@ -21,7 +21,6 @@ Usage:
 Configuration:
     Set ARCHON_DB_BACKEND environment variable to choose backend:
     - "sqlite" (default): Lightweight file-based SQLite backend
-    - "supabase" (legacy): Production PostgreSQL backend via Supabase
     - "fake": In-memory fake repository for testing
 """
 
@@ -29,15 +28,13 @@ import os
 from typing import Literal, Optional
 
 from ..config.logfire_config import get_logger
-from ..services.client_manager import get_supabase_client
 from .database_repository import DatabaseRepository
 from .fake_repository import FakeDatabaseRepository
 from .sqlite_repository import SQLiteDatabaseRepository
-from .supabase_repository import SupabaseDatabaseRepository
 
 logger = get_logger(__name__)
 
-BackendType = Literal["supabase", "fake", "sqlite"]
+BackendType = Literal["fake", "sqlite"]
 
 class RepositoryFactory:
     """
@@ -79,9 +76,6 @@ class RepositoryFactory:
 
             # Use fake backend for testing
             repo = factory.get_repository(backend="fake")
-
-            # Use specific backend (legacy Supabase)
-            repo = factory.get_repository(backend="supabase")
         """
         # Determine which backend to use
         if backend is None:
@@ -94,16 +88,14 @@ class RepositoryFactory:
         # Create new repository for requested backend
         logger.info(f"Initializing repository with backend: {backend}")
 
-        if backend == "supabase":
-            self._repository = self._create_supabase_repository()
-        elif backend == "fake":
+        if backend == "fake":
             self._repository = self._create_fake_repository()
         elif backend == "sqlite":
             self._repository = self._create_sqlite_repository()
         else:
             raise ValueError(
                 f"Unknown backend: {backend}. "
-                f"Supported backends: sqlite (default), supabase, fake"
+                f"Supported backends: sqlite (default), fake"
             )
 
         self._backend = backend
@@ -132,7 +124,7 @@ class RepositoryFactory:
         backend = os.getenv("ARCHON_DB_BACKEND", "sqlite").lower()
 
         # Validate the backend value
-        valid_backends = ("supabase", "fake", "sqlite")
+        valid_backends = ("fake", "sqlite")
         if backend not in valid_backends:
             logger.warning(
                 f"Invalid ARCHON_DB_BACKEND value: {backend}. "
@@ -141,27 +133,6 @@ class RepositoryFactory:
             return "sqlite"
 
         return backend  # type: ignore
-
-    @staticmethod
-    def _create_supabase_repository() -> SupabaseDatabaseRepository:
-        """
-        Create a Supabase repository instance.
-
-        Returns:
-            Configured SupabaseDatabaseRepository
-
-        Raises:
-            RuntimeError: If Supabase client initialization fails
-        """
-        try:
-            supabase_client = get_supabase_client()
-            return SupabaseDatabaseRepository(supabase_client)
-        except Exception as e:
-            logger.error(f"Failed to initialize Supabase repository: {e}")
-            raise RuntimeError(
-                f"Failed to initialize Supabase repository: {e}. "
-                f"Ensure SUPABASE_URL and SUPABASE_SERVICE_KEY are set correctly."
-            ) from e
 
     @staticmethod
     def _create_fake_repository() -> FakeDatabaseRepository:
@@ -233,9 +204,6 @@ def get_repository(backend: Optional[BackendType] = None) -> DatabaseRepository:
             repo = get_repository(backend="fake")
             service = MyService(repository=repo)
             # ... test code ...
-
-        # Force specific backend (legacy Supabase)
-        repo = get_repository(backend="supabase")
     """
     return _factory.get_repository(backend)
 

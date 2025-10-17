@@ -11,8 +11,8 @@ class IUrlTypeHandler(Protocol):
         self,
         url: str,
         request: dict[str, Any],
-        progress_callback: Callable[[str, int, str], Awaitable[None]] | None = None,
-    ) -> tuple[list[dict[str, Any]], str]:
+        progress_callback: Callable[..., Any] | None = None,
+    ) -> tuple[list[dict[str, Any]], str | None]:
         """
         Crawl URL based on its detected type.
 
@@ -24,6 +24,6 @@ class IUrlTypeHandler(Protocol):
         Returns:
             Tuple of (crawl_results, crawl_type) where:
             - crawl_results: List of crawled page dictionaries
-            - crawl_type: Type of crawl performed (e.g., 'single_page', 'recursive')
+            - crawl_type: Type of crawl performed (e.g., 'single_page', 'recursive'), or None
         """
         ...

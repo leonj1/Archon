@@ -12,11 +12,9 @@ from .repository_factory import (
     get_repository,
     reset_factory,
 )
-from .supabase_repository import SupabaseDatabaseRepository
 
 __all__ = [
     "DatabaseRepository",
-    "SupabaseDatabaseRepository",
     "FakeDatabaseRepository",
     "RepositoryFactory",
     "get_repository",
