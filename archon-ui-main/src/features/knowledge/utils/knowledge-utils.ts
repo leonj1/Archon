@@ -158,11 +158,12 @@ export function sortKnowledgeItems(items: KnowledgeItem[], sortConfig: Knowledge
         comparison = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
         break;
 
-      case "status":
+      case "status": {
         const aPriority = STATUS_PRIORITY[a.status] ?? 999;
         const bPriority = STATUS_PRIORITY[b.status] ?? 999;
         comparison = aPriority - bPriority;
         break;
+      }
 
       case "document_count":
         comparison = a.document_count - b.document_count;

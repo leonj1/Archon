@@ -807,3 +807,22 @@ export function useKnowledgeCodeExamples(
     staleTime: STALE_TIMES.normal,
   });
 }
+
+/**
+ * Content search hook for full-text search across all knowledge bases
+ * Searches within document contents rather than just titles
+ */
+export function useContentSearch(query: string, enabled: boolean = true) {
+  return useQuery({
+    queryKey: query.trim() ? knowledgeKeys.search(query) : DISABLED_QUERY_KEY,
+    queryFn: () =>
+      query.trim()
+        ? knowledgeService.searchKnowledgeBase({
+            query: query.trim(),
+            limit: 50, // Return top 50 matches
+          })
+        : Promise.reject("No search query"),
+    enabled: enabled && query.trim().length > 0,
+    staleTime: STALE_TIMES.frequent, // 5 seconds - search results can change frequently
+  });
+}

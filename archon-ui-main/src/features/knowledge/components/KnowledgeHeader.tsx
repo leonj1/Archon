@@ -7,6 +7,8 @@ import { Asterisk, BookOpen, Briefcase, Grid, List, Plus, Search, Terminal } fro
 import { Button, Input, ToggleGroup, ToggleGroupItem } from "../../ui/primitives";
 import { cn } from "../../ui/primitives/styles";
 import type { KnowledgeSortConfig } from "../types";
+import type { SearchMode } from "./SearchModeToggle";
+import { SearchModeToggle } from "./SearchModeToggle";
 import { SortControl } from "./SortControl";
 
 interface KnowledgeHeaderProps {
@@ -14,6 +16,8 @@ interface KnowledgeHeaderProps {
   isLoading: boolean;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  searchMode: SearchMode;
+  onSearchModeChange: (mode: SearchMode) => void;
   typeFilter: "all" | "technical" | "business";
   onTypeFilterChange: (type: "all" | "technical" | "business") => void;
   viewMode: "grid" | "table";
@@ -28,6 +32,8 @@ export const KnowledgeHeader: React.FC<KnowledgeHeaderProps> = ({
   isLoading,
   searchQuery,
   onSearchChange,
+  searchMode,
+  onSearchModeChange,
   typeFilter,
   onTypeFilterChange,
   viewMode,
@@ -62,12 +68,15 @@ export const KnowledgeHeader: React.FC<KnowledgeHeaderProps> = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
             type="text"
-            placeholder="Search knowledge base..."
+            placeholder={searchMode === "title" ? "Search by title..." : "Search within content (e.g., HashMap)..."}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10 bg-black/30 dark:bg-black/30 border-white/10 dark:border-white/10 focus:border-cyan-500/50"
           />
         </div>
+
+        {/* Search mode toggle */}
+        <SearchModeToggle mode={searchMode} onModeChange={onSearchModeChange} />
 
         {/* Segmented type filters */}
         <ToggleGroup

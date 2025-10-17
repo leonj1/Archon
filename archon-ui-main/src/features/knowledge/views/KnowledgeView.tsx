@@ -8,9 +8,11 @@ import { useToast } from "@/features/shared/hooks/useToast";
 import { CrawlingProgress } from "../../progress/components/CrawlingProgress";
 import type { ActiveOperation } from "../../progress/types";
 import { AddKnowledgeDialog } from "../components/AddKnowledgeDialog";
+import { ContentSearchResults } from "../components/ContentSearchResults";
 import { KnowledgeHeader } from "../components/KnowledgeHeader";
 import { KnowledgeList } from "../components/KnowledgeList";
-import { useKnowledgeSummaries } from "../hooks/useKnowledgeQueries";
+import type { SearchMode } from "../components/SearchModeToggle";
+import { useContentSearch, useKnowledgeSummaries } from "../hooks/useKnowledgeQueries";
 import { KnowledgeInspector } from "../inspector/components/KnowledgeInspector";
 import type { KnowledgeItem, KnowledgeItemsFilter, KnowledgeSortConfig } from "../types";
 import { sortKnowledgeItems } from "../utils/knowledge-utils";
@@ -19,6 +21,7 @@ export const KnowledgeView = () => {
   // View state
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<SearchMode>("title");
   const [typeFilter, setTypeFilter] = useState<"all" | "technical" | "business">("all");
   const [sortConfig, setSortConfig] = useState<KnowledgeSortConfig>({
     field: "updated_at",
@@ -31,13 +34,14 @@ export const KnowledgeView = () => {
   const [inspectorInitialTab, setInspectorInitialTab] = useState<"documents" | "code">("documents");
 
   // Build filter object for API - memoize to prevent recreating on every render
+  // Only use searchQuery in filter when in "title" mode
   const filter = useMemo<KnowledgeItemsFilter>(() => {
     const f: KnowledgeItemsFilter = {
       page: 1,
       per_page: 100,
     };
 
-    if (searchQuery) {
+    if (searchQuery && searchMode === "title") {
       f.search = searchQuery;
     }
 
@@ -46,12 +50,20 @@ export const KnowledgeView = () => {
     }
 
     return f;
-  }, [searchQuery, typeFilter]);
+  }, [searchQuery, searchMode, typeFilter]);
 
   // Fetch knowledge summaries (no automatic polling!)
   const { data, isLoading, error, refetch, setActiveCrawlIds, activeOperations } = useKnowledgeSummaries(filter);
 
-  // Apply sorting to knowledge items
+  // Content search (only when in content mode with a query)
+  const isContentSearchActive = searchMode === "content" && searchQuery.trim().length > 0;
+  const {
+    data: contentSearchData,
+    isLoading: contentSearchLoading,
+    error: contentSearchError,
+  } = useContentSearch(searchQuery, isContentSearchActive);
+
+  // Apply sorting to knowledge items (for title search or no search)
   const knowledgeItems = useMemo(() => {
     const items = data?.items || [];
     return sortKnowledgeItems(items, sortConfig);
@@ -136,6 +148,8 @@ export const KnowledgeView = () => {
         isLoading={isLoading}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        searchMode={searchMode}
+        onSearchModeChange={setSearchMode}
         typeFilter={typeFilter}
         onTypeFilterChange={setTypeFilter}
         viewMode={viewMode}
@@ -147,8 +161,8 @@ export const KnowledgeView = () => {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto px-6 pb-6">
-        {/* Active Operations - Show at top when present */}
-        {hasActiveOperations && (
+        {/* Active Operations - Show at top when present (only for non-content search) */}
+        {hasActiveOperations && !isContentSearchActive && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white/90">Active Operations ({activeOperations.length})</h3>
@@ -161,22 +175,35 @@ export const KnowledgeView = () => {
           </div>
         )}
 
-        {/* Knowledge Items List */}
-        <KnowledgeList
-          items={knowledgeItems}
-          viewMode={viewMode}
-          isLoading={isLoading}
-          error={error}
-          onRetry={refetch}
-          onViewDocument={handleViewDocument}
-          onViewCodeExamples={handleViewCodeExamples}
-          onDeleteSuccess={handleDeleteSuccess}
-          activeOperations={activeOperations}
-          onRefreshStarted={(progressId) => {
-            // Add the progress ID to track it
-            setActiveCrawlIds((prev) => [...prev, progressId]);
-          }}
-        />
+        {/* Content Search Results */}
+        {isContentSearchActive ? (
+          <ContentSearchResults
+            query={searchQuery}
+            results={contentSearchData?.results || []}
+            isLoading={contentSearchLoading}
+            error={contentSearchError}
+            knowledgeItems={knowledgeItems}
+            onClearSearch={() => setSearchQuery("")}
+            onViewDocument={handleViewDocument}
+          />
+        ) : (
+          /* Knowledge Items List (Title search or no search) */
+          <KnowledgeList
+            items={knowledgeItems}
+            viewMode={viewMode}
+            isLoading={isLoading}
+            error={error}
+            onRetry={refetch}
+            onViewDocument={handleViewDocument}
+            onViewCodeExamples={handleViewCodeExamples}
+            onDeleteSuccess={handleDeleteSuccess}
+            activeOperations={activeOperations}
+            onRefreshStarted={(progressId) => {
+              // Add the progress ID to track it
+              setActiveCrawlIds((prev) => [...prev, progressId]);
+            }}
+          />
+        )}
       </div>
 
       {/* Dialogs */}
