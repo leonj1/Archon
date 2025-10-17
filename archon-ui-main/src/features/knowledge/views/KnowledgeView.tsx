@@ -12,13 +12,18 @@ import { KnowledgeHeader } from "../components/KnowledgeHeader";
 import { KnowledgeList } from "../components/KnowledgeList";
 import { useKnowledgeSummaries } from "../hooks/useKnowledgeQueries";
 import { KnowledgeInspector } from "../inspector/components/KnowledgeInspector";
-import type { KnowledgeItem, KnowledgeItemsFilter } from "../types";
+import type { KnowledgeItem, KnowledgeItemsFilter, KnowledgeSortConfig } from "../types";
+import { sortKnowledgeItems } from "../utils/knowledge-utils";
 
 export const KnowledgeView = () => {
   // View state
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "technical" | "business">("all");
+  const [sortConfig, setSortConfig] = useState<KnowledgeSortConfig>({
+    field: "updated_at",
+    direction: "desc",
+  });
 
   // Dialog state
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -46,7 +51,12 @@ export const KnowledgeView = () => {
   // Fetch knowledge summaries (no automatic polling!)
   const { data, isLoading, error, refetch, setActiveCrawlIds, activeOperations } = useKnowledgeSummaries(filter);
 
-  const knowledgeItems = data?.items || [];
+  // Apply sorting to knowledge items
+  const knowledgeItems = useMemo(() => {
+    const items = data?.items || [];
+    return sortKnowledgeItems(items, sortConfig);
+  }, [data?.items, sortConfig]);
+
   const totalItems = data?.total || 0;
   const hasActiveOperations = activeOperations.length > 0;
 
@@ -130,6 +140,8 @@ export const KnowledgeView = () => {
         onTypeFilterChange={setTypeFilter}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        sortConfig={sortConfig}
+        onSortChange={setSortConfig}
         onAddKnowledge={handleAddKnowledge}
       />
 

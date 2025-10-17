@@ -2,7 +2,7 @@
  * Knowledge Base Utility Functions
  */
 
-import type { KnowledgeItem, KnowledgeItemMetadata } from "../types";
+import type { KnowledgeItem, KnowledgeItemMetadata, KnowledgeSortConfig } from "../types";
 
 /**
  * Group knowledge items by their group_name metadata
@@ -126,4 +126,56 @@ export function getFileTypeIcon(fileType?: string): string {
   if (lowerType.includes("code") || lowerType.includes("json")) return "💻";
 
   return "📄";
+}
+
+/**
+ * Status priority for sorting (processing > active > completed > error)
+ */
+const STATUS_PRIORITY: Record<string, number> = {
+  processing: 0,
+  active: 1,
+  completed: 2,
+  error: 3,
+};
+
+/**
+ * Sort knowledge items based on sort configuration
+ */
+export function sortKnowledgeItems(items: KnowledgeItem[], sortConfig: KnowledgeSortConfig): KnowledgeItem[] {
+  return [...items].sort((a, b) => {
+    let comparison = 0;
+
+    switch (sortConfig.field) {
+      case "title":
+        comparison = a.title.localeCompare(b.title);
+        break;
+
+      case "created_at":
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        break;
+
+      case "updated_at":
+        comparison = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        break;
+
+      case "status":
+        const aPriority = STATUS_PRIORITY[a.status] ?? 999;
+        const bPriority = STATUS_PRIORITY[b.status] ?? 999;
+        comparison = aPriority - bPriority;
+        break;
+
+      case "document_count":
+        comparison = a.document_count - b.document_count;
+        break;
+
+      case "code_examples_count":
+        comparison = a.code_examples_count - b.code_examples_count;
+        break;
+
+      default:
+        comparison = 0;
+    }
+
+    return sortConfig.direction === "asc" ? comparison : -comparison;
+  });
 }

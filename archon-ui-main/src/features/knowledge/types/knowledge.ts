@@ -158,6 +158,22 @@ export interface SearchOptions {
 // UI-specific types
 export type KnowledgeViewMode = "grid" | "table";
 
+// Sorting types
+export type KnowledgeSortField =
+  | "title"
+  | "created_at"
+  | "updated_at"
+  | "status"
+  | "document_count"
+  | "code_examples_count";
+
+export type SortDirection = "asc" | "desc";
+
+export interface KnowledgeSortConfig {
+  field: KnowledgeSortField;
+  direction: SortDirection;
+}
+
 // Inspector specific types
 export interface InspectorSelectedItem {
   type: "document" | "code";

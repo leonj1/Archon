@@ -6,6 +6,8 @@
 import { Asterisk, BookOpen, Briefcase, Grid, List, Plus, Search, Terminal } from "lucide-react";
 import { Button, Input, ToggleGroup, ToggleGroupItem } from "../../ui/primitives";
 import { cn } from "../../ui/primitives/styles";
+import type { KnowledgeSortConfig } from "../types";
+import { SortControl } from "./SortControl";
 
 interface KnowledgeHeaderProps {
   totalItems: number;
@@ -16,6 +18,8 @@ interface KnowledgeHeaderProps {
   onTypeFilterChange: (type: "all" | "technical" | "business") => void;
   viewMode: "grid" | "table";
   onViewModeChange: (mode: "grid" | "table") => void;
+  sortConfig: KnowledgeSortConfig;
+  onSortChange: (config: KnowledgeSortConfig) => void;
   onAddKnowledge: () => void;
 }
 
@@ -28,6 +32,8 @@ export const KnowledgeHeader: React.FC<KnowledgeHeaderProps> = ({
   onTypeFilterChange,
   viewMode,
   onViewModeChange,
+  sortConfig,
+  onSortChange,
   onAddKnowledge,
 }) => {
   return (
@@ -91,6 +97,9 @@ export const KnowledgeHeader: React.FC<KnowledgeHeaderProps> = ({
             <Briefcase className="w-4 h-4" aria-hidden="true" />
           </ToggleGroupItem>
         </ToggleGroup>
+
+        {/* Sort Control */}
+        <SortControl sortConfig={sortConfig} onSortChange={onSortChange} />
 
         {/* View Mode Toggle */}
         <div className="flex gap-1 p-1 bg-black/30 rounded-lg border border-white/10">
