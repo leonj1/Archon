@@ -226,7 +226,7 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
 
         <DataCardContent>
           {/* Progress tracking for active operations - using simplified component */}
-          {activeOperation && <KnowledgeCardProgress operation={activeOperation} />}
+          {activeOperation && <KnowledgeCardProgress operation={activeOperation} knowledgeBaseName={item.title} />}
         </DataCardContent>
 
         <DataCardFooter>

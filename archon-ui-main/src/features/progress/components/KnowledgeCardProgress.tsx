@@ -5,15 +5,16 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, CheckCircle2, Code, FileText, Link, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Code, FileText, Globe, Link, Loader2 } from "lucide-react";
 import { cn } from "../../ui/primitives/styles";
 import type { ActiveOperation } from "../types/progress";
 
 interface KnowledgeCardProgressProps {
   operation: ActiveOperation;
+  knowledgeBaseName?: string;
 }
 
-export const KnowledgeCardProgress: React.FC<KnowledgeCardProgressProps> = ({ operation }) => {
+export const KnowledgeCardProgress: React.FC<KnowledgeCardProgressProps> = ({ operation, knowledgeBaseName }) => {
   // Direct progress field from backend (0-100) - same as CrawlingProgress
   const progressPercentage = typeof operation.progress === "number" ? Math.round(operation.progress) : 0;
 
@@ -34,6 +35,21 @@ export const KnowledgeCardProgress: React.FC<KnowledgeCardProgressProps> = ({ op
   if (!isActive) {
     return null;
   }
+
+  // Get display name - fallback to extracting from URL if not provided
+  const displayName =
+    knowledgeBaseName ||
+    (() => {
+      if (operation.url) {
+        try {
+          const url = new URL(operation.url);
+          return url.hostname.replace("www.", "");
+        } catch {
+          return operation.url;
+        }
+      }
+      return "Processing...";
+    })();
 
   const getStatusIcon = () => {
     switch (operation.status) {
@@ -76,6 +92,12 @@ export const KnowledgeCardProgress: React.FC<KnowledgeCardProgressProps> = ({ op
         className="border-t border-white/10 bg-black/20"
       >
         <div className="p-3 space-y-2">
+          {/* Knowledge Base Label */}
+          <div className="flex items-center gap-2 mb-1">
+            <Globe className="w-3 h-3 text-purple-400 flex-shrink-0" />
+            <span className="text-xs text-gray-400 truncate">{displayName}</span>
+          </div>
+
           {/* Status line */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

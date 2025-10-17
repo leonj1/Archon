@@ -171,7 +171,7 @@ export const KnowledgeView = () => {
                 Live Updates
               </div>
             </div>
-            <CrawlingProgress onSwitchToBrowse={() => {}} />
+            <CrawlingProgress onSwitchToBrowse={() => {}} knowledgeItems={knowledgeItems} />
           </div>
         )}
 

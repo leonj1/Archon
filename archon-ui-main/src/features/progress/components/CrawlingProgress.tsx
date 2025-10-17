@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CheckCircle, Globe, Loader2, StopCircle, XCircle } from "lucide-react";
 import { useState } from "react";
 import { useStopCrawl } from "../../knowledge/hooks";
+import type { KnowledgeItem } from "../../knowledge/types";
 import { Button } from "../../ui/primitives";
 import { cn } from "../../ui/primitives/styles";
 import { useCrawlProgressPolling } from "../hooks";
@@ -15,6 +16,7 @@ import type { ActiveOperation } from "../types/progress";
 
 interface CrawlingProgressProps {
   onSwitchToBrowse: () => void;
+  knowledgeItems?: KnowledgeItem[];
 }
 
 const itemVariants = {
@@ -31,7 +33,7 @@ const itemVariants = {
   },
 };
 
-export const CrawlingProgress: React.FC<CrawlingProgressProps> = ({ onSwitchToBrowse }) => {
+export const CrawlingProgress: React.FC<CrawlingProgressProps> = ({ onSwitchToBrowse, knowledgeItems = [] }) => {
   const { activeOperations, isLoading } = useCrawlProgressPolling();
   const stopMutation = useStopCrawl();
   const [stoppingId, setStoppingId] = useState<string | null>(null);
@@ -47,6 +49,33 @@ export const CrawlingProgress: React.FC<CrawlingProgressProps> = ({ onSwitchToBr
     } finally {
       setStoppingId(null);
     }
+  };
+
+  const getKnowledgeBaseName = (operation: ActiveOperation): string => {
+    // Try to find knowledge item by source_id
+    if (operation.source_id) {
+      const item = knowledgeItems.find((k) => k.source_id === operation.source_id);
+      if (item) return item.title;
+    }
+
+    // Try to match by URL
+    if (operation.url) {
+      const item = knowledgeItems.find((k) => k.url === operation.url);
+      if (item) return item.title;
+    }
+
+    // Fallback: extract domain from URL
+    if (operation.url) {
+      try {
+        const url = new URL(operation.url);
+        return url.hostname.replace("www.", "");
+      } catch {
+        return operation.url;
+      }
+    }
+
+    // Final fallback
+    return "Unknown Knowledge Base";
   };
 
   const getStatusIcon = (status: string) => {
@@ -155,12 +184,22 @@ export const CrawlingProgress: React.FC<CrawlingProgressProps> = ({ onSwitchToBr
                 <div className="p-4 border-b border-white/10">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-white/90 flex items-center gap-2">
+                      {/* Knowledge Base Label */}
+                      <div className="mb-2">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Knowledge Base</p>
+                        <h3 className="text-lg font-semibold text-white/90 flex items-center gap-2">
+                          <Globe className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                          <span className="truncate">{getKnowledgeBaseName(operation)}</span>
+                        </h3>
+                      </div>
+
+                      {/* Current Status */}
+                      <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
                         {getStatusIcon(operation.status)}
-                        <span className="truncate">
-                          {operation.message || operation.current_url || "Processing..."}
-                        </span>
-                      </h3>
+                        <span className="truncate">{operation.message || operation.current_url || "Processing..."}</span>
+                      </div>
+
+                      {/* Status badges */}
                       <div className="flex items-center gap-2 mt-2">
                         <span className={cn("px-2 py-1 text-xs rounded", getStatusColor(operation.status))}>
                           {operation.status.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}
