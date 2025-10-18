@@ -88,29 +88,23 @@ BEGIN
         unique_sessions,
         last_updated
     )
-    SELECT
-        datetime(strftime('%Y-%m-%d %H:00:00', NEW.timestamp)) as hour_bucket,
+    VALUES (
+        datetime(strftime('%Y-%m-%d %H:00:00', NEW.timestamp)),
         NEW.tool_name,
         NEW.tool_category,
-        1 as call_count,
-        CASE WHEN NEW.success = 0 THEN 1 ELSE 0 END as error_count,
+        1,
+        CASE WHEN NEW.success = 0 THEN 1 ELSE 0 END,
         NEW.response_time_ms,
-        1 as unique_sessions,
+        1,
         CURRENT_TIMESTAMP
-    WHERE NOT EXISTS (
-        SELECT 1 FROM archon_mcp_usage_hourly
-        WHERE hour_bucket = datetime(strftime('%Y-%m-%d %H:00:00', NEW.timestamp))
-          AND tool_name = NEW.tool_name
-    );
-
-    UPDATE archon_mcp_usage_hourly
-    SET
+    )
+    ON CONFLICT(hour_bucket, tool_name) DO UPDATE SET
         call_count = call_count + 1,
         error_count = error_count + CASE WHEN NEW.success = 0 THEN 1 ELSE 0 END,
-        avg_response_time_ms = ((avg_response_time_ms * call_count) + NEW.response_time_ms) / (call_count + 1),
-        last_updated = CURRENT_TIMESTAMP
-    WHERE hour_bucket = datetime(strftime('%Y-%m-%d %H:00:00', NEW.timestamp))
-      AND tool_name = NEW.tool_name;
+        avg_response_time_ms = (
+            (COALESCE(avg_response_time_ms, 0) * call_count + NEW.response_time_ms) / (call_count + 1)
+        ),
+        last_updated = CURRENT_TIMESTAMP;
 END;
 
 -- Trigger to update daily aggregation when new event is inserted
@@ -127,29 +121,23 @@ BEGIN
         unique_sessions,
         last_updated
     )
-    SELECT
-        date(NEW.timestamp) as date_bucket,
+    VALUES (
+        date(NEW.timestamp),
         NEW.tool_name,
         NEW.tool_category,
-        1 as call_count,
-        CASE WHEN NEW.success = 0 THEN 1 ELSE 0 END as error_count,
+        1,
+        CASE WHEN NEW.success = 0 THEN 1 ELSE 0 END,
         NEW.response_time_ms,
-        1 as unique_sessions,
+        1,
         CURRENT_TIMESTAMP
-    WHERE NOT EXISTS (
-        SELECT 1 FROM archon_mcp_usage_daily
-        WHERE date_bucket = date(NEW.timestamp)
-          AND tool_name = NEW.tool_name
-    );
-
-    UPDATE archon_mcp_usage_daily
-    SET
+    )
+    ON CONFLICT(date_bucket, tool_name) DO UPDATE SET
         call_count = call_count + 1,
         error_count = error_count + CASE WHEN NEW.success = 0 THEN 1 ELSE 0 END,
-        avg_response_time_ms = ((avg_response_time_ms * call_count) + NEW.response_time_ms) / (call_count + 1),
-        last_updated = CURRENT_TIMESTAMP
-    WHERE date_bucket = date(NEW.timestamp)
-      AND tool_name = NEW.tool_name;
+        avg_response_time_ms = (
+            (COALESCE(avg_response_time_ms, 0) * call_count + NEW.response_time_ms) / (call_count + 1)
+        ),
+        last_updated = CURRENT_TIMESTAMP;
 END;
 
 -- ============================================

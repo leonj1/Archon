@@ -228,9 +228,31 @@ CREATE INDEX IF NOT EXISTS idx_archon_document_versions_task_id ON archon_docume
 CREATE INDEX IF NOT EXISTS idx_archon_document_versions_field_name ON archon_document_versions(field_name);
 
 -- =====================================================
--- SECTION 5: TRIGGERS FOR UPDATED_AT
+-- SECTION 5: PROMPTS TABLE
 -- =====================================================
 
--- SQLite doesn't support functions like PostgreSQL, but we can use triggers
--- Note: These need to be updated via the application layer in SQLite
--- The updated_at fields are included for compatibility but won't auto-update
+-- Prompts table for storing system prompts
+CREATE TABLE IF NOT EXISTS archon_prompts (
+    id TEXT PRIMARY KEY,
+    prompt_name TEXT UNIQUE NOT NULL,
+    prompt TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for faster prompt lookups
+CREATE INDEX IF NOT EXISTS idx_archon_prompts_name ON archon_prompts(prompt_name);
+
+-- =====================================================
+-- SECTION 6: NOTES ON UPDATED_AT TIMESTAMPS
+-- =====================================================
+
+-- Note: SQLite doesn't support PostgreSQL-style functions like update_updated_at_column()
+-- The updated_at fields are managed by the application layer in SQLite.
+-- All repository methods (create, update, upsert) explicitly set updated_at = CURRENT_TIMESTAMP.
+-- This ensures consistent timestamp handling across the application.
+
+-- =====================================================
+-- MIGRATION COMPLETE
+-- =====================================================
