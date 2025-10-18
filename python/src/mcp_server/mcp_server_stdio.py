@@ -1,17 +1,12 @@
+#!/usr/bin/env python3
 """
-MCP Server for Archon (Microservices Version)
+MCP Server for Archon - Stdio Transport Version
 
-This is the MCP server that uses HTTP calls to other services
-instead of importing heavy dependencies directly. This significantly reduces
-the container size from 1.66GB to ~150MB.
+This version of the MCP server uses stdio transport for better compatibility
+with Claude Code. It can be run directly from the command line or via
+Claude Code's MCP configuration.
 
-Modules:
-- RAG Module: RAG queries, search, and source management via HTTP
-- Project Module: Task and project management via HTTP
-- Health & Session: Local operations
-
-Note: Crawling and document upload operations are handled directly by the
-API service and frontend, not through MCP tools.
+Transport: stdio (stdin/stdout)
 """
 
 import json
@@ -29,7 +24,6 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-
 from mcp.server.fastmcp import Context, FastMCP
 
 # Add the project root to Python path for imports
@@ -40,50 +34,48 @@ project_root = Path(__file__).resolve().parent.parent
 dotenv_path = project_root / ".env"
 load_dotenv(dotenv_path, override=True)
 
-# Determine if we're running in stdio mode before configuring logging
-is_stdio = (len(sys.argv) > 1 and sys.argv[1] == "stdio") or os.getenv("MCP_TRANSPORT", "").lower() == "stdio"
-
-# Configure logging FIRST before any imports that might use it
-# For stdio mode, log to stderr to avoid interfering with protocol
-log_stream = sys.stderr if is_stdio else sys.stdout
-
+# Configure logging to stderr so it doesn't interfere with stdio protocol
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.StreamHandler(log_stream),
-        logging.FileHandler("/tmp/mcp_server.log", mode="a")
+        logging.StreamHandler(sys.stderr),  # Use stderr for logs
+        logging.FileHandler("/tmp/mcp_server_stdio.log", mode="a")
         if os.path.exists("/tmp")
         else logging.NullHandler(),
     ],
 )
 logger = logging.getLogger(__name__)
 
-# Import Logfire configuration
-from src.server.config.logfire_config import mcp_logger, setup_logfire
+# Try to import Logfire configuration if available
+try:
+    from src.server.config.logfire_config import mcp_logger, setup_logfire
+except ImportError:
+    logger.warning("Logfire not available - continuing without it")
+    mcp_logger = logger
+    def setup_logfire(service_name): pass
 
-# Import service client for HTTP calls
-from src.server.services.mcp_service_client import get_mcp_service_client
+# Try to import service client for HTTP calls
+try:
+    from src.server.services.mcp_service_client import get_mcp_service_client
+except ImportError:
+    logger.warning("Service client not available - some features may be limited")
+    def get_mcp_service_client(): return None
 
-# Import session management
-from src.server.services.mcp_session_manager import get_session_manager
+# Try to import session management
+try:
+    from src.server.services.mcp_session_manager import get_session_manager
+except ImportError:
+    logger.warning("Session manager not available - continuing without it")
+    class DummySessionManager:
+        def get_active_session_count(self): return 0
+        timeout = 3600
+    def get_session_manager(): return DummySessionManager()
 
 # Global initialization lock and flag
 _initialization_lock = threading.Lock()
 _initialization_complete = False
 _shared_context = None
-
-server_host = "0.0.0.0"  # Listen on all interfaces
-
-# Require ARCHON_MCP_PORT to be set
-mcp_port = os.getenv("ARCHON_MCP_PORT")
-if not mcp_port:
-    raise ValueError(
-        "ARCHON_MCP_PORT environment variable is required. "
-        "Please set it in your .env file or environment. "
-        "Default value: 8051"
-    )
-server_port = int(mcp_port)
 
 
 @dataclass
@@ -112,6 +104,10 @@ class ArchonContext:
 async def perform_health_checks(context: ArchonContext):
     """Perform health checks on dependent services via HTTP."""
     try:
+        if context.service_client is None:
+            logger.warning("Service client not available - skipping health checks")
+            return
+
         # Check dependent services
         service_health = await context.service_client.health_check()
 
@@ -144,7 +140,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[ArchonContext]:
 
     # Quick check without lock
     if _initialization_complete and _shared_context:
-        logger.info("♻️ Reusing existing context for new SSE connection")
+        logger.info("♻️ Reusing existing context for new stdio connection")
         yield _shared_context
         return
 
@@ -152,11 +148,11 @@ async def lifespan(server: FastMCP) -> AsyncIterator[ArchonContext]:
     with _initialization_lock:
         # Double-check pattern
         if _initialization_complete and _shared_context:
-            logger.info("♻️ Reusing existing context for new SSE connection")
+            logger.info("♻️ Reusing existing context for new stdio connection")
             yield _shared_context
             return
 
-        logger.info("🚀 Starting MCP server...")
+        logger.info("🚀 Starting MCP server (stdio mode)...")
 
         try:
             # Initialize session manager
@@ -175,7 +171,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[ArchonContext]:
             # Perform initial health check
             await perform_health_checks(context)
 
-            logger.info("✓ MCP server ready")
+            logger.info("✓ MCP server ready (stdio mode)")
 
             # Store context globally
             _shared_context = context
@@ -227,7 +223,7 @@ IMPORTANT: Always use source_id (not URLs or domain names) for filtering!
 ## 📋 Core Workflow
 
 ### Task Management Cycle
-1. **Get current task**: `list_tasks(task_id="...")` 
+1. **Get current task**: `list_tasks(task_id="...")`
 2. **Search/List tasks**: `list_tasks(query="auth", filter_by="status", filter_value="todo")`
 3. **Mark as doing**: `manage_task("update", task_id="...", status="doing")`
 4. **Research phase**:
@@ -236,22 +232,6 @@ IMPORTANT: Always use source_id (not URLs or domain names) for filtering!
 5. **Implementation**: Code based on research findings
 6. **Mark for review**: `manage_task("update", task_id="...", status="review")`
 7. **Get next task**: `list_tasks(filter_by="status", filter_value="todo")`
-
-### Consolidated Task Tools (Optimized ~2 tools from 5)
-- `list_tasks(query=None, task_id=None, filter_by=None, filter_value=None, per_page=10)`
-  - list + search + get in one tool
-  - Search with keyword query parameter (optional)
-  - task_id parameter for getting single task (full details)
-  - Filter by status, project, or assignee
-  - **Optimized**: Returns truncated descriptions and array counts (lists only)
-  - **Default**: 10 items per page (was 50)
-- `manage_task(action, task_id=None, project_id=None, ...)`
-  - **Consolidated**: create + update + delete in one tool
-  - action: "create" | "update" | "delete"
-  - Examples:
-    - `manage_task("create", project_id="p-1", title="Fix auth")`
-    - `manage_task("update", task_id="t-1", status="doing")`
-    - `manage_task("delete", task_id="t-1")`
 
 ## 🏗️ Project Management
 
@@ -281,56 +261,22 @@ Vector search works best with 2-5 keywords, NOT long sentences or keyword dumps.
 ❌ BAD Queries (too long, unfocused):
 - `rag_search_knowledge_base(query="how to implement vector search with pgvector in PostgreSQL for semantic similarity matching with OpenAI embeddings")`
 - `rag_search_code_examples(query="React hooks useState useEffect useContext useReducer useMemo useCallback")`
-
-### Query Construction Tips:
-- Extract 2-5 most important keywords from the user's request
-- Focus on technical terms and specific technologies
-- Omit filler words like "how to", "implement", "create", "example"
-- For multi-concept searches, do multiple focused queries instead of one broad query
-
-## 📊 Task Status Flow
-`todo` → `doing` → `review` → `done`
-- Only ONE task in 'doing' status at a time
-- Use 'review' for completed work awaiting validation
-- Mark tasks 'done' only after verification
-
-## 📝 Task Granularity Guidelines
-
-### Project Scope Determines Task Granularity
-
-**For Feature-Specific Projects** (project = single feature):
-Create granular implementation tasks:
-- "Set up development environment"
-- "Install required dependencies"
-- "Create database schema"
-- "Implement API endpoints"
-- "Add frontend components"
-- "Write unit tests"
-- "Add integration tests"
-- "Update documentation"
-
-**For Codebase-Wide Projects** (project = entire application):
-Create feature-level tasks:
-- "Implement user authentication feature"
-- "Add payment processing system"
-- "Create admin dashboard"
 """
 
-# Initialize the main FastMCP server with fixed configuration
+# Initialize the main FastMCP server with stdio transport
 try:
-    logger.info("🏗️ MCP SERVER INITIALIZATION:")
+    logger.info("🏗️ MCP SERVER INITIALIZATION (STDIO):")
     logger.info("   Server Name: archon-mcp-server")
-    logger.info("   Description: MCP server using HTTP calls")
+    logger.info("   Description: MCP server using stdio transport")
+    logger.info("   Transport: stdio (stdin/stdout)")
 
     mcp = FastMCP(
         "archon-mcp-server",
         description="MCP server for Archon - uses HTTP calls to other services",
         instructions=MCP_INSTRUCTIONS,
         lifespan=lifespan,
-        host=server_host,
-        port=server_port,
     )
-    logger.info("✓ FastMCP server instance created successfully")
+    logger.info("✓ FastMCP server instance created successfully (stdio mode)")
 
 except Exception as e:
     logger.error(f"✗ Failed to create FastMCP server: {e}")
@@ -553,34 +499,21 @@ except Exception as e:
 
 
 def main():
-    """Main entry point for the MCP server."""
+    """Main entry point for the MCP server (stdio mode)."""
     try:
-        # Initialize Logfire first
-        setup_logfire(service_name="archon-mcp-server")
+        # Initialize Logfire first if available
+        setup_logfire(service_name="archon-mcp-server-stdio")
 
-        # Determine transport mode from environment or command line
-        transport_mode = os.getenv("MCP_TRANSPORT", "sse").lower()
+        logger.info("🚀 Starting Archon MCP Server (stdio mode)")
+        logger.info("   Transport: stdio (stdin/stdout)")
+        logger.info("   Reading from stdin, writing to stdout")
+        logger.info("   Logs are written to stderr")
 
-        # Check command line arguments for transport override
-        if len(sys.argv) > 1 and sys.argv[1] in ["stdio", "sse"]:
-            transport_mode = sys.argv[1]
+        mcp_logger.info("🔥 Logfire initialized for MCP server (stdio)")
+        mcp_logger.info("🌟 Starting MCP server in stdio mode")
 
-        logger.info("🚀 Starting Archon MCP Server")
-
-        if transport_mode == "stdio":
-            logger.info("   Mode: stdio (stdin/stdout)")
-            logger.info("   Reading from stdin, writing to stdout")
-            logger.info("   Logs are written to stderr")
-            mcp_logger.info("🌟 Starting MCP server in stdio mode")
-        else:
-            logger.info("   Mode: SSE (Server-Sent Events)")
-            logger.info(f"   SSE Endpoint: http://{server_host}:{server_port}/sse")
-            logger.info(f"   Messages Endpoint: http://{server_host}:{server_port}/messages/")
-            mcp_logger.info(f"🌟 Starting MCP server - host={server_host}, port={server_port}")
-
-        mcp_logger.info("🔥 Logfire initialized for MCP server")
-
-        mcp.run(transport=transport_mode)
+        # Run with stdio transport
+        mcp.run(transport="stdio")
 
     except Exception as e:
         mcp_logger.error(f"💥 Fatal error in main - error={str(e)}, error_type={type(e).__name__}")
