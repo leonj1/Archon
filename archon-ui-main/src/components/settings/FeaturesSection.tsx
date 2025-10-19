@@ -97,15 +97,15 @@ export const FeaturesSection = () => {
 
   const handleDisconnectScreenToggle = async (checked: boolean) => {
     if (loading) return;
-    
+
     try {
       setLoading(true);
       setDisconnectScreenEnabled(checked);
 
-      await serverHealthService.updateSettings(checked);
+      await serverHealthService.updateSettings({ enabled: checked });
 
       showToast(
-        checked ? 'Disconnect Screen Enabled' : 'Disconnect Screen Disabled', 
+        checked ? 'Disconnect Screen Enabled' : 'Disconnect Screen Disabled',
         checked ? 'success' : 'warning'
       );
     } catch (error) {

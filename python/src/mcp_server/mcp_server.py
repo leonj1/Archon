@@ -68,15 +68,12 @@ _shared_context = None
 
 server_host = "0.0.0.0"  # Listen on all interfaces
 
-# Require ARCHON_MCP_PORT to be set
-mcp_port = os.getenv("ARCHON_MCP_PORT")
-if not mcp_port:
-    raise ValueError(
-        "ARCHON_MCP_PORT environment variable is required. "
-        "Please set it in your .env file or environment. "
-        "Default value: 8051"
-    )
-server_port = int(mcp_port)
+# Get MCP port with default value
+mcp_port = os.getenv("ARCHON_MCP_PORT", "8051")
+try:
+    server_port = int(mcp_port)
+except ValueError:
+    raise ValueError("ARCHON_MCP_PORT must be an integer (e.g., 8051)")
 
 
 @dataclass

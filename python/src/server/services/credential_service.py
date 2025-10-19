@@ -161,33 +161,36 @@ class CredentialService:
             await self.load_all_credentials()
 
         value = self._cache.get(key, default)
+        resolved = value
 
         # If it's an encrypted value and we want to decrypt it
         if isinstance(value, dict) and value.get("is_encrypted") and decrypt:
             encrypted_value = value.get("encrypted_value")
             if encrypted_value:
                 try:
-                    return self._decrypt_value(encrypted_value)
+                    resolved = self._decrypt_value(encrypted_value)
                 except Exception as e:
                     logger.error(f"Failed to decrypt credential {key}: {e}")
-                    return default
-        
-        # If no value found in database and it's None/default, try environment variable fallback
+                    resolved = default
+
+        # If no value found (or decryption failed back to default), try environment variable fallback
         # for critical API keys
-        if value is None or value == default:
+        if resolved is None or resolved == default:
             env_fallback_keys = {
                 "OPENAI_API_KEY": "OPENAI_API_KEY",
                 "GOOGLE_API_KEY": "GOOGLE_API_KEY",
                 "ANTHROPIC_API_KEY": "ANTHROPIC_API_KEY",
             }
-            
+
             if key in env_fallback_keys:
                 env_value = os.getenv(env_fallback_keys[key])
                 if env_value:
-                    logger.info(f"Credential {key} not found in database, using environment variable fallback")
+                    logger.debug(
+                        f"Credential {key} not found/decrypted; using environment variable fallback"
+                    )
                     return env_value
 
-        return value
+        return resolved
 
     async def get_encrypted_credential_raw(self, key: str) -> str | None:
         """Get the raw encrypted value for a credential (without decryption)."""
@@ -480,7 +483,7 @@ class CredentialService:
         try:
             # For now, we'll update the RAG strategy settings
             return await self.set_credential(
-                "llm_provider",
+                "LLM_PROVIDER",
                 provider,
                 category="rag_strategy",
                 description=f"Active {service_type} provider",
@@ -518,7 +521,6 @@ async def initialize_credentials() -> None:
         "PORT",  # Server binding configuration
         "MCP_TRANSPORT",  # Server transport mode
         "LOGFIRE_ENABLED",  # Logging infrastructure setup
-        "PROJECTS_ENABLED",  # Feature flag for module loading
     ]
 
     # LLM provider credentials (for sync client support)

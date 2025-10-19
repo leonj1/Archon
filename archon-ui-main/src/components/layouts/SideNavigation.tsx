@@ -70,15 +70,17 @@ export const SideNavigation: React.FC<SideNavigationProps> = ({
   const location = useLocation();
   
   return <div data-id={dataId} className={`flex flex-col items-center gap-6 py-6 px-3 rounded-xl backdrop-blur-md bg-gradient-to-b from-white/80 to-white/60 dark:from-white/10 dark:to-black/30 border border-gray-200 dark:border-zinc-800/50 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_30px_-15px_rgba(0,0,0,0.7)] ${className}`}>
-      {/* Logo - Static display */}
-      <div 
+      {/* Logo - Link to Home */}
+      <Link
+        to="/"
         className="logo-container p-2 relative rounded-lg transition-all duration-300"
-        onMouseEnter={() => setActiveTooltip('logo')} 
+        onMouseEnter={() => setActiveTooltip('logo')}
         onMouseLeave={() => setActiveTooltip(null)}
+        aria-label="Home"
       >
         <img src={logoSrc} alt={logoAlt} className="w-8 h-8 transition-all duration-300" />
         <NavTooltip show={activeTooltip === 'logo'} label="Archon Knowledge Base" />
-      </div>
+      </Link>
       {/* Navigation links */}
       <nav className="flex flex-col gap-4">
         {navigationItems.map(item => {

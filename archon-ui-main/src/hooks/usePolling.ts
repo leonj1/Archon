@@ -225,34 +225,6 @@ export function usePolling<T>(
 }
 
 /**
- * Hook for polling task updates
- */
-export function useTaskPolling(projectId: string, options?: UsePollingOptions<any>) {
-  const baseUrl = '/api/projects';
-  const url = `${baseUrl}/${projectId}/tasks`;
-  
-  return usePolling(url, {
-    interval: 8000, // 8 seconds for tasks
-    staleTime: 2000, // Consider data stale after 2 seconds
-    ...options,
-  });
-}
-
-/**
- * Hook for polling project list
- */
-export function useProjectPolling(options?: UsePollingOptions<any>) {
-  const url = '/api/projects';
-  
-  return usePolling(url, {
-    interval: 10000, // 10 seconds for project list
-    staleTime: 3000, // Consider data stale after 3 seconds
-    ...options,
-  });
-}
-
-
-/**
  * Hook for polling crawl progress updates
  */
 export function useCrawlProgressPolling(progressId: string | null, options?: UsePollingOptions<any>) {
