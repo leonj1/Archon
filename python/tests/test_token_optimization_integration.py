@@ -103,7 +103,8 @@ async def test_documents_endpoint():
                 timeout=10.0
             )
             if response.status_code == 200:
-                projects = response.json()
+                response_data = response.json()
+                projects = response_data.get("projects", [])
                 if projects and len(projects) > 0:
                     project_id = projects[0]["id"]
                     print(f"\n=== Testing Documents Endpoint (Project: {project_id[:8]}...) ===")
