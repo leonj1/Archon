@@ -38,6 +38,11 @@ DROP TABLE IF EXISTS archon_projects CASCADE;
 DROP TYPE IF EXISTS task_status CASCADE;
 
 -- Remove credentials related to projects
-DELETE FROM credentials WHERE key IN ('PROJECTS_ENABLED');
+DO $$
+BEGIN
+  IF to_regclass('public.credentials') IS NOT NULL THEN
+    DELETE FROM public.credentials WHERE key IN ('PROJECTS_ENABLED');
+  END IF;
+END $$;
 
 COMMIT;
