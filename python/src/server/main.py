@@ -8,7 +8,6 @@ Modules:
 - settings_api: Settings and credentials management
 - mcp_api: MCP server management and tool execution
 - knowledge_api: Knowledge base, crawling, and RAG operations
-- projects_api: Project and task management with streaming
 """
 
 import logging
@@ -186,8 +185,8 @@ app.include_router(mcp_router)
 app.include_router(knowledge_router)
 app.include_router(pages_router)
 app.include_router(ollama_router)
-app.include_router(projects_router)
 app.include_router(progress_router)
+app.include_router(projects_router)
 app.include_router(agent_chat_router)
 app.include_router(internal_router)
 app.include_router(bug_report_router)

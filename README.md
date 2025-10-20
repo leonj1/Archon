@@ -3,11 +3,7 @@
 </p>
 
 <p align="center">
-   <a href="https://trendshift.io/repositories/13964" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13964" alt="coleam00%2FArchon | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</p>
-
-<p align="center">
-  <em>Power up your AI coding assistants with your own custom knowledge base and task management as an MCP server</em>
+  <em>Power up your AI coding assistants with your own custom knowledge base as an MCP server</em>
 </p>
 
 <p align="center">
@@ -24,17 +20,17 @@
 
 > Archon is currently in beta! Expect things to not work 100%, and please feel free to share any feedback and contribute with fixes/new features! Thank you to everyone for all the excitement we have for Archon already, as well as the bug reports, PRs, and discussions. It's a lot for our small team to get through but we're committed to addressing everything and making Archon into the best tool it possibly can be!
 
-Archon is the **command center** for AI coding assistants. For you, it's a sleek interface to manage knowledge, context, and tasks for your projects. For the AI coding assistant(s), it's a **Model Context Protocol (MCP) server** to collaborate on and leverage the same knowledge, context, and tasks. Connect Claude Code, Kiro, Cursor, Windsurf, etc. to give your AI agents access to:
+Archon is the **knowledge base** for AI coding assistants. For you, it's a sleek interface to manage knowledge and context for your coding projects. For AI coding assistants, it's a **Model Context Protocol (MCP) server** to access and leverage your curated knowledge base. Connect Claude Code, Kiro, Cursor, Windsurf, etc. to give your AI agents access to:
 
 - **Your documentation** (crawled websites, uploaded PDFs/docs)
 - **Smart search capabilities** with advanced RAG strategies
-- **Task management** integrated with your knowledge base
-- **Real-time updates** as you add new content and collaborate with your coding assistant on tasks
+- **Code examples** extracted from your knowledge sources
+- **Real-time updates** as you add new content and enhance your knowledge base
 - **Much more** coming soon to build Archon into an integrated environment for all context engineering
 
-This new vision for Archon replaces the old one (the agenteer). Archon used to be the AI agent that builds other agents, and now you can use Archon to do that and more.
+This streamlined version of Archon focuses on knowledge aggregation and retrieval, providing powerful contextual information to enhance your AI-driven development workflow.
 
-> It doesn't matter what you're building or if it's a new/existing codebase - Archon's knowledge and task management capabilities will improve the output of **any** AI driven coding.
+> It doesn't matter what you're building or if it's a new/existing codebase - Archon's knowledge base capabilities will improve the output of **any** AI driven coding.
 
 ## 🔗 Important Links
 
@@ -45,16 +41,6 @@ This new vision for Archon replaces the old one (the agenteer). Archon used to b
 - **[Dynamous AI Mastery](https://dynamous.ai)** - The birthplace of Archon - come join a vibrant community of other early AI adopters all helping each other transform their careers and businesses!
 
 ## Quick Start
-
-<p align="center">
-  <a href="https://youtu.be/DMXyDpnzNpY">
-    <img src="https://img.youtube.com/vi/DMXyDpnzNpY/maxresdefault.jpg" alt="Archon Setup Tutorial" width="640" />
-  </a>
-  <br/>
-  <em>📺 Click to watch the setup tutorial on YouTube</em>
-  <br/>
-  <a href="./archon-example-workflow">-> Example AI coding workflow in the video <-</a>
-</p>
 
 ### Prerequisites
 
@@ -68,13 +54,11 @@ This new vision for Archon replaces the old one (the agenteer). Archon used to b
 
 1. **Clone Repository**:
    ```bash
-   git clone -b stable https://github.com/coleam00/archon.git
+   git clone https://github.com/coleam00/archon.git
    ```
    ```bash
    cd archon
    ```
-   
-   **Note:** The `stable` branch is recommended for using Archon. If you want to contribute or try the latest features, use the `main` branch with `git clone https://github.com/coleam00/archon.git`
 2. **Environment Configuration**:
 
    ```bash
@@ -220,18 +204,14 @@ To upgrade Archon to the latest version:
    git pull
    ```
 
-2. **Rebuild and restart containers**:
+2. **Check for migrations**: Look in the `migration/` folder for any SQL files newer than your last update. Check the file created dates to determine if you need to run them. You can run these in the SQL editor just like you did when you first set up Archon. We are also working on a way to make handling these migrations automatic!
+
+3. **Rebuild and restart**:
    ```bash
    docker compose up -d --build
    ```
-   This rebuilds containers with the latest code and restarts all services.
 
-3. **Check for database migrations**:
-   - Open the Archon settings in your browser: [http://localhost:3737/settings](http://localhost:3737/settings)
-   - Navigate to the **Database Migrations** section
-   - If there are pending migrations, the UI will display them with clear instructions
-   - Click on each migration to view and copy the SQL
-   - Run the SQL scripts in your Supabase SQL editor in the order shown
+This is the same command used for initial setup - it rebuilds containers with the latest code and restarts services.
 
 ## What's Included
 

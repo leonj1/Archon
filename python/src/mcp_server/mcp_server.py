@@ -1,5 +1,5 @@
 """
-MCP Server for Archon (Microservices Version)
+MCP Server for Archon Knowledge Base (Microservices Version)
 
 This is the MCP server that uses HTTP calls to other services
 instead of importing heavy dependencies directly. This significantly reduces
@@ -7,7 +7,6 @@ the container size from 1.66GB to ~150MB.
 
 Modules:
 - RAG Module: RAG queries, search, and source management via HTTP
-- Project Module: Task and project management via HTTP
 - Health & Session: Local operations
 
 Note: Crawling and document upload operations are handled directly by the
@@ -69,15 +68,12 @@ _shared_context = None
 
 server_host = "0.0.0.0"  # Listen on all interfaces
 
-# Require ARCHON_MCP_PORT to be set
-mcp_port = os.getenv("ARCHON_MCP_PORT")
-if not mcp_port:
-    raise ValueError(
-        "ARCHON_MCP_PORT environment variable is required. "
-        "Please set it in your .env file or environment. "
-        "Default value: 8051"
-    )
-server_port = int(mcp_port)
+# Get MCP port with default value
+mcp_port = os.getenv("ARCHON_MCP_PORT", "8051")
+try:
+    server_port = int(mcp_port)
+except ValueError:
+    raise ValueError("ARCHON_MCP_PORT must be an integer (e.g., 8051)")
 
 
 @dataclass
@@ -189,125 +185,53 @@ async def lifespan(server: FastMCP) -> AsyncIterator[ArchonContext]:
 
 # Define MCP instructions for Claude Code and other clients
 MCP_INSTRUCTIONS = """
-# Archon MCP Server Instructions
+# Archon Knowledge Base MCP Server Instructions
 
 ## 🚨 CRITICAL RULES (ALWAYS FOLLOW)
-1. **Task Management**: ALWAYS use Archon MCP tools for task management.
-   - Combine with your local TODO tools for granular tracking
-
-2. **Research First**: Before implementing, use rag_search_knowledge_base and rag_search_code_examples
-3. **Task-Driven Development**: Never code without checking current tasks first
-
-## 🎯 Targeted Documentation Search
-
-When searching specific documentation (very common!):
-1. **Get available sources**: `rag_get_available_sources()` - Returns list with id, title, url
-2. **Find source ID**: Match user's request to source title (e.g., "PydanticAI docs" -> find ID)
-3. **Filter search**: `rag_search_knowledge_base(query="...", source_id="src_xxx", match_count=5)`
-
-Examples:
-- User: "Search the Supabase docs for vector functions"
-  1. Call `rag_get_available_sources()`
-  2. Find Supabase source ID from results (e.g., "src_abc123")
-  3. Call `rag_search_knowledge_base(query="vector functions", source_id="src_abc123")`
-
-- User: "Find authentication examples in the MCP documentation"
-  1. Call `rag_get_available_sources()`
-  2. Find MCP docs source ID
-  3. Call `rag_search_code_examples(query="authentication", source_id="src_def456")`
-
-IMPORTANT: Always use source_id (not URLs or domain names) for filtering!
+1. **Research First**: Always use perform_rag_query and search_code_examples before implementing
+2. **Knowledge-Driven Development**: Leverage the knowledge base for informed decisions
 
 ## 📋 Core Workflow
 
-### Task Management Cycle
-1. **Get current task**: `list_tasks(task_id="...")` 
-2. **Search/List tasks**: `list_tasks(query="auth", filter_by="status", filter_value="todo")`
-3. **Mark as doing**: `manage_task("update", task_id="...", status="doing")`
-4. **Research phase**:
-   - `rag_search_knowledge_base(query="...", match_count=5)`
-   - `rag_search_code_examples(query="...", match_count=3)`
-5. **Implementation**: Code based on research findings
-6. **Mark for review**: `manage_task("update", task_id="...", status="review")`
-7. **Get next task**: `list_tasks(filter_by="status", filter_value="todo")`
+### Research Workflow
+1. **Identify need**: What information do you need?
+2. **Query knowledge base**: `perform_rag_query(query="...", match_count=5)`
+3. **Search code examples**: `search_code_examples(query="...", match_count=3)`
+4. **Apply findings**: Use discovered information for implementation
 
-### Consolidated Task Tools (Optimized ~2 tools from 5)
-- `list_tasks(query=None, task_id=None, filter_by=None, filter_value=None, per_page=10)`
-  - list + search + get in one tool
-  - Search with keyword query parameter (optional)
-  - task_id parameter for getting single task (full details)
-  - Filter by status, project, or assignee
-  - **Optimized**: Returns truncated descriptions and array counts (lists only)
-  - **Default**: 10 items per page (was 50)
-- `manage_task(action, task_id=None, project_id=None, ...)`
-  - **Consolidated**: create + update + delete in one tool
-  - action: "create" | "update" | "delete"
-  - Examples:
-    - `manage_task("create", project_id="p-1", title="Fix auth")`
-    - `manage_task("update", task_id="t-1", status="doing")`
-    - `manage_task("delete", task_id="t-1")`
+## 🔍 Research Functions
 
-## 🏗️ Project Management
+### RAG (Retrieval-Augmented Generation)
+- `perform_rag_query(query, match_count=5, source_type=None)`
+  - Search across all knowledge sources
+  - Get contextual information for your queries
+  - Filter by source_type if needed
 
-### Project Tools
-- `list_projects(project_id=None, query=None, page=1, per_page=10)`
-  - List all projects, search by query, or get specific project by ID
-- `manage_project(action, project_id=None, title=None, description=None, github_repo=None)`
-  - Actions: "create", "update", "delete"
+### Code Examples
+- `search_code_examples(query, match_count=3, language=None)`
+  - Find relevant code snippets
+  - Get implementation examples
+  - Filter by programming language
 
-### Document Tools
-- `list_documents(project_id, document_id=None, query=None, document_type=None, page=1, per_page=10)`
-  - List project documents, search, filter by type, or get specific document
-- `manage_document(action, project_id, document_id=None, title=None, document_type=None, content=None, ...)`
-  - Actions: "create", "update", "delete"
+### Source Management
+- `get_available_sources()`
+  - List all crawled websites and uploaded documents
+  - See what knowledge is available
 
 ## 🔍 Research Patterns
+- **Architecture patterns**: `perform_rag_query(query="[tech] architecture patterns", match_count=5)`
+- **Implementation examples**: `search_code_examples(query="[feature] implementation", match_count=3)`
+- **API documentation**: `perform_rag_query(query="[library] API reference", match_count=5)`
+- **Best practices**: `perform_rag_query(query="[topic] best practices", match_count=5)`
 
-### CRITICAL: Keep Queries Short and Focused!
-Vector search works best with 2-5 keywords, NOT long sentences or keyword dumps.
+Keep match_count around 3-5 for focused results
 
-✅ GOOD Queries (concise, focused):
-- `rag_search_knowledge_base(query="vector search pgvector")`
-- `rag_search_code_examples(query="React useState")`
-- `rag_search_knowledge_base(query="authentication JWT")`
-- `rag_search_code_examples(query="FastAPI middleware")`
-
-❌ BAD Queries (too long, unfocused):
-- `rag_search_knowledge_base(query="how to implement vector search with pgvector in PostgreSQL for semantic similarity matching with OpenAI embeddings")`
-- `rag_search_code_examples(query="React hooks useState useEffect useContext useReducer useMemo useCallback")`
-
-### Query Construction Tips:
-- Extract 2-5 most important keywords from the user's request
-- Focus on technical terms and specific technologies
-- Omit filler words like "how to", "implement", "create", "example"
-- For multi-concept searches, do multiple focused queries instead of one broad query
-
-## 📊 Task Status Flow
-`todo` → `doing` → `review` → `done`
-- Only ONE task in 'doing' status at a time
-- Use 'review' for completed work awaiting validation
-- Mark tasks 'done' only after verification
-
-## 📝 Task Granularity Guidelines
-
-### Project Scope Determines Task Granularity
-
-**For Feature-Specific Projects** (project = single feature):
-Create granular implementation tasks:
-- "Set up development environment"
-- "Install required dependencies"
-- "Create database schema"
-- "Implement API endpoints"
-- "Add frontend components"
-- "Write unit tests"
-- "Add integration tests"
-- "Update documentation"
-
-**For Codebase-Wide Projects** (project = entire application):
-Create feature-level tasks:
-- "Implement user authentication feature"
-- "Add payment processing system"
-- "Create admin dashboard"
+## 🎯 Best Practices
+1. **Specific Queries**: Use targeted, specific search terms
+2. **Multiple Sources**: Cross-reference information from different sources  
+3. **Code Examples**: Always search for implementation examples
+4. **Verify Information**: Check multiple sources when possible
+5. **Stay Current**: Be aware that crawled content reflects snapshot in time
 """
 
 # Initialize the main FastMCP server with fixed configuration
@@ -428,7 +352,7 @@ def register_modules():
 
     # Import and register RAG module (HTTP-based version)
     try:
-        from src.mcp_server.features.rag import register_rag_tools
+        from src.mcp_server.modules.rag_module import register_rag_tools
 
         register_rag_tools(mcp)
         modules_registered += 1
@@ -441,94 +365,8 @@ def register_modules():
 
     # Import and register all feature tools - separated and focused
 
-    # Project Management Tools
-    try:
-        from src.mcp_server.features.projects import register_project_tools
 
-        register_project_tools(mcp)
-        modules_registered += 1
-        logger.info("✓ Project tools registered")
-    except ImportError as e:
-        # Module not found - this is acceptable in modular architecture
-        logger.warning(f"⚠ Project tools module not available (optional): {e}")
-    except (SyntaxError, NameError, AttributeError) as e:
-        # Code errors that should not be ignored
-        logger.error(f"✗ Code error in project tools - MUST FIX: {e}")
-        logger.error(traceback.format_exc())
-        raise  # Re-raise to prevent running with broken code
-    except Exception as e:
-        # Unexpected errors during registration
-        logger.error(f"✗ Failed to register project tools: {e}")
-        logger.error(traceback.format_exc())
-        # Don't raise - allow other modules to register
 
-    # Task Management Tools
-    try:
-        from src.mcp_server.features.tasks import register_task_tools
-
-        register_task_tools(mcp)
-        modules_registered += 1
-        logger.info("✓ Task tools registered")
-    except ImportError as e:
-        logger.warning(f"⚠ Task tools module not available (optional): {e}")
-    except (SyntaxError, NameError, AttributeError) as e:
-        logger.error(f"✗ Code error in task tools - MUST FIX: {e}")
-        logger.error(traceback.format_exc())
-        raise
-    except Exception as e:
-        logger.error(f"✗ Failed to register task tools: {e}")
-        logger.error(traceback.format_exc())
-
-    # Document Management Tools
-    try:
-        from src.mcp_server.features.documents import register_document_tools
-
-        register_document_tools(mcp)
-        modules_registered += 1
-        logger.info("✓ Document tools registered")
-    except ImportError as e:
-        logger.warning(f"⚠ Document tools module not available (optional): {e}")
-    except (SyntaxError, NameError, AttributeError) as e:
-        logger.error(f"✗ Code error in document tools - MUST FIX: {e}")
-        logger.error(traceback.format_exc())
-        raise
-    except Exception as e:
-        logger.error(f"✗ Failed to register document tools: {e}")
-        logger.error(traceback.format_exc())
-
-    # Version Management Tools
-    try:
-        from src.mcp_server.features.documents import register_version_tools
-
-        register_version_tools(mcp)
-        modules_registered += 1
-        logger.info("✓ Version tools registered")
-    except ImportError as e:
-        logger.warning(f"⚠ Version tools module not available (optional): {e}")
-    except (SyntaxError, NameError, AttributeError) as e:
-        logger.error(f"✗ Code error in version tools - MUST FIX: {e}")
-        logger.error(traceback.format_exc())
-        raise
-    except Exception as e:
-        logger.error(f"✗ Failed to register version tools: {e}")
-        logger.error(traceback.format_exc())
-
-    # Feature Management Tools
-    try:
-        from src.mcp_server.features.feature_tools import register_feature_tools
-
-        register_feature_tools(mcp)
-        modules_registered += 1
-        logger.info("✓ Feature tools registered")
-    except ImportError as e:
-        logger.warning(f"⚠ Feature tools module not available (optional): {e}")
-    except (SyntaxError, NameError, AttributeError) as e:
-        logger.error(f"✗ Code error in feature tools - MUST FIX: {e}")
-        logger.error(traceback.format_exc())
-        raise
-    except Exception as e:
-        logger.error(f"✗ Failed to register feature tools: {e}")
-        logger.error(traceback.format_exc())
 
     logger.info(f"📦 Total modules registered: {modules_registered}")
 
