@@ -5,7 +5,13 @@ SHELL := /bin/bash
 # Docker compose command - prefer newer 'docker compose' plugin over standalone 'docker-compose'
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
-.PHONY: help dev dev-docker stop restart restart-rebuild test test-fe test-be test-be-unit test-be-coverage test-be-build test-be-interactive test-integration-sqlite-qdrant lint lint-fe lint-be clean install check
+.PHONY: help dev dev-docker stop restart restart-rebuild test test-fe test-be test-be-unit test-be-coverage test-be-build test-be-interactive test-integration-sqlite-qdrant lint lint-fe lint-be clean install check start-mcp-http stop-mcp-http
+
+MCP_HTTP_HOST ?= 127.0.0.1
+MCP_HTTP_PORT ?= 8765
+MCP_HTTP_PATH ?= /mcp
+MCP_HTTP_PID_FILE ?= .mcp_http_server.pid
+MCP_HTTP_LOG ?= logs/mcp_http_server.log
 
 help:
 	@echo "Archon Development Commands"
@@ -32,6 +38,10 @@ help:
 	@echo "  make lint              - Run all linters"
 	@echo "  make lint-fe           - Run frontend linter only"
 	@echo "  make lint-be           - Run backend linter only"
+	@echo ""
+	@echo "MCP Servers:"
+	@echo "  make start-mcp-http    - Start experimental FastMCP HTTP server"
+	@echo "  make stop-mcp-http     - Stop experimental FastMCP HTTP server"
 	@echo ""
 	@echo "Setup:"
 	@echo "  make install           - Install dependencies"
@@ -161,6 +171,36 @@ lint-fe:
 lint-be:
 	@echo "Linting backend..."
 	@cd python && uv run ruff check --fix
+
+start-mcp-http:
+	@echo "Starting experimental FastMCP HTTP server..."
+	@if [ -f $(MCP_HTTP_PID_FILE) ]; then \
+		PID=$$(cat $(MCP_HTTP_PID_FILE)); \
+		if kill -0 $$PID 2>/dev/null; then \
+			echo "⚠️  Server already running (PID $$PID)"; \
+			exit 0; \
+		fi; \
+	fi; \
+	mkdir -p logs; \
+	ARCHON_WORKSPACE=$(PWD) nohup python experimental/fastmcp_server.py --transport http --host $(MCP_HTTP_HOST) --port $(MCP_HTTP_PORT) --http-path $(MCP_HTTP_PATH) >> $(MCP_HTTP_LOG) 2>&1 & echo $$! > $(MCP_HTTP_PID_FILE); \
+	sleep 1; \
+	echo "✓ FastMCP HTTP server listening on http://$(MCP_HTTP_HOST):$(MCP_HTTP_PORT)$(MCP_HTTP_PATH)"; \
+	echo "  Logs: $(MCP_HTTP_LOG)"
+
+stop-mcp-http:
+	@echo "Stopping experimental FastMCP HTTP server..."
+	@if [ -f $(MCP_HTTP_PID_FILE) ]; then \
+		PID=$$(cat $(MCP_HTTP_PID_FILE)); \
+		if kill -0 $$PID 2>/dev/null; then \
+			kill $$PID && rm -f $(MCP_HTTP_PID_FILE); \
+			echo "✓ FastMCP HTTP server stopped"; \
+		else \
+			echo "⚠️  No running process found for PID $$PID"; \
+			rm -f $(MCP_HTTP_PID_FILE); \
+		fi; \
+	else \
+		echo "FastMCP HTTP server is not running"; \
+	fi
 
 # Clean everything (with confirmation)
 clean:

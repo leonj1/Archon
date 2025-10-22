@@ -4,7 +4,7 @@ This guide explains how to connect Archon's MCP server to Claude Code for enhanc
 
 ## Problem Fixed
 
-The original Archon MCP server used SSE (Server-Sent Events) transport, which is deprecated in Claude Code. Claude Code requires either **stdio** or **HTTP** transport for proper compatibility. This has now been fixed.
+The original Archon MCP server used SSE (Server-Sent Events) transport, which is deprecated in Claude Code. Claude Code requires either **stdio** or **HTTP** transport for proper compatibility. Archon now defaults to the modern **streamable HTTP** transport so Claude Code CLI connects reliably.
 
 ## What Changed
 
@@ -38,9 +38,9 @@ The original Archon MCP server used SSE (Server-Sent Events) transport, which is
 
    The `.mcp.json` file has already been created in the project root. Claude Code should automatically detect it.
 
-   If you need to manually configure, you can use:
+   If you need to manually configure the HTTP transport, you can use:
    ```bash
-   claude mcp add --transport stdio archon -- python python/src/mcp_server/mcp_server.py stdio
+   claude mcp add --transport streamable-http archon http://localhost:8051/mcp
    ```
 
 4. **Restart Claude Code**
@@ -65,15 +65,16 @@ If you prefer to use Docker, the configuration includes a Docker-based setup:
 
 ### Transport Modes
 
-The updated MCP server supports two transport modes:
+The updated MCP server supports three transport modes:
 
-1. **stdio** (for Claude Code) - Uses stdin/stdout for communication
-2. **sse** (legacy) - Server-Sent Events for HTTP-based communication
+1. **streamable-http** *(default)* - Modern HTTP transport supported by Claude Code CLI and other MCP clients
+2. **stdio** - Uses stdin/stdout for communication
+3. **sse** *(legacy)* - Server-Sent Events for older HTTP clients
 
-The transport can be selected via:
-- Command-line argument: `python mcp_server.py stdio`
-- Environment variable: `MCP_TRANSPORT=stdio`
-- Default: SSE (for backward compatibility with existing Docker setup)
+Select a transport via:
+- Command-line argument: `python mcp_server.py <streamable-http|stdio|sse>`
+- Environment variable: `MCP_TRANSPORT=streamable-http`
+- Default: `streamable-http`
 
 ### Logging Configuration
 
@@ -168,7 +169,8 @@ Example Windows configuration:
 ### Running Both Transports
 
 For development, you can run:
-- **SSE mode** (port 8051): `docker compose up archon-mcp`
+- **Streamable HTTP mode** (port 8051): `docker compose up archon-mcp`
+- **SSE mode**: `MCP_TRANSPORT=sse docker compose up archon-mcp`
 - **stdio mode** (local): `python python/src/mcp_server/mcp_server.py stdio`
 
 This allows testing both transports simultaneously.

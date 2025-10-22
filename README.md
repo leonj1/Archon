@@ -297,14 +297,14 @@ Archon uses true microservices architecture with clear separation of concerns:
 | -------------- | -------------------- | ---------------------------- | ------------------------------------------------------------------ |
 | **Frontend**   | `archon-ui-main/`    | Web interface and dashboard  | React, TypeScript, TailwindCSS, Socket.IO client                   |
 | **Server**     | `python/src/server/` | Core business logic and APIs | FastAPI, service layer, Socket.IO broadcasts, all ML/AI operations |
-| **MCP Server** | `python/src/mcp/`    | MCP protocol interface       | Lightweight HTTP wrapper, MCP tools, session management         |
+| **MCP Server** | `python/src/mcp_server/`    | MCP protocol interface       | Lightweight HTTP wrapper, MCP tools, session management         |
 | **Agents**     | `python/src/agents/` | PydanticAI agent hosting     | Document and RAG agents, streaming responses                       |
 
 ### Communication Patterns
 
 - **HTTP-based**: All inter-service communication uses HTTP APIs
 - **Socket.IO**: Real-time updates from Server to Frontend
-- **MCP Protocol**: AI clients connect to MCP Server via SSE or stdio
+- **MCP Protocol**: AI clients connect to MCP Server via Streamable HTTP (default), SSE, or stdio
 - **No Direct Imports**: Services are truly independent with no shared code dependencies
 
 ### Key Architectural Benefits

@@ -144,7 +144,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[ArchonContext]:
 
     # Quick check without lock
     if _initialization_complete and _shared_context:
-        logger.info("♻️ Reusing existing context for new SSE connection")
+        logger.info("♻️ Reusing existing context for new connection")
         yield _shared_context
         return
 
@@ -152,7 +152,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[ArchonContext]:
     with _initialization_lock:
         # Double-check pattern
         if _initialization_complete and _shared_context:
-            logger.info("♻️ Reusing existing context for new SSE connection")
+            logger.info("♻️ Reusing existing context for new connection")
             yield _shared_context
             return
 
@@ -559,11 +559,13 @@ def main():
         setup_logfire(service_name="archon-mcp-server")
 
         # Determine transport mode from environment or command line
-        transport_mode = os.getenv("MCP_TRANSPORT", "sse").lower()
+        transport_mode = os.getenv("MCP_TRANSPORT", "streamable-http").lower()
 
         # Check command line arguments for transport override
-        if len(sys.argv) > 1 and sys.argv[1] in ["stdio", "sse"]:
-            transport_mode = sys.argv[1]
+        if len(sys.argv) > 1:
+            cli_mode = sys.argv[1].lower()
+            if cli_mode in {"stdio", "sse", "streamable-http"}:
+                transport_mode = cli_mode
 
         logger.info("🚀 Starting Archon MCP Server")
 
@@ -572,11 +574,17 @@ def main():
             logger.info("   Reading from stdin, writing to stdout")
             logger.info("   Logs are written to stderr")
             mcp_logger.info("🌟 Starting MCP server in stdio mode")
-        else:
+        elif transport_mode == "sse":
             logger.info("   Mode: SSE (Server-Sent Events)")
             logger.info(f"   SSE Endpoint: http://{server_host}:{server_port}/sse")
             logger.info(f"   Messages Endpoint: http://{server_host}:{server_port}/messages/")
-            mcp_logger.info(f"🌟 Starting MCP server - host={server_host}, port={server_port}")
+            mcp_logger.info(f"🌟 Starting MCP server - host={server_host}, port={server_port} (SSE)")
+        else:
+            logger.info("   Mode: Streamable HTTP")
+            logger.info(f"   HTTP Endpoint: http://{server_host}:{server_port}/mcp")
+            mcp_logger.info(
+                f"🌟 Starting MCP server - host={server_host}, port={server_port} (streamable-http)"
+            )
 
         mcp_logger.info("🔥 Logfire initialized for MCP server")
 

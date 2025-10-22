@@ -97,7 +97,7 @@ archon-mcp:
 
 ## Client Configuration
 
-Archon MCP server uses **SSE (Server-Sent Events) transport only**.
+Archon MCP server now defaults to **Streamable HTTP** transport for maximum compatibility with Claude Code CLI and other modern MCP clients. The server listens on `http://localhost:8051/mcp` by default. You can still run in SSE mode by setting `MCP_TRANSPORT=sse` (or passing `sse` on the command line) when you need backwards-compatible clients.
 
 ### Cursor IDE
 
@@ -107,7 +107,8 @@ Add to MCP settings:
 {
   "mcpServers": {
     "archon": {
-      "uri": "http://localhost:8051/sse"
+      "transport": "streamable-http",
+      "uri": "http://localhost:8051/mcp"
     }
   }
 }
@@ -116,7 +117,7 @@ Add to MCP settings:
 ### Claude Code
 
 ```bash
-claude mcp add --transport sse archon http://localhost:8051/sse
+claude mcp add --transport streamable-http archon http://localhost:8051/mcp
 ```
 
 ### Windsurf IDE
@@ -127,11 +128,16 @@ Add to settings:
 {
   "mcp.servers": {
     "archon": {
-      "uri": "http://localhost:8051/sse"
+      "transport": "streamable-http",
+      "uri": "http://localhost:8051/mcp"
     }
   }
 }
 ```
+
+> **Need SSE or stdio instead?**
+> - Set `MCP_TRANSPORT=sse` to reuse the existing SSE endpoints (`/sse`, `/messages/`).
+> - Run `python -m src.mcp_server.mcp_server stdio` (or `MCP_TRANSPORT=stdio`) to enable stdio transport.
 
 ## Tool Usage Examples
 
