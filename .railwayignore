@@ -1,0 +1,105 @@
+# Railway Ignore File
+# Files and directories that should not be uploaded to Railway during deployment
+# Similar to .dockerignore but specific to Railway builds
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Environment files (use Railway dashboard for env vars)
+.env
+.env.*
+!.env.example
+
+# Local development files
+.serena
+.claude/settings.local.json
+.zed
+tmp/
+temp/
+UAT/
+logs/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# PRP local files
+PRPs/local/
+PRPs/completed/
+PRPs/stories/
+PRPs/reviews/
+
+# Database files (use Railway volumes or external DB)
+data/
+*.db
+*.db-shm
+*.db-wal
+qdrant_storage/
+projects.db
+
+# Test and development artifacts
+*.log
+release-notes-*.md
+refactor_db.py
+cli_tools.py
+
+# Node modules (will be installed during build)
+node_modules/
+archon-ui-main/node_modules/
+
+# Build outputs (will be generated during build)
+dist/
+build/
+*.egg-info/
+archon-ui-main/dist/
+
+# Documentation build
+docs/node_modules/
+docs/dist/
+
+# Python virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# Docker files (not needed on Railway)
+docker-compose*.yml
+Dockerfile.test
+
+# Lock files (uv.lock will be used)
+# Keep uv.lock for Python dependency resolution
+# Keep package-lock.json for Node dependency resolution
+
+# Large files and directories
+*.mp4
+*.mov
+*.avi
+*.zip
+*.tar.gz
+*.rar
+
+# Backup files
+*.bak
+*.backup
+*~
