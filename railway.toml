@@ -141,11 +141,9 @@ timeout = 10
 interval = 30
 
 [[services.environment]]
-VITE_ARCHON_SERVER_PORT = "8181"
-ARCHON_SERVER_PORT = "8181"
 HOST = "0.0.0.0"
 PROD = "true"
 DOCKER_ENV = "true"
-# VITE_API_URL - Will be set using Railway service URL reference
+VITE_API_URL = "${{archon-server.RAILWAY_PUBLIC_DOMAIN}}"
 # VITE_ALLOWED_HOSTS - Optional, comma-separated list of allowed hosts
 # VITE_SHOW_DEVTOOLS - Optional, set to "true" for development
