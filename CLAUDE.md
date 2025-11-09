@@ -275,6 +275,16 @@ When connected to Claude/Cursor/Windsurf, the following tools are available:
 - `archon:rag_list_pages_for_source` - List all pages for a given source (browse documentation structure)
 - `archon:rag_read_full_page` - Retrieve full page content by page_id or URL
 
+### Memory Management Tools
+
+- `archon:find_memory` - Find stored memories by exact key or search
+  - Parameters: `key` (exact match) OR `query/type/tags/session_id/match_count` (search)
+  - Returns: Single memory (by key) or list of matching memories (search)
+- `archon:manage_memory` - Manage memories with actions: "store" or "delete"
+  - Parameters: `action`, `key`, `content`, `type` (pattern/solution/api/architecture/learning), `tags`, `session_id`, `metadata`, `memory_id`
+  - Example (store): Store authentication patterns, error solutions, API discoveries
+  - Example (delete): Remove memories by ID
+
 ### Project Management
 
 - `archon:find_projects` - Find all projects, search, or get specific project (by project_id)

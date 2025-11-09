@@ -267,6 +267,27 @@ IMPORTANT: Always use source_id (not URLs or domain names) for filtering!
 - `manage_document(action, project_id, document_id=None, title=None, document_type=None, content=None, ...)`
   - Actions: "create", "update", "delete"
 
+## 🧠 Memory Management
+
+Store and retrieve knowledge, patterns, and learnings across sessions.
+
+### Memory Tools
+- `find_memory(key, query, type, tags, session_id, match_count)`
+  - Find memories by exact key or search
+  - Example (exact): `find_memory(key="fastapi_jwt_auth")`
+  - Example (search): `find_memory(query="authentication", type="pattern", tags=["jwt"])`
+
+- `manage_memory(action, key, content, type, tags, session_id, metadata, memory_id)`
+  - Manage memories with actions: "store" | "delete"
+  - Types: "pattern", "solution", "api", "architecture", "learning"
+  - Example (store): `manage_memory(action="store", key="fastapi_jwt_auth", content="Use @app.middleware...", type="pattern", tags=["auth", "jwt"])`
+  - Example (delete): `manage_memory(action="delete", memory_id="uuid-here")`
+
+### When to Use Memory
+- **Store** after discovering patterns, solutions, or architectural decisions
+- **Find** before starting new tasks to check for existing knowledge
+- **Tag** memories with relevant keywords for easy discovery
+
 ## 🔍 Research Patterns
 
 ### CRITICAL: Keep Queries Short and Focused!
@@ -534,6 +555,23 @@ def register_modules():
         raise
     except Exception as e:
         logger.error(f"✗ Failed to register feature tools: {e}")
+        logger.error(traceback.format_exc())
+
+    # Memory Management Tools
+    try:
+        from src.mcp_server.features.memory import register_memory_tools
+
+        register_memory_tools(mcp)
+        modules_registered += 1
+        logger.info("✓ Memory tools registered")
+    except ImportError as e:
+        logger.warning(f"⚠ Memory tools module not available (optional): {e}")
+    except (SyntaxError, NameError, AttributeError) as e:
+        logger.error(f"✗ Code error in memory tools - MUST FIX: {e}")
+        logger.error(traceback.format_exc())
+        raise
+    except Exception as e:
+        logger.error(f"✗ Failed to register memory tools: {e}")
         logger.error(traceback.format_exc())
 
     logger.info(f"📦 Total modules registered: {modules_registered}")
