@@ -29,7 +29,6 @@ ARCHON_SQLITE_PATH = "/data/archon.db"
 # Core API service handling knowledge management and business logic
 [[services]]
 name = "archon-server"
-dockerfile = "python/Dockerfile.server"
 source = "python"
 
 [services.build]
@@ -64,7 +63,6 @@ ARCHON_HOST = "0.0.0.0"
 # Lightweight HTTP-based MCP server for AI IDE tools
 [[services]]
 name = "archon-mcp"
-dockerfile = "python/Dockerfile.mcp"
 source = "python"
 
 [services.build]
@@ -96,7 +94,6 @@ AGENTS_ENABLED = "false"
 # PydanticAI-based agents for document processing and ML features
 [[services]]
 name = "archon-agents"
-dockerfile = "python/Dockerfile.agents"
 source = "python"
 
 [services.build]
@@ -125,7 +122,6 @@ API_SERVICE_URL = "${{archon-server.RAILWAY_PRIVATE_DOMAIN}}"
 # React 18 + TypeScript + Vite frontend application
 [[services]]
 name = "archon-frontend"
-dockerfile = "archon-ui-main/Dockerfile"
 source = "archon-ui-main"
 
 [services.build]
