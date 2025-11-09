@@ -23,6 +23,8 @@ logger = get_logger(__name__)
 class MemoryService:
     """Service class for memory storage and retrieval operations"""
 
+    VALID_MEMORY_TYPES = {"pattern", "solution", "api", "architecture", "learning"}
+
     def __init__(self, db_path: str = "/data/archon.db"):
         """
         Initialize memory service with SQLite database path.
@@ -62,6 +64,9 @@ class MemoryService:
 
             if not memory_content or not isinstance(memory_content, str):
                 return False, {"error": "memory_content is required and must be a string"}
+
+            if memory_type not in self.VALID_MEMORY_TYPES:
+                return False, {"error": f"memory_type must be one of {self.VALID_MEMORY_TYPES}"}
 
             # Generate embedding for semantic search
             try:
@@ -239,7 +244,7 @@ class MemoryService:
         Args:
             query: Optional text query for semantic search
             memory_type: Filter by type
-            tags: Filter by tags (any match)
+            tags: Filter by tags (exact match, returns memories with any of the specified tags)
             session_id: Filter by session
             match_count: Maximum results to return
 
@@ -273,10 +278,13 @@ class MemoryService:
                     params.append(session_id)
 
                 if tags:
-                    # Filter by any tag match
-                    tag_conditions = " OR ".join(["m.tags LIKE ?" for _ in tags])
+                    # Filter by exact tag match using JSON functions (any tag in the list)
+                    tag_conditions = " OR ".join([
+                        "EXISTS (SELECT 1 FROM json_each(m.tags) WHERE json_each.value = ?)"
+                        for _ in tags
+                    ])
                     sql += f" AND ({tag_conditions})"
-                    params.extend([f"%{tag}%" for tag in tags])
+                    params.extend(tags)
 
                 # If query provided, do simple text search (semantic search would require vector similarity)
                 if query:

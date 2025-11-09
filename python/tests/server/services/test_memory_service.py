@@ -147,6 +147,20 @@ async def test_store_memory_with_session(memory_service):
     assert result["action"] == "created"
 
 
+@pytest.mark.asyncio
+async def test_store_memory_invalid_type_fails(memory_service):
+    """Test that storing with invalid memory_type fails."""
+    success, result = await memory_service.store_memory(
+        memory_key="test_key",
+        memory_content="Some content",
+        memory_type="invalid_type",
+    )
+
+    assert not success
+    assert "error" in result
+    assert "memory_type must be one of" in result["error"]
+
+
 # ========================================================================
 # RETRIEVE MEMORY TESTS
 # ========================================================================
@@ -245,6 +259,38 @@ async def test_search_memories_by_query(memory_service):
 
 
 @pytest.mark.asyncio
+async def test_search_memories_by_tags_exact_match(memory_service):
+    """Test searching memories by exact tag match."""
+    # Create memories with specific tags
+    await memory_service.store_memory(
+        memory_key="auth_memory",
+        memory_content="Authentication pattern",
+        tags=["auth", "security"],
+    )
+    await memory_service.store_memory(
+        memory_key="authorization_memory",
+        memory_content="Authorization pattern",
+        tags=["authorization", "security"],
+    )
+
+    # Search for "auth" should only match exact "auth" tag, not "authorization"
+    success, result = await memory_service.search_memories(tags=["auth"])
+
+    assert success
+    # Should find the auth_memory but not authorization_memory
+    assert result["count"] >= 1
+    memory_keys = [m["memory_key"] for m in result["memories"]]
+    assert "auth_memory" in memory_keys
+
+    # Search for "authorization" should match exact tag
+    success, result = await memory_service.search_memories(tags=["authorization"])
+
+    assert success
+    memory_keys = [m["memory_key"] for m in result["memories"]]
+    assert "authorization_memory" in memory_keys
+
+
+@pytest.mark.asyncio
 async def test_search_memories_with_limit(memory_service):
     """Test search with match_count limit."""
     # Create multiple memories
@@ -263,6 +309,28 @@ async def test_search_memories_with_limit(memory_service):
 
     assert success
     assert result["count"] <= 3
+
+
+@pytest.mark.asyncio
+async def test_search_memories_invalid_match_count_fails(memory_service):
+    """Test that searching with invalid match_count fails."""
+    success, result = await memory_service.search_memories(
+        memory_type="learning",
+        match_count=0,
+    )
+
+    assert not success
+    assert "error" in result
+    assert "match_count must be greater than 0" in result["error"]
+
+    # Test negative value
+    success, result = await memory_service.search_memories(
+        memory_type="learning",
+        match_count=-5,
+    )
+
+    assert not success
+    assert "error" in result
 
 
 # ========================================================================
@@ -303,6 +371,22 @@ async def test_list_memories_filtered_by_type(memory_service):
 
     assert success
     assert all(m["memory_type"] == "pattern" for m in result["memories"])
+
+
+@pytest.mark.asyncio
+async def test_list_memories_invalid_limit_fails(memory_service):
+    """Test that listing with invalid limit fails."""
+    success, result = await memory_service.list_memories(limit=0)
+
+    assert not success
+    assert "error" in result
+    assert "limit must be greater than 0" in result["error"]
+
+    # Test negative value
+    success, result = await memory_service.list_memories(limit=-10)
+
+    assert not success
+    assert "error" in result
 
 
 # ========================================================================
