@@ -24,15 +24,16 @@ The Memory Management feature provides MCP tools for storing and retrieving cont
 ### MCP Tools
 - **Location**: `python/src/mcp_server/features/memory/memory_tools.py`
 - **Tools**:
-  - `store_memory` - Store knowledge for future recall
-  - `retrieve_memory` - Retrieve by key or search
+  - `find_memory` - Find memories by key or search
+  - `manage_memory` - Manage memories (store/delete)
 
 ## Usage Examples
 
 ### Store Memory
 ```python
 # From MCP client (Claude Code, Cursor, etc.)
-store_memory(
+manage_memory(
+    action="store",
     key="fastapi_jwt_middleware",
     content="Use @app.middleware decorator with request.state for JWT validation. Store decoded token in request.state.user for access in route handlers.",
     type="pattern",
@@ -40,20 +41,25 @@ store_memory(
 )
 ```
 
-### Retrieve by Key
+### Find by Key
 ```python
-retrieve_memory(key="fastapi_jwt_middleware")
+find_memory(key="fastapi_jwt_middleware")
 ```
 
 ### Search Memories
 ```python
 # Search by query
-retrieve_memory(
+find_memory(
     query="authentication",
     type="pattern",
     tags=["jwt"],
     match_count=3
 )
+```
+
+### Delete Memory
+```python
+manage_memory(action="delete", memory_id="uuid-here")
 ```
 
 ## Memory Types

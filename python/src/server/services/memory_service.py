@@ -191,17 +191,16 @@ class MemoryService:
                 if not row:
                     return False, {"error": f"Memory not found: {memory_key}"}
 
-                # Update access statistics
+                # Update access statistics (atomic increment)
                 await conn.execute(
                     """
-                    INSERT OR REPLACE INTO archon_mcp_memory_stats (memory_id, access_count, last_accessed)
-                    VALUES (
-                        ?,
-                        COALESCE((SELECT access_count FROM archon_mcp_memory_stats WHERE memory_id = ?), 0) + 1,
-                        CURRENT_TIMESTAMP
-                    )
+                    INSERT INTO archon_mcp_memory_stats (memory_id, access_count, last_accessed)
+                    VALUES (?, 1, CURRENT_TIMESTAMP)
+                    ON CONFLICT(memory_id) DO UPDATE SET
+                        access_count = archon_mcp_memory_stats.access_count + 1,
+                        last_accessed = excluded.last_accessed
                     """,
-                    (row[0], row[0])
+                    (row[0],)
                 )
                 await conn.commit()
 
@@ -248,6 +247,10 @@ class MemoryService:
             Tuple of (success, result_dict)
         """
         try:
+            # Validate match_count
+            if match_count <= 0:
+                return False, {"error": "match_count must be greater than 0"}
+
             async with aiosqlite.connect(self.db_path) as conn:
                 # Build query dynamically
                 sql = """
@@ -335,6 +338,10 @@ class MemoryService:
             Tuple of (success, result_dict)
         """
         try:
+            # Validate limit
+            if limit <= 0:
+                return False, {"error": "limit must be greater than 0"}
+
             async with aiosqlite.connect(self.db_path) as conn:
                 sql = """
                     SELECT m.id, m.memory_key, m.memory_content, m.memory_type,

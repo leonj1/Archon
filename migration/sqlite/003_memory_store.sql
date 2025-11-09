@@ -7,7 +7,7 @@
 -- ============================================
 CREATE TABLE IF NOT EXISTS archon_mcp_memories (
     id TEXT PRIMARY KEY,
-    memory_key TEXT NOT NULL,
+    memory_key TEXT NOT NULL UNIQUE,
     memory_content TEXT NOT NULL,
     memory_type TEXT NOT NULL DEFAULT 'learning',
     session_id TEXT,
@@ -18,8 +18,7 @@ CREATE TABLE IF NOT EXISTS archon_mcp_memories (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for fast queries
-CREATE INDEX IF NOT EXISTS idx_memory_key ON archon_mcp_memories(memory_key);
+-- Indexes for fast queries (memory_key already indexed via UNIQUE constraint)
 CREATE INDEX IF NOT EXISTS idx_memory_type ON archon_mcp_memories(memory_type);
 CREATE INDEX IF NOT EXISTS idx_memory_session ON archon_mcp_memories(session_id);
 CREATE INDEX IF NOT EXISTS idx_memory_created ON archon_mcp_memories(created_at DESC);

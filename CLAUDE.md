@@ -277,12 +277,13 @@ When connected to Claude/Cursor/Windsurf, the following tools are available:
 
 ### Memory Management Tools
 
-- `archon:store_memory` - Store knowledge, patterns, or learnings for future recall
-  - Parameters: `key`, `content`, `type` (pattern/solution/api/architecture/learning), `tags`, `session_id`, `metadata`
-  - Example: Store authentication patterns, error solutions, API discoveries
-- `archon:retrieve_memory` - Retrieve stored memories by exact key or search
-  - Parameters: `key` (exact match) OR `query/type/tags` (search)
+- `archon:find_memory` - Find stored memories by exact key or search
+  - Parameters: `key` (exact match) OR `query/type/tags/session_id/match_count` (search)
   - Returns: Single memory (by key) or list of matching memories (search)
+- `archon:manage_memory` - Manage memories with actions: "store" or "delete"
+  - Parameters: `action`, `key`, `content`, `type` (pattern/solution/api/architecture/learning), `tags`, `session_id`, `metadata`, `memory_id`
+  - Example (store): Store authentication patterns, error solutions, API discoveries
+  - Example (delete): Remove memories by ID
 
 ### Project Management
 
