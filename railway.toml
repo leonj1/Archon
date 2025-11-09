@@ -13,11 +13,6 @@ source = "."
 context = "."
 dockerfile = "Dockerfile.migrations"
 
-[services.healthcheck]
-path = ""
-timeout = 30
-interval = 60
-
 [[services.environment]]
 ARCHON_DB_BACKEND = "sqlite"
 ARCHON_SQLITE_PATH = "/data/archon.db"
