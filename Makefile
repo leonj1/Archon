@@ -5,7 +5,7 @@ SHELL := /bin/bash
 # Docker compose command - prefer newer 'docker compose' plugin over standalone 'docker-compose'
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
-.PHONY: help dev dev-docker stop restart restart-rebuild test test-fe test-be test-be-unit test-be-coverage test-be-build test-be-interactive test-integration-sqlite-qdrant lint lint-fe lint-be clean install check start-mcp-http stop-mcp-http
+.PHONY: help dev dev-docker stop restart restart-rebuild test test-fe test-be test-be-unit test-be-coverage test-be-build test-be-interactive test-integration-sqlite-qdrant lint lint-fe lint-be clean install check start-mcp-http stop-mcp-http build
 
 MCP_HTTP_HOST ?= 127.0.0.1
 MCP_HTTP_PORT ?= 8765
@@ -23,6 +23,9 @@ help:
 	@echo "  make restart           - Quick restart (no rebuild)"
 	@echo "  make restart-rebuild   - Restart with full rebuild"
 	@echo "  make clean             - Remove containers and volumes"
+	@echo ""
+	@echo "Build:"
+	@echo "  make build             - Build all Docker images (no cache)"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test              - Run all tests"
@@ -201,6 +204,12 @@ stop-mcp-http:
 	else \
 		echo "FastMCP HTTP server is not running"; \
 	fi
+
+# Build all Docker images without cache
+build:
+	@echo "Building all Docker images (no cache)..."
+	@$(COMPOSE) build --no-cache
+	@echo "✓ All images built successfully"
 
 # Clean everything (with confirmation)
 clean:
