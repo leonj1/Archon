@@ -375,10 +375,12 @@ class MemoryService:
 
                 memories = []
                 for row in rows:
+                    # Truncate content for list view
+                    content = row[2][:200] + "..." if len(row[2]) > 200 else row[2]
                     memories.append({
                         "id": row[0],
                         "memory_key": row[1],
-                        "memory_content": row[2][:200] + "..." if len(row[2]) > 200 else row[2],  # Truncate for list view
+                        "memory_content": content,
                         "memory_type": row[3],
                         "session_id": row[4],
                         "tags": json.loads(row[5]) if row[5] else [],

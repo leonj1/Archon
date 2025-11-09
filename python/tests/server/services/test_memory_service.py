@@ -46,7 +46,8 @@ async def temp_db():
                 memory_id TEXT NOT NULL,
                 access_count INTEGER NOT NULL DEFAULT 0,
                 last_accessed DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(memory_id)
+                UNIQUE(memory_id),
+                FOREIGN KEY(memory_id) REFERENCES archon_mcp_memories(id) ON DELETE CASCADE
             )
         """)
 
@@ -109,6 +110,12 @@ async def test_store_memory_update_existing(memory_service):
     assert result["action"] == "updated"
     assert result["memory_key"] == "update_test"
 
+    # Verify content was actually updated
+    success, retrieve_result = await memory_service.retrieve_memory_by_key("update_test")
+    assert success
+    assert retrieve_result["memory"]["memory_content"] == "Updated content"
+    assert retrieve_result["memory"]["memory_type"] == "pattern"
+
 
 @pytest.mark.asyncio
 async def test_store_memory_empty_key_fails(memory_service):
@@ -159,6 +166,31 @@ async def test_store_memory_invalid_type_fails(memory_service):
     assert not success
     assert "error" in result
     assert "memory_type must be one of" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_store_memory_with_complex_metadata(memory_service):
+    """Test that complex metadata is stored and retrieved correctly."""
+    complex_metadata = {
+        "nested": {"key": "value"},
+        "list": [1, 2, 3],
+        "special": "unicode: 🎉",
+        "number": 42,
+        "boolean": True,
+        "null_value": None,
+    }
+
+    success, result = await memory_service.store_memory(
+        memory_key="metadata_test",
+        memory_content="Test content",
+        metadata=complex_metadata,
+    )
+    assert success
+
+    # Retrieve and verify metadata
+    success, retrieve_result = await memory_service.retrieve_memory_by_key("metadata_test")
+    assert success
+    assert retrieve_result["memory"]["metadata"] == complex_metadata
 
 
 # ========================================================================
@@ -212,6 +244,17 @@ async def test_retrieve_updates_access_stats(memory_service):
 
     success, result = await memory_service.retrieve_memory_by_key("stats_test")
     assert success
+
+    # Verify access count was incremented
+    import aiosqlite
+    async with aiosqlite.connect(memory_service.db_path) as conn:
+        cursor = await conn.execute(
+            "SELECT access_count FROM archon_mcp_memory_stats WHERE memory_id = ?",
+            (result["memory"]["id"],)
+        )
+        row = await cursor.fetchone()
+        assert row is not None, "Stats entry should exist"
+        assert row[0] == 3, f"Expected 3 accesses, got {row[0]}"
 
 
 # ========================================================================
