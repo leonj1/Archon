@@ -7,6 +7,7 @@ AI assistants can persist and recall.
 """
 
 import json
+import struct
 import uuid
 from datetime import datetime
 from typing import Any, Optional
@@ -64,17 +65,15 @@ class MemoryService:
 
             # Generate embedding for semantic search
             try:
-                embedding_result = await create_embedding(memory_content)
-                embedding_vector = embedding_result.get("embedding", [])
-                if not embedding_vector:
+                embedding_vector = await create_embedding(memory_content)
+                if not embedding_vector or not isinstance(embedding_vector, list):
                     logger.warning(f"Failed to generate embedding for memory: {memory_key}")
                     embedding_blob = None
                 else:
                     # Convert list to blob for SQLite storage
-                    import struct
                     embedding_blob = struct.pack(f"{len(embedding_vector)}f", *embedding_vector)
             except Exception as e:
-                logger.error(f"Error generating embedding: {e}")
+                logger.error(f"Error generating embedding: {e}", exc_info=True)
                 embedding_blob = None
 
             # Serialize tags and metadata
