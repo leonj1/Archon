@@ -14,7 +14,7 @@ Archon consists of 5 services that will be deployed to Railway:
 
 ## Prerequisites
 
-1. **Railway Account**: Sign up at https://railway.app
+1. **Railway Account**: Sign up at [https://railway.app](https://railway.app)
 2. **Railway CLI** (optional): Install via `npm install -g @railway/cli` or `brew install railway`
 3. **Supabase Account**: You'll need a Supabase project for the database
 4. **GitHub Repository**: Connect your repo to Railway for automatic deployments
@@ -25,7 +25,7 @@ Archon consists of 5 services that will be deployed to Railway:
 
 #### Step 1: Create a New Project
 
-1. Go to https://railway.app/dashboard
+1. Go to [https://railway.app/dashboard](https://railway.app/dashboard)
 2. Click "New Project"
 3. Select "Deploy from GitHub repo"
 4. Authorize Railway to access your GitHub account
@@ -35,14 +35,15 @@ Archon consists of 5 services that will be deployed to Railway:
 
 Railway will detect the configuration files. You need to create 5 separate services:
 
-**Service 1: Database Migrations**
+### Service 1: Database Migrations
+
 1. Click "New Service" → "Empty Service"
 2. Name: `archon-migrations`
 3. Go to Settings → Build:
    - Root Directory: `/`
    - Dockerfile Path: `Dockerfile.migrations`
 4. Go to Variables and add:
-   ```
+   ```bash
    ARCHON_DB_BACKEND=sqlite
    ARCHON_SQLITE_PATH=/data/archon.db
    SUPABASE_URL=<your-supabase-url>
@@ -50,22 +51,23 @@ Railway will detect the configuration files. You need to create 5 separate servi
    ```
 5. Deploy
 
-**Service 2: Backend Server**
+### Service 2: Backend Server
+
 1. Click "New Service" → "Empty Service"
 2. Name: `archon-server`
 3. Go to Settings → Build:
    - Root Directory: `python`
    - Dockerfile Path: `Dockerfile.server`
 4. Go to Variables and add:
-   ```
+   ```bash
    ARCHON_DB_BACKEND=sqlite
    ARCHON_SQLITE_PATH=/data/archon.db
    ARCHON_SKIP_DB_INIT=true
    SERVICE_DISCOVERY_MODE=railway
    LOG_LEVEL=INFO
    ARCHON_SERVER_PORT=$PORT
-   ARCHON_MCP_PORT=8051
-   ARCHON_AGENTS_PORT=8052
+   ARCHON_MCP_URL=${{archon-mcp.RAILWAY_PRIVATE_DOMAIN}}
+   ARCHON_AGENTS_URL=${{archon-agents.RAILWAY_PRIVATE_DOMAIN}}
    AGENTS_ENABLED=false
    ARCHON_HOST=0.0.0.0
    SUPABASE_URL=<your-supabase-url>
@@ -78,23 +80,23 @@ Railway will detect the configuration files. You need to create 5 separate servi
    - Note the public URL (e.g., `archon-server.up.railway.app`)
 6. Deploy
 
-**Service 3: MCP Server**
+### Service 3: MCP Server
+
 1. Click "New Service" → "Empty Service"
 2. Name: `archon-mcp`
 3. Go to Settings → Build:
    - Root Directory: `python`
    - Dockerfile Path: `Dockerfile.mcp`
 4. Go to Variables and add:
-   ```
+   ```bash
    ARCHON_SQLITE_PATH=/data/archon.db
    SERVICE_DISCOVERY_MODE=railway
    TRANSPORT=sse
    LOG_LEVEL=INFO
    ARCHON_MCP_PORT=$PORT
-   ARCHON_SERVER_PORT=8181
-   ARCHON_AGENTS_PORT=8052
+   API_SERVICE_URL=${{archon-server.RAILWAY_PRIVATE_DOMAIN}}
+   AGENTS_SERVICE_URL=${{archon-agents.RAILWAY_PRIVATE_DOMAIN}}
    AGENTS_ENABLED=false
-   API_SERVICE_URL=${{archon-server.RAILWAY_PUBLIC_DOMAIN}}
    SUPABASE_URL=<your-supabase-url>
    SUPABASE_SERVICE_KEY=<your-service-key>
    LOGFIRE_TOKEN=<optional>
@@ -103,18 +105,19 @@ Railway will detect the configuration files. You need to create 5 separate servi
    - Enable "Public Networking"
 6. Deploy
 
-**Service 4: AI Agents (Optional)**
+### Service 4: AI Agents (Optional)
+
 1. Click "New Service" → "Empty Service"
 2. Name: `archon-agents`
 3. Go to Settings → Build:
    - Root Directory: `python`
    - Dockerfile Path: `Dockerfile.agents`
 4. Go to Variables and add:
-   ```
+   ```bash
    SERVICE_DISCOVERY_MODE=railway
    LOG_LEVEL=INFO
    ARCHON_AGENTS_PORT=$PORT
-   ARCHON_SERVER_PORT=8181
+   API_SERVICE_URL=${{archon-server.RAILWAY_PRIVATE_DOMAIN}}
    SUPABASE_URL=<your-supabase-url>
    SUPABASE_SERVICE_KEY=<your-service-key>
    OPENAI_API_KEY=<your-openai-key>
@@ -124,14 +127,15 @@ Railway will detect the configuration files. You need to create 5 separate servi
    - Enable "Public Networking"
 6. Deploy
 
-**Service 5: Frontend**
+### Service 5: Frontend
+
 1. Click "New Service" → "Empty Service"
 2. Name: `archon-frontend`
 3. Go to Settings → Build:
    - Root Directory: `archon-ui-main`
    - Dockerfile Path: `Dockerfile`
 4. Go to Variables and add:
-   ```
+   ```bash
    VITE_API_URL=${{archon-server.RAILWAY_PUBLIC_DOMAIN}}
    VITE_ARCHON_SERVER_PORT=8181
    ARCHON_SERVER_PORT=8181
@@ -155,6 +159,10 @@ To ensure services start in the correct order:
    - `archon-mcp` depends on `archon-server`
    - `archon-frontend` depends on `archon-server`
    - `archon-agents` has no dependencies (optional)
+
+##### Understanding Service Dependencies
+
+Railway starts dependent services after the dependency service reports a successful health check. Ensure your `archon-migrations` service exits cleanly after completion (or returns healthy status) so dependent services can proceed. If a service fails to start or pass health checks, dependent services will remain in a pending state until the issue is resolved.
 
 #### Step 4: Set Up Volumes (Optional)
 
@@ -328,7 +336,7 @@ Access via service Dashboard → Metrics tab
 
 To run multiple instances:
 1. Go to service Settings → Replicas
-2. Set number of replicas (requires paid plan)
+2. Set number of replicas (requires a paid plan)
 3. Railway handles load balancing
 
 ### Vertical Scaling
@@ -395,10 +403,10 @@ To increase resources:
 
 ## Support and Resources
 
-- **Railway Docs**: https://docs.railway.app
-- **Railway Discord**: https://discord.gg/railway
-- **Archon Issues**: https://github.com/your-org/archon/issues
-- **Supabase Docs**: https://supabase.com/docs
+- **Railway Docs**: [https://docs.railway.app](https://docs.railway.app)
+- **Railway Discord**: [https://discord.gg/railway](https://discord.gg/railway)
+- **Archon Issues**: [https://github.com/your-org/archon/issues](https://github.com/your-org/archon/issues)
+- **Supabase Docs**: [https://supabase.com/docs](https://supabase.com/docs)
 
 ## Next Steps
 

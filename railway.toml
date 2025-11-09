@@ -2,10 +2,6 @@
 # This configuration deploys all Archon services to Railway.app
 # Each service is defined with its build context, Dockerfile, and environment variables
 
-[build]
-builder = "dockerfile"
-dockerfilePath = "Dockerfile.migrations"
-
 # Database Migration Service
 # Runs database migrations using Flyway before other services start
 [[services]]
@@ -60,8 +56,8 @@ ARCHON_SKIP_DB_INIT = "true"
 SERVICE_DISCOVERY_MODE = "railway"
 LOG_LEVEL = "INFO"
 ARCHON_SERVER_PORT = "$PORT"
-ARCHON_MCP_PORT = "8051"
-ARCHON_AGENTS_PORT = "8052"
+ARCHON_MCP_URL = "${{archon-mcp.RAILWAY_PRIVATE_DOMAIN}}"
+ARCHON_AGENTS_URL = "${{archon-agents.RAILWAY_PRIVATE_DOMAIN}}"
 AGENTS_ENABLED = "false"
 ARCHON_HOST = "0.0.0.0"
 # SUPABASE_URL - Set in Railway dashboard
@@ -94,11 +90,9 @@ SERVICE_DISCOVERY_MODE = "railway"
 TRANSPORT = "sse"
 LOG_LEVEL = "INFO"
 ARCHON_MCP_PORT = "$PORT"
-ARCHON_SERVER_PORT = "8181"
-ARCHON_AGENTS_PORT = "8052"
+API_SERVICE_URL = "${{archon-server.RAILWAY_PRIVATE_DOMAIN}}"
+AGENTS_SERVICE_URL = "${{archon-agents.RAILWAY_PRIVATE_DOMAIN}}"
 AGENTS_ENABLED = "false"
-# API_SERVICE_URL - Will be set using Railway service URL reference
-# AGENTS_SERVICE_URL - Will be set using Railway service URL reference
 # SUPABASE_URL - Set in Railway dashboard
 # SUPABASE_SERVICE_KEY - Set in Railway dashboard (encrypted)
 # LOGFIRE_TOKEN - Optional, set in Railway dashboard
@@ -126,7 +120,7 @@ interval = 30
 SERVICE_DISCOVERY_MODE = "railway"
 LOG_LEVEL = "INFO"
 ARCHON_AGENTS_PORT = "$PORT"
-ARCHON_SERVER_PORT = "8181"
+API_SERVICE_URL = "${{archon-server.RAILWAY_PRIVATE_DOMAIN}}"
 # SUPABASE_URL - Set in Railway dashboard
 # SUPABASE_SERVICE_KEY - Set in Railway dashboard (encrypted)
 # OPENAI_API_KEY - Set in Railway dashboard (encrypted)
